@@ -1,0 +1,250 @@
+<div class="container-fluid login-page">
+
+    <div class="row vh-100">
+
+        <!-- Left Section -->
+
+        <div class="col-lg-6 left-section d-flex flex-column justify-content-center">
+
+            <div class="brand">
+
+                <span class="material-icons recycle-icon">
+                    recycling
+                </span>
+
+                <h2>WasteZero</h2>
+
+            </div>
+
+            <h1>Join the Recycling Revolution</h1>
+
+            <p>
+                WasteZero connects volunteers, NGOs, and administrators
+                to schedule pickups, manage recycling opportunities,
+                and make a positive impact on our environment.
+            </p>
+
+            <div class="features">
+
+                <div>
+                    <h5>Schedule Pickups</h5>
+                    <small>Easily arrange waste collection</small>
+                </div>
+
+                <div>
+                    <h5>Track Impact</h5>
+                    <small>Monitor environmental contribution</small>
+                </div>
+
+                <div>
+                    <h5>Volunteer</h5>
+                    <small>Join recycling initiatives</small>
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- Right -->
+
+        <div class="col-lg-6 d-flex justify-content-center align-items-center">
+
+            <div class="login-card">
+
+                <div class="tabs">
+
+    <button
+        type="button"
+        routerLink="/login">
+
+        Login
+
+    </button>
+
+    <button
+        type="button"
+        class="active"
+        routerLink="/register">
+
+        Register
+
+    </button>
+
+</div>
+
+                <h2>Create Account</h2>
+
+                <p class="subtitle">
+                    Join WasteZero today
+                </p>
+
+                <form
+                    [formGroup]="registerForm"
+                    (ngSubmit)="onRegister()">
+
+                    <div class="mb-3">
+
+                        <label>Name</label>
+
+                        <input
+                            type="text"
+                            class="form-control"
+                            formControlName="name"
+                            placeholder="Full Name">
+
+                        @if(registerForm.controls.name.touched &&
+                        registerForm.controls.name.errors?.['required']){
+
+                        <div class="text-danger mt-1">
+                            Name is required
+                        </div>
+
+                        }
+
+                    </div>
+
+                    <div class="mb-3">
+
+                        <label>Username</label>
+
+                        <input
+                            type="text"
+                            class="form-control"
+                            formControlName="username"
+                            placeholder="Username">
+
+                        @if(registerForm.controls.username.touched &&
+                        registerForm.controls.username.errors?.['required']){
+
+                        <div class="text-danger mt-1">
+                            Username is required
+                        </div>
+
+                        }
+
+                    </div>
+
+                    <div class="mb-3">
+
+                        <label>Email</label>
+
+                        <input
+                            type="email"
+                            class="form-control"
+                            formControlName="email"
+                            placeholder="Email Address">
+
+                        @if(registerForm.controls.email.touched &&
+                        registerForm.controls.email.errors?.['required']){
+
+                        <div class="text-danger mt-1">
+                            Email is required
+                        </div>
+
+                        }
+
+                        @if(registerForm.controls.email.touched &&
+                        registerForm.controls.email.errors?.['email']){
+
+                        <div class="text-danger mt-1">
+                            Invalid email address
+                        </div>
+
+                        }
+
+                    </div>
+
+                    <div class="mb-3">
+
+                        <label>Password</label>
+
+                        <input
+                            type="password"
+                            class="form-control"
+                            formControlName="password"
+                            placeholder="Password">
+
+                        @if(registerForm.controls.password.touched &&
+                        registerForm.controls.password.errors?.['required']){
+
+                        <div class="text-danger mt-1">
+                            Password is required
+                        </div>
+
+                        }
+
+                        @if(registerForm.controls.password.touched &&
+                        registerForm.controls.password.errors?.['minlength']){
+
+                        <div class="text-danger mt-1">
+                            Password must contain minimum 6 characters
+                        </div>
+
+                        }
+
+                    </div>
+
+                    <div class="mb-3">
+
+                        <label>Confirm Password</label>
+
+                        <input
+                            type="password"
+                            class="form-control"
+                            formControlName="confirmPassword"
+                            placeholder="Confirm Password">
+
+                    </div>
+
+                    @if(registerForm.errors?.['passwordMismatch']
+                    && registerForm.controls.confirmPassword.touched){
+
+                    <div class="text-danger mb-3">
+
+                        Passwords do not match
+
+                    </div>
+
+                    }
+
+                    <div class="mb-4">
+
+                        <label>Role</label>
+
+                        <select
+                            class="form-select"
+                            formControlName="role">
+
+                            <option value="volunteer">
+                                Volunteer
+                            </option>
+
+                            <option value="ngo">
+                                NGO
+                            </option>
+
+                            <option value="admin">
+                                Admin
+                            </option>
+
+                        </select>
+
+                    </div>
+
+                    <button
+                        class="btn btn-primary login-btn"
+                        type="submit">
+
+                        Register
+
+                    </button>
+
+                </form>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
