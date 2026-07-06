@@ -1,0 +1,26 @@
+.layout {
+  min-height: 100vh;
+}
+
+.main-area {
+  margin-left: var(--sidebar-width);
+  min-height: 100vh;
+  transition: margin-left var(--transition-fast);
+}
+
+.content {
+  padding-top: var(--topnav-height);
+  min-height: calc(100vh - var(--topnav-height));
+  background-color: var(--bg-surface);
+  transition: background-color var(--transition-fast);
+}
+
+@media (max-width: 768px) {
+  .main-area {
+    margin-left: 0;
+  }
+
+  .content {
+    padding-bottom: var(--bottomtab-height);
+  }
+}

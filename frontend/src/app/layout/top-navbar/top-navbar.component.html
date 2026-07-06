@@ -1,0 +1,28 @@
+<header class="topnav">
+  <div class="topnav-left">
+    <button class="btn-icon hamburger show-mobile" (click)="onToggleSidebar()">
+      <svg lucideMenu [size]="22"></svg>
+    </button>
+    <div class="topnav-brand hide-mobile">
+    </div>
+  </div>
+
+  <div class="topnav-right">
+    <button class="btn-icon notification-btn">
+      <svg lucideBell [size]="20"></svg>
+      @if (notificationCount > 0) {
+        <span class="notification-badge">{{ notificationCount }}</span>
+      }
+    </button>
+
+    <div class="user-info">
+      <div class="user-avatar">
+        <svg lucideUser [size]="18"></svg>
+      </div>
+      <div class="user-details hide-mobile">
+        <span class="user-name">{{ authService.currentUser()?.full_name }}</span>
+        <span class="user-role">{{ authService.currentUser()?.role | titlecase }}</span>
+      </div>
+    </div>
+  </div>
+</header>

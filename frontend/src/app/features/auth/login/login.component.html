@@ -1,0 +1,68 @@
+<div class="auth-page">
+  <div class="auth-container">
+    <div class="auth-header">
+      <span class="auth-logo">♻</span>
+      <h1>WasteZero</h1>
+      <p class="text-secondary">Welcome back. Sign in to continue.</p>
+    </div>
+
+    <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="auth-form">
+      @if (errorMessage) {
+        <div class="error-banner">{{ errorMessage }}</div>
+      }
+
+      <div class="form-group">
+        <label class="form-label" for="username">Username</label>
+        <input
+          id="username"
+          type="text"
+          class="form-input"
+          formControlName="username"
+          placeholder="Enter your username"
+          autocomplete="username"
+        />
+        @if (loginForm.get('username')?.invalid && loginForm.get('username')?.touched) {
+          <span class="form-error">Username is required</span>
+        }
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="password">Password</label>
+        <input
+          id="password"
+          type="password"
+          class="form-input"
+          formControlName="password"
+          placeholder="Enter your password"
+          autocomplete="current-password"
+        />
+        @if (loginForm.get('password')?.invalid && loginForm.get('password')?.touched) {
+          <span class="form-error">
+            @if (loginForm.get('password')?.errors?.['required']) {
+              Password is required
+            } @else if (loginForm.get('password')?.errors?.['minlength']) {
+              Password must be at least 6 characters
+            }
+          </span>
+        }
+      </div>
+
+      <button
+        type="submit"
+        class="btn btn-primary auth-submit"
+        [disabled]="isLoading"
+      >
+        @if (isLoading) {
+          Signing in...
+        } @else {
+          Sign In
+        }
+      </button>
+
+      <p class="auth-footer">
+        Don't have an account?
+        <a routerLink="/register">Create one here</a>
+      </p>
+    </form>
+  </div>
+</div>

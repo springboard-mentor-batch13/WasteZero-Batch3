@@ -1,0 +1,18 @@
+<nav class="bottom-tab-bar">
+  @for (tab of tabs; track tab.route) {
+    <a
+      [routerLink]="tab.route"
+      routerLinkActive="active"
+      class="tab-item"
+    >
+      @switch (tab.icon) {
+        @case ('layout-dashboard') { <svg lucideLayoutDashboard [size]="20"></svg> }
+        @case ('calendar-plus') { <svg lucideCalendarPlus [size]="20"></svg> }
+        @case ('heart') { <svg lucideHeart [size]="20"></svg> }
+        @case ('message-square') { <svg lucideMessageSquare [size]="20"></svg> }
+        @case ('user') { <svg lucideUser [size]="20"></svg> }
+      }
+      <span class="tab-label">{{ tab.label }}</span>
+    </a>
+  }
+</nav>

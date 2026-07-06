@@ -1,0 +1,151 @@
+<div class="page-container">
+  <div class="page-header">
+    <h1>My Profile</h1>
+    <p>Manage your personal information and skills.</p>
+  </div>
+
+  @if (isLoading) {
+    <div class="loading-container">
+      <div class="loading-spinner"></div>
+      <p class="text-secondary">Loading profile...</p>
+    </div>
+  } @else {
+    <div class="card profile-card">
+      <form [formGroup]="profileForm" (ngSubmit)="onSave()">
+
+        <div class="form-grid">
+          <div class="form-group">
+            <label class="form-label" for="full_name">
+              <svg lucideUser [size]="15"></svg>
+              Full Name
+            </label>
+            <input
+              id="full_name"
+              type="text"
+              class="form-input"
+              formControlName="full_name"
+              placeholder="Enter your full name"
+            />
+            @if (profileForm.get('full_name')?.invalid && profileForm.get('full_name')?.touched) {
+              <span class="form-error">Full name is required</span>
+            }
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="email">
+              <svg lucideMail [size]="15"></svg>
+              Email
+            </label>
+            <input
+              id="email"
+              type="email"
+              class="form-input"
+              formControlName="email"
+              placeholder="you@example.com"
+            />
+            @if (profileForm.get('email')?.invalid && profileForm.get('email')?.touched) {
+              <span class="form-error">
+                @if (profileForm.get('email')?.errors?.['required']) {
+                  Email is required
+                } @else if (profileForm.get('email')?.errors?.['email']) {
+                  Enter a valid email address
+                }
+              </span>
+            }
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="location">
+            <svg lucideMapPin [size]="15"></svg>
+            Location
+          </label>
+          <input
+            id="location"
+            type="text"
+            class="form-input"
+            formControlName="location"
+            placeholder="e.g. Mumbai, India"
+          />
+          <span class="form-helper">Used for matching you with nearby pickups and opportunities.</span>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">
+            <svg lucideBriefcase [size]="15"></svg>
+            Skills
+          </label>
+
+          <div class="skills-container">
+            @for (skill of skills.controls; track $index) {
+              <div class="skill-row">
+                <input
+                  type="text"
+                  class="form-input skill-input"
+                  [formControl]="$any(skill)"
+                  [placeholder]="'Skill ' + ($index + 1)"
+                />
+                <button
+                  type="button"
+                  class="btn-icon skill-remove"
+                  (click)="removeSkill($index)"
+                  title="Remove skill"
+                >
+                  <svg lucideX [size]="16"></svg>
+                </button>
+              </div>
+            }
+
+            <button
+              type="button"
+              class="btn btn-secondary btn-sm add-skill-btn"
+              (click)="addSkill()"
+            >
+              <svg lucidePlus [size]="16"></svg>
+              Add Skill
+            </button>
+          </div>
+          <span class="form-helper">Add skills relevant to volunteering and waste management.</span>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="bio">Bio</label>
+          <textarea
+            id="bio"
+            class="form-textarea"
+            formControlName="bio"
+            placeholder="Tell us a bit about yourself..."
+            rows="4"
+          ></textarea>
+          <span class="form-helper">
+            {{ profileForm.get('bio')?.value?.length || 0 }} / 500 characters
+          </span>
+          @if (profileForm.get('bio')?.errors?.['maxlength']) {
+            <span class="form-error">Bio must be 500 characters or less</span>
+          }
+        </div>
+
+        <div class="form-actions">
+          <button
+            type="submit"
+            class="btn btn-primary"
+            [disabled]="isSaving || profileForm.invalid"
+          >
+            <svg lucideSave [size]="18"></svg>
+            @if (isSaving) {
+              Saving...
+            } @else {
+              Save Changes
+            }
+          </button>
+        </div>
+      </form>
+    </div>
+  }
+
+  @if (showToast) {
+    <div class="toast" [class.toast-success]="toastType === 'success'" [class.toast-error]="toastType === 'error'">
+      {{ toastMessage }}
+    </div>
+  }
+</div>

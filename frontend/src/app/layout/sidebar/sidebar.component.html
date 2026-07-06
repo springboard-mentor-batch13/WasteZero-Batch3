@@ -1,0 +1,64 @@
+<aside class="sidebar" [class.sidebar-open]="isOpen">
+  <div class="sidebar-header">
+    <div class="sidebar-logo">
+      <span class="logo-icon">♻</span>
+      <span class="logo-text">WasteZero</span>
+    </div>
+    <button class="btn-icon close-btn show-mobile" (click)="onClose()">
+      <svg lucideChevronLeft [size]="20"></svg>
+    </button>
+  </div>
+
+  <nav class="sidebar-nav">
+    <ul class="nav-list">
+      @for (item of filteredNavItems; track item.route) {
+        <li class="nav-item">
+          <a
+            [routerLink]="item.route"
+            routerLinkActive="active"
+            class="nav-link"
+            (click)="onClose()"
+          >
+            <span class="nav-icon">
+              @switch (item.icon) {
+                @case ('layout-dashboard') { <svg lucideLayoutDashboard [size]="20"></svg> }
+                @case ('calendar-plus') { <svg lucideCalendarPlus [size]="20"></svg> }
+                @case ('truck') { <svg lucideTruck [size]="20"></svg> }
+                @case ('heart') { <svg lucideHeart [size]="20"></svg> }
+                @case ('message-square') { <svg lucideMessageSquare [size]="20"></svg> }
+                @case ('user') { <svg lucideUser [size]="20"></svg> }
+                @case ('shield') { <svg lucideShield [size]="20"></svg> }
+              }
+            </span>
+            <span class="nav-label">{{ item.label }}</span>
+          </a>
+        </li>
+      }
+    </ul>
+  </nav>
+
+  <div class="sidebar-footer">
+    <button class="sidebar-action" (click)="onToggleDarkMode()">
+      @if (themeService.isDarkMode()) {
+        <svg lucideSun [size]="20"></svg>
+      } @else {
+        <svg lucideMoon [size]="20"></svg>
+      }
+      <span class="nav-label">
+        {{ themeService.isDarkMode() ? 'Light Mode' : 'Dark Mode' }}
+      </span>
+      <div class="toggle-track" [class.toggle-active]="themeService.isDarkMode()">
+        <div class="toggle-thumb"></div>
+      </div>
+    </button>
+
+    <button class="sidebar-action logout-action" (click)="onLogout()">
+      <svg lucideLogOut [size]="20"></svg>
+      <span class="nav-label">Logout</span>
+    </button>
+  </div>
+</aside>
+
+@if (isOpen) {
+  <div class="sidebar-backdrop show-mobile" (click)="onClose()"></div>
+}

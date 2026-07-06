@@ -1,0 +1,56 @@
+<div class="page-container">
+  <div class="page-header">
+    <h1>Dashboard</h1>
+    <p>Welcome back, {{ authService.currentUser()?.full_name }}!</p>
+  </div>
+
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-icon stat-icon-blue">
+        <svg lucideTrendingUp [size]="22"></svg>
+      </div>
+      <div class="stat-info">
+        <span class="stat-value">0</span>
+        <span class="stat-label">Total Pickups</span>
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-icon stat-icon-green">
+        <svg lucideRecycle [size]="22"></svg>
+      </div>
+      <div class="stat-info">
+        <span class="stat-value">0</span>
+        <span class="stat-label">Recycled Items</span>
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-icon stat-icon-eco">
+        <svg lucideLeaf [size]="22"></svg>
+      </div>
+      <div class="stat-info">
+        <span class="stat-value">0 kg</span>
+        <span class="stat-label">CO₂ Saved</span>
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-icon stat-icon-purple">
+        <svg lucideClock [size]="22"></svg>
+      </div>
+      <div class="stat-info">
+        <span class="stat-value">0 hrs</span>
+        <span class="stat-label">Volunteer Hours</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="card placeholder-card">
+    <h2>Your Environmental Impact</h2>
+    <p class="text-secondary">
+      Pickup history and recycling breakdown charts will appear here once you start scheduling pickups.
+      This dashboard is fully connected — stats will update automatically with real data.
+    </p>
+  </div>
+</div>

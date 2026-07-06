@@ -1,0 +1,152 @@
+<div class="auth-page">
+  <div class="auth-container">
+    <div class="auth-header">
+      <span class="auth-logo">♻</span>
+      <h1>Create Account</h1>
+      <p class="text-secondary">Join WasteZero and make a difference.</p>
+    </div>
+
+    <form [formGroup]="registerForm" (ngSubmit)="onSubmit()" class="auth-form">
+      @if (errorMessage) {
+        <div class="error-banner">{{ errorMessage }}</div>
+      }
+
+      <div class="form-group">
+        <label class="form-label" for="full_name">Full Name</label>
+        <input
+          id="full_name"
+          type="text"
+          class="form-input"
+          formControlName="full_name"
+          placeholder="Enter your full name"
+        />
+        @if (registerForm.get('full_name')?.invalid && registerForm.get('full_name')?.touched) {
+          <span class="form-error">Full name is required</span>
+        }
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="email">Email</label>
+        <input
+          id="email"
+          type="email"
+          class="form-input"
+          formControlName="email"
+          placeholder="you@example.com"
+        />
+        @if (registerForm.get('email')?.invalid && registerForm.get('email')?.touched) {
+          <span class="form-error">
+            @if (registerForm.get('email')?.errors?.['required']) {
+              Email is required
+            } @else if (registerForm.get('email')?.errors?.['email']) {
+              Enter a valid email address
+            }
+          </span>
+        }
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="username">Username</label>
+        <input
+          id="username"
+          type="text"
+          class="form-input"
+          formControlName="username"
+          placeholder="Choose a username"
+          autocomplete="username"
+        />
+        @if (registerForm.get('username')?.invalid && registerForm.get('username')?.touched) {
+          <span class="form-error">
+            @if (registerForm.get('username')?.errors?.['required']) {
+              Username is required
+            } @else if (registerForm.get('username')?.errors?.['minlength']) {
+              Username must be at least 3 characters
+            }
+          </span>
+        }
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label" for="password">Password</label>
+          <input
+            id="password"
+            type="password"
+            class="form-input"
+            formControlName="password"
+            placeholder="Min. 6 characters"
+            autocomplete="new-password"
+          />
+          @if (registerForm.get('password')?.invalid && registerForm.get('password')?.touched) {
+            <span class="form-error">
+              @if (registerForm.get('password')?.errors?.['required']) {
+                Password is required
+              } @else if (registerForm.get('password')?.errors?.['minlength']) {
+                Min. 6 characters
+              }
+            </span>
+          }
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="confirm_password">Confirm Password</label>
+          <input
+            id="confirm_password"
+            type="password"
+            class="form-input"
+            formControlName="confirm_password"
+            placeholder="Re-enter password"
+            autocomplete="new-password"
+          />
+          @if (registerForm.get('confirm_password')?.invalid && registerForm.get('confirm_password')?.touched) {
+            <span class="form-error">
+              @if (registerForm.get('confirm_password')?.errors?.['required']) {
+                Confirm your password
+              } @else if (registerForm.get('confirm_password')?.errors?.['passwordMismatch']) {
+                Passwords do not match
+              }
+            </span>
+          }
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="role">Role</label>
+        <select id="role" class="form-select" formControlName="role">
+          @for (role of roles; track role.value) {
+            <option [value]="role.value">{{ role.label }}</option>
+          }
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="location">Location <span class="text-secondary">(optional)</span></label>
+        <input
+          id="location"
+          type="text"
+          class="form-input"
+          formControlName="location"
+          placeholder="e.g. Mumbai, India"
+        />
+        <span class="form-helper">Used for matching you with nearby pickups and opportunities.</span>
+      </div>
+
+      <button
+        type="submit"
+        class="btn btn-primary auth-submit"
+        [disabled]="isLoading"
+      >
+        @if (isLoading) {
+          Creating account...
+        } @else {
+          Create Account
+        }
+      </button>
+
+      <p class="auth-footer">
+        Already have an account?
+        <a routerLink="/login">Sign in</a>
+      </p>
+    </form>
+  </div>
+</div>
