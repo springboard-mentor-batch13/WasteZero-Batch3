@@ -1,11 +1,20 @@
 export type UserRole = 'volunteer' | 'ngo' | 'admin';
 
 export interface User {
-  id: string;
+  id?: string;
+  _id?: string;
+
   name: string;
   username: string;
   email: string;
   role: UserRole;
+
+  location?: string;
+  skills?: string[];
+  bio?: string;
+
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface AuthResponse {

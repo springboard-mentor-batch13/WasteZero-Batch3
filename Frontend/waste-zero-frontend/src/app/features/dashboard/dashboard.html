@@ -1,130 +1,121 @@
-<p>dashboard works!</p>
 <div class="dashboard">
 
-    <!-- Sidebar -->
-    <aside class="sidebar">
+  <!-- Sidebar -->
+  <aside class="sidebar">
 
-        <div class="logo">
-            <h2>♻ WasteZero</h2>
-        </div>
+    <div class="logo">
+      <h2>♻ WasteZero</h2>
+    </div>
 
-        <ul class="menu">
+    <ul class="menu">
 
-            <li class="active">
-                Dashboard
-            </li>
+      <li routerLink="/dashboard" routerLinkActive="active">
+        Dashboard
+      </li>
 
-            <li>
-                Profile
-            </li>
+      <li routerLink="/profile" routerLinkActive="active">
+        Profile
+      </li>
 
-            <li>
-                Pickups
-            </li>
+      <li>
+        Pickups
+      </li>
 
-            <li>
-                Recycling
-            </li>
+      <li>
+        Recycling
+      </li>
 
-            <li>
-                Reports
-            </li>
+      <li>
+        Reports
+      </li>
 
-            <li (click)="logout()">
-                Logout
-            </li>
+      <li routerLink="/change-password" routerLinkActive="active">
+        Change Password
+      </li>
 
-        </ul>
+      <li (click)="logout()">
+        Logout
+      </li>
 
-    </aside>
+    </ul>
 
-    <!-- Main Content -->
+  </aside>
 
-    <main class="main-content">
+  <!-- Main Content -->
+  <main class="main-content">
 
-        <!-- Top Bar -->
+    <!-- Top Bar -->
+    <div class="topbar">
 
-        <div class="topbar">
+      <h2>
+        Welcome {{ userName }} 👋
+      </h2>
 
-            <h2>Welcome Nandini 👋</h2>
+      <span class="date">
+        {{ userRole | titlecase }} Dashboard
+      </span>
 
-            <span class="date">
-                WasteZero Dashboard
-            </span>
+    </div>
 
-        </div>
+    <!-- Statistics Cards -->
+    <div class="cards">
 
-        <!-- Statistics Cards -->
+      <div class="card">
+        <h3>25</h3>
+        <p>Total Pickups</p>
+      </div>
 
-        <div class="cards">
+      <div class="card">
+        <h3>15</h3>
+        <p>Recycling Requests</p>
+      </div>
 
-            <div class="card">
+      <div class="card">
+        <h3>10</h3>
+        <p>Completed Tasks</p>
+      </div>
 
-                <h3>25</h3>
+      <div class="card">
+        <h3>2</h3>
+        <p>Pending Tasks</p>
+      </div>
 
-                <p>Total Pickups</p>
+    </div>
 
-            </div>
+    <!-- Welcome Card -->
+    <div class="welcome-card">
 
-            <div class="card">
+      <h2>
+        Welcome to WasteZero 🌱
+      </h2>
 
-                <h3>15</h3>
+      <p>
+        Thank you for contributing towards a cleaner and greener environment.
+        Use the sidebar to manage pickups, recycling requests, update your profile,
+        and securely manage your account.
+      </p>
 
-                <p>Recycling Requests</p>
+    </div>
 
-            </div>
+    <!-- Recent Activities -->
+    <div class="activity">
 
-            <div class="card">
+      <h3>Recent Activities</h3>
 
-                <h3>10</h3>
+      <ul>
 
-                <p>Completed Tasks</p>
+        <li>✅ Pickup request submitted</li>
 
-            </div>
+        <li>♻ Recycling drive joined</li>
 
-            <div class="card">
+        <li>📦 Plastic waste collected</li>
 
-                <h3>2</h3>
+        <li>🌿 Profile updated successfully</li>
 
-                <p>Pending Tasks</p>
+      </ul>
 
-            </div>
+    </div>
 
-        </div>
-
-        <!-- Welcome Card -->
-
-        <div class="welcome-card">
-
-            <h2>Welcome to WasteZero 🌱</h2>
-
-            <p>
-                Thank you for contributing towards a cleaner and greener environment.
-                Use the sidebar to manage pickups, recycling requests, and your profile.
-            </p>
-
-        </div>
-
-        <!-- Recent Activities -->
-
-        <div class="activity">
-
-            <h3>Recent Activities</h3>
-
-            <ul>
-
-                <li>✅ Pickup request submitted</li>
-
-                <li>♻ Recycling drive joined</li>
-
-                <li>📦 Plastic waste collected</li>
-
-                <li>🌿 Profile updated successfully</li>
-
-            </ul>
-
-        </div>
-
-    </main>
+  </main>
 
 </div>

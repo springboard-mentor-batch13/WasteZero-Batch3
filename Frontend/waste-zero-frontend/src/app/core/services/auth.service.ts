@@ -61,6 +61,23 @@ export class AuthService {
     this.currentUserSignal.set(null);
   }
 
+  changePassword(data: {
+  currentPassword: string;
+  newPassword: string;
+}): Observable<{ success: boolean; message: string }> {
+
+  return this.http.put<{ success: boolean; message: string }>(
+    `${environment.apiUrl}/users/change-password`,
+    data,
+    {
+      headers: {
+        Authorization: `Bearer ${this.getToken()}`
+      }
+    }
+  );
+
+}
+
   getToken(): string | null {
     return localStorage.getItem('token');
   }
