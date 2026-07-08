@@ -10,6 +10,12 @@ import {
 } from '@angular/forms';
 
 import { Router, RouterLink } from '@angular/router';
+
+import {
+  MatSnackBar,
+  MatSnackBarModule
+} from '@angular/material/snack-bar';
+
 import { AuthService } from '../../../core/services/auth.service';
 
 const passwordMatchValidator: ValidatorFn = (
@@ -31,7 +37,8 @@ const passwordMatchValidator: ValidatorFn = (
   imports: [
     CommonModule,
     ReactiveFormsModule,
-    RouterLink
+    RouterLink,
+    MatSnackBarModule
   ],
   templateUrl: './register.html',
   styleUrl: './register.css'
@@ -41,6 +48,7 @@ export class Register {
   private fb = inject(FormBuilder);
   private authService = inject(AuthService);
   private router = inject(Router);
+  private snackBar = inject(MatSnackBar);
 
   registerForm = this.fb.group({
 
@@ -72,44 +80,65 @@ export class Register {
     validators: passwordMatchValidator
   });
 
- onRegister() {
+  onRegister(): void {
 
-  if (this.registerForm.invalid) {
-    this.registerForm.markAllAsTouched();
-    return;
-  }
+    if (this.registerForm.invalid) {
 
-  const {
-    name,
-    username,
-    email,
-    password,
-    role
-  } = this.registerForm.getRawValue();
-
-  this.authService.register({
-    name: name!,
-    username: username!,
-    email: email!,
-    password: password!,
-    role: role!
-  }).subscribe({
-
-    next: (response) => {
-
-      alert(response.message);
-
-      this.router.navigate(['/login']);;
-
-    },
-
-    error: (error) => {
-
-      alert(error.error?.message || 'Registration Failed');
+      this.registerForm.markAllAsTouched();
+      return;
 
     }
 
-  });
+    const {
+      name,
+      username,
+      email,
+      password,
+      role
+    } = this.registerForm.getRawValue();
 
-}
+    this.authService.register({
+
+      name: name!,
+      username: username!,
+      email: email!,
+      password: password!,
+      role: role!
+
+    }).subscribe({
+
+      next: (response) => {
+
+        this.snackBar.open(
+          response.message,
+          'Close',
+          {
+            duration: 3000,
+            horizontalPosition: 'right',
+            verticalPosition: 'top'
+          }
+        );
+
+        this.router.navigate(['/login']);
+
+      },
+
+      error: (error) => {
+
+        this.snackBar.open(
+          error.error?.message || 'Registration failed',
+          'Close',
+          {
+            duration: 3000,
+            horizontalPosition: 'right',
+            verticalPosition: 'top'
+          }
+        );
+
+      }
+
+    });
+
+  }
+
 }

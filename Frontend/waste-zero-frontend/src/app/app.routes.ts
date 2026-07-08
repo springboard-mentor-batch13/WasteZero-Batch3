@@ -4,11 +4,12 @@ import { Login } from './features/auth/login/login';
 import { Register } from './features/auth/register/register';
 import { Dashboard } from './features/dashboard/dashboard';
 import { Profile } from './features/profile/profile';
-import { ChangePassword } from './features/change-password/change-password';
+import { Layout } from './features/layout/layout';
 
 import { authGuard } from './core/guards/auth.guard';
 
 export const routes: Routes = [
+
   {
     path: '',
     redirectTo: 'login',
@@ -26,19 +27,24 @@ export const routes: Routes = [
   },
 
   {
-    path: 'dashboard',
-    component: Dashboard,
-    canActivate: [authGuard]
-  },
+    path: '',
+    component: Layout,
+    canActivate: [authGuard],
+    children: [
 
-  {
-    path: 'profile',
-    component: Profile,
-    canActivate: [authGuard]
-  },
-  {
-  path: 'change-password',
-  component: ChangePassword,
-  canActivate: [authGuard]
-}
+      {
+        path: 'dashboard',
+        component: Dashboard
+      },
+
+      {
+        path: 'profile',
+        component: Profile
+      },
+
+     
+
+    ]
+  }
+
 ];

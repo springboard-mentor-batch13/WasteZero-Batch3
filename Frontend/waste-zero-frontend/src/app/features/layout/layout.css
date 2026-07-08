@@ -1,0 +1,235 @@
+/* ==========================
+   Dashboard Layout
+========================== */
+
+.dashboard{
+    display:flex;
+    min-height:100vh;
+    background:#eef5fb;
+}
+
+/* ==========================
+   Sidebar
+========================== */
+
+.sidebar{
+    width:260px;
+    background:#1565c0;
+    color:#fff;
+    position:fixed;
+    top:0;
+    left:0;
+    bottom:0;
+    overflow-y:auto;
+    padding:25px 20px;
+    box-shadow:2px 0 12px rgba(0,0,0,.12);
+}
+
+/* Scrollbar */
+
+.sidebar::-webkit-scrollbar{
+    width:6px;
+}
+
+.sidebar::-webkit-scrollbar-thumb{
+    background:rgba(255,255,255,.25);
+    border-radius:10px;
+}
+
+/* ==========================
+   Logo
+========================== */
+
+.logo{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    margin-bottom:30px;
+}
+
+.logo-icon{
+    font-size:28px; /* Balanced with text */
+}
+
+.logo-text{
+    font-size:24px; /* Scaled down from 32px for a modern look */
+    font-weight:700;
+}
+
+/* ==========================
+   User Info (Fixed to Horizontal Layout)
+========================== */
+
+.user-info{
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 30px;
+}
+
+.avatar{
+    width:42px;
+    height:42px;
+    border-radius:50%;
+    background:#fff;
+    color:#1565c0;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    font-size:18px;
+    font-weight:700;
+    flex-shrink: 0; /* Prevents avatar from shrinking */
+}
+
+.user-info h4{
+    margin:0;
+    font-size:16px; /* Scaled down from 24px */
+    font-weight:600;
+    line-height: 1.2;
+}
+
+.user-info span{
+    color:#d9e8ff;
+    font-size:13px;
+    opacity: 0.9;
+}
+
+/* ==========================
+   Titles
+========================== */
+
+.menu-title{
+    margin:25px 0 10px 4px;
+    font-size:11px;
+    letter-spacing:1px;
+    font-weight:700;
+    color:#cfe2ff;
+    text-transform: uppercase;
+    opacity: 0.7;
+}
+
+/* ==========================
+   Menu
+========================== */
+
+.menu{
+    list-style:none;
+    margin:0;
+    padding:0;
+}
+
+.menu li{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    padding:10px 14px; /* Slightly tighter padding for better spacing */
+    margin-bottom:4px;
+    border-radius:10px;
+    cursor:pointer;
+    transition:.25s;
+    font-size:14px; /* Standard cleaner text height */
+    font-weight:500;
+}
+
+.menu li:hover{
+    background:rgba(255,255,255,.12);
+}
+
+.menu li.active{
+    background:#fff;
+    color:#1565c0;
+    font-weight:600;
+}
+
+.menu li span{
+    flex:1;
+}
+
+/* ==========================
+   Dark Mode
+========================== */
+
+.dark-mode{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-top:30px;
+    padding:18px 4px 0;
+    border-top:1px solid rgba(255,255,255,.15);
+    font-size:14px;
+}
+
+/* ==========================
+   Logout
+========================== */
+
+.logout-btn{
+    width:100%;
+    margin-top:20px;
+    padding:11px;
+    border:none;
+    border-radius:10px;
+    background:#fff;
+    color:#1565c0;
+    font-size:14px;
+    font-weight:600;
+    cursor:pointer;
+    transition:.25s;
+}
+
+.logout-btn:hover{
+    background:#f2f7ff;
+}
+
+/* ==========================
+   Main Content
+========================== */
+
+.main-content{
+    flex:1;
+    margin-left:260px;
+    padding:35px;
+}
+
+/* ==========================
+   Responsive
+========================== */
+
+@media(max-width:900px){
+
+.sidebar{
+    width:220px;
+}
+
+.main-content{
+    margin-left:220px;
+    padding:25px;
+}
+
+.logo-text{
+    font-size:20px;
+}
+
+.user-info h4{
+    font-size:15px;
+}
+
+}
+
+@media(max-width:768px){
+
+.dashboard{
+    flex-direction:column;
+}
+
+.sidebar{
+    position:relative;
+    width:100%;
+    height:auto;
+}
+
+.main-content{
+    margin-left:0;
+}
+
+}

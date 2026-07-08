@@ -1,0 +1,144 @@
+<div class="dashboard">
+
+  <aside class="sidebar">
+
+    <!-- Logo -->
+    <div class="logo">
+      <span class="logo-icon">♻</span>
+      <span class="logo-text">WasteZero</span>
+    </div>
+
+    <!-- User -->
+    <div class="user-info">
+
+      <div class="avatar">
+        {{ authService.getCurrentUser()?.name?.charAt(0) }}
+      </div>
+
+      <div>
+        <h4>{{ authService.getCurrentUser()?.name }}</h4>
+
+        <span>
+          {{ authService.getCurrentUser()?.role | titlecase }}
+        </span>
+      </div>
+
+    </div>
+
+    <!-- ================= MAIN MENU ================= -->
+
+    <p class="menu-title">
+      MAIN MENU
+    </p>
+
+    <ul class="menu">
+
+      <li routerLink="/dashboard" routerLinkActive="active">
+        📊 <span>Dashboard</span>
+      </li>
+
+      @if(authService.getCurrentUser()?.role === 'volunteer'){
+
+        <li>
+          📅 <span>Schedule Pickup</span>
+        </li>
+
+        <li>
+          🌱 <span>My Impact</span>
+        </li>
+
+        <li>
+          💬 <span>Messages</span>
+        </li>
+
+      }
+
+      @if(authService.getCurrentUser()?.role === 'ngo'){
+
+        <li>
+          ➕ <span>Create Opportunity</span>
+        </li>
+
+        <li>
+          💼 <span>Manage Opportunities</span>
+        </li>
+
+        <li>
+          💬 <span>Messages</span>
+        </li>
+
+      }
+
+      @if(authService.getCurrentUser()?.role === 'admin'){
+
+        <li>
+          👥 <span>Users</span>
+        </li>
+
+        <li>
+          📊 <span>Reports</span>
+        </li>
+
+        <li>
+          🛡️ <span>Admin Panel</span>
+        </li>
+
+      }
+
+    </ul>
+
+    <!-- ================= SETTINGS ================= -->
+
+    <p class="menu-title">
+      SETTINGS
+    </p>
+
+    <ul class="menu">
+
+      <li routerLink="/profile" routerLinkActive="active">
+        👤 <span>My Profile</span>
+      </li>
+
+      <li>
+        ⚙️ <span>Settings</span>
+      </li>
+
+      <li>
+        ❓ <span>Help & Support</span>
+      </li>
+
+    </ul>
+
+    <!-- ================= DARK MODE ================= -->
+
+    <div class="dark-mode">
+
+      <span>🌙 Dark Mode</span>
+
+      <input
+        type="checkbox"
+        disabled>
+
+    </div>
+
+    <!-- ================= LOGOUT ================= -->
+
+    <button
+      class="logout-btn"
+      (click)="logout()">
+
+      Sign Out
+
+    </button>
+
+  </aside>
+
+  <!-- ================= CONTENT ================= -->
+
+  <main class="main-content">
+
+    <router-outlet></router-outlet>
+
+  </main>
+
+</div>

@@ -1,100 +1,243 @@
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
+/* ===========================
+   PAGE
+=========================== */
+
+.page-container{
+    padding:30px;
 }
 
-.dashboard {
-    display: flex;
-    min-height: 100vh;
-    font-family: Arial, Helvetica, sans-serif;
+.page-header{
+    margin-bottom:20px;
 }
 
-.sidebar {
-    width: 250px;
-    background: #1f2937;
-    color: white;
-    padding: 20px;
+.page-header h1{
+    font-size:38px;
+    color:#1565c0;
+    margin-bottom:8px;
 }
 
-.logo {
-    text-align: center;
-    margin-bottom: 30px;
+.page-header p{
+    color:#666;
+    font-size:16px;
 }
 
-.menu {
-    list-style: none;
+/* ===========================
+   TABS
+=========================== */
+
+.tabs{
+    display:flex;
+    gap:12px;
+    margin-bottom:25px;
 }
 
-.menu li {
-    padding: 15px;
-    margin-bottom: 10px;
-    border-radius: 8px;
-    cursor: pointer;
-    transition: 0.3s;
+.tab-btn{
+
+    padding:12px 28px;
+    border:none;
+    border-radius:10px;
+    background:#e3f2fd;
+    color:#1565c0;
+    font-size:15px;
+    font-weight:600;
+    cursor:pointer;
+    transition:.3s;
+
 }
 
-.menu li:hover,
-.menu li.active {
-    background: #374151;
+.tab-btn:hover{
+
+    background:#bbdefb;
+
 }
 
-.main-content {
-    flex: 1;
-    padding: 40px;
-    background: #f5f5f5;
+.tab-btn.active{
+
+    background:#1565c0;
+    color:#fff;
+
 }
 
-.topbar {
-    margin-bottom: 30px;
+/* ===========================
+   CARD
+=========================== */
+
+.profile-card{
+
+    background:#fff;
+    border-radius:18px;
+    padding:35px;
+    box-shadow:0 8px 24px rgba(0,0,0,.08);
+    max-width:950px;
+
 }
 
-.topbar h2 {
-    margin-bottom: 8px;
+/* ===========================
+   FORM
+=========================== */
+
+.form-grid{
+
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:22px;
+
 }
 
-form {
-    background: white;
-    padding: 30px;
-    border-radius: 12px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+.form-group{
+
+    display:flex;
+    flex-direction:column;
+    margin-bottom:22px;
+
 }
 
-.form-group {
-    margin-bottom: 20px;
+.form-label{
+
+    font-size:15px;
+    font-weight:600;
+    color:#333;
+    margin-bottom:8px;
+
 }
 
-label {
-    display: block;
-    margin-bottom: 8px;
-    font-weight: 600;
+.form-input,
+.form-textarea{
+
+    width:100%;
+    padding:13px 15px;
+    border:1px solid #d7dce3;
+    border-radius:10px;
+    font-size:15px;
+    background:#fff;
+    transition:.3s;
+    box-sizing:border-box;
+
 }
 
-input,
-textarea {
-    width: 100%;
-    padding: 12px;
-    border: 1px solid #d1d5db;
-    border-radius: 8px;
-    outline: none;
-    font-size: 15px;
+.form-input:focus,
+.form-textarea:focus{
+
+    outline:none;
+    border-color:#1565c0;
+    box-shadow:0 0 0 4px rgba(21,101,192,.15);
+
 }
 
-input:focus,
-textarea:focus {
-    border-color: #22c55e;
+.form-input[readonly]{
+
+    background:#f4f6f8;
+    cursor:not-allowed;
+
 }
 
-button {
-    background: #22c55e;
-    color: white;
-    border: none;
-    padding: 12px 30px;
-    border-radius: 8px;
-    cursor: pointer;
-    font-size: 16px;
+.form-textarea{
+
+    resize:vertical;
+    min-height:140px;
+
 }
 
-button:hover {
-    background: #16a34a;
+.form-helper{
+
+    color:#666;
+    margin-top:6px;
+    font-size:13px;
+
+}
+
+.form-error{
+
+    color:#e53935;
+    font-size:13px;
+    margin-top:5px;
+
+}
+
+/* ===========================
+   BUTTON
+=========================== */
+
+.form-actions{
+
+    display:flex;
+    justify-content:flex-end;
+    margin-top:20px;
+
+}
+
+.btn-save{
+
+    background:#1565c0;
+    color:#fff;
+    border:none;
+    padding:13px 30px;
+    border-radius:10px;
+    font-size:15px;
+    font-weight:600;
+    cursor:pointer;
+    transition:.3s;
+
+}
+
+.btn-save:hover{
+
+    background:#0d47a1;
+
+}
+
+/* ===========================
+   RESPONSIVE
+=========================== */
+
+@media(max-width:768px){
+
+.page-container{
+
+padding:20px;
+
+}
+
+.form-grid{
+
+grid-template-columns:1fr;
+
+}
+
+.profile-card{
+
+padding:22px;
+
+}
+
+.page-header h1{
+
+font-size:30px;
+
+}
+
+.tabs{
+
+flex-direction:column;
+
+}
+
+.tab-btn{
+
+width:100%;
+
+}
+
+.form-actions{
+
+justify-content:stretch;
+
+}
+
+.btn-save{
+
+width:100%;
+
+}
+
 }

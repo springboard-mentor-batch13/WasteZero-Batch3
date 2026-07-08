@@ -12,6 +12,11 @@ import {
 import { Router } from '@angular/router';
 import { AuthService } from '../../core/services/auth.service';
 
+import {
+  MatSnackBar,
+  MatSnackBarModule
+} from '@angular/material/snack-bar';
+
 const passwordMatchValidator: ValidatorFn = (
   group: AbstractControl
 ): ValidationErrors | null => {
@@ -30,7 +35,8 @@ const passwordMatchValidator: ValidatorFn = (
   standalone: true,
   imports: [
     CommonModule,
-    ReactiveFormsModule
+    ReactiveFormsModule,
+    MatSnackBarModule
   ],
   templateUrl: './change-password.html',
   styleUrl: './change-password.css'
@@ -40,6 +46,7 @@ export class ChangePassword {
   private fb = inject(FormBuilder);
   private authService = inject(AuthService);
   private router = inject(Router);
+  private snackBar = inject(MatSnackBar);
 
   passwordForm = this.fb.group({
 
@@ -88,7 +95,15 @@ export class ChangePassword {
 
       next: (response) => {
 
-        alert(response.message);
+        this.snackBar.open(
+          response.message,
+          'Close',
+          {
+            duration: 3000,
+            horizontalPosition: 'right',
+            verticalPosition: 'top'
+          }
+        );
 
         this.passwordForm.reset();
 
@@ -98,9 +113,14 @@ export class ChangePassword {
 
       error: (error) => {
 
-        alert(
-          error.error?.message ||
-          'Password update failed'
+        this.snackBar.open(
+          error.error?.message || 'Password update failed',
+          'Close',
+          {
+            duration: 3000,
+            horizontalPosition: 'right',
+            verticalPosition: 'top'
+          }
         );
 
       }
