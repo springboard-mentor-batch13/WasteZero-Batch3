@@ -1,9 +1,70 @@
-const express = require('express');
-const router = express.Router();
-const { registerUser, loginUser } = require('../controllers/auth.controllers');
+const express = require("express");
 
-// Map fields directly to the controllers
-router.post('/register', registerUser);
-router.post('/login', loginUser);
+const router = express.Router();
+
+const {
+  loginLimiter,
+  otpLimiter,
+} = require("../middlewares/rateLimiter.middleware");
+
+const {
+  registerValidation,
+  loginValidation,
+  validate,
+} = require("../validations/auth.validation");
+
+const {
+  registerUser,
+  loginUser,
+  verifyUserOtp,
+  resendOtp,
+  forgotPassword,
+  resetPassword,
+} = require("../controllers/auth.controllers");
+
+// Register
+router.post(
+  "/register",
+  registerValidation,
+  validate,
+  registerUser
+);
+
+// Login
+router.post(
+  "/login",
+  loginLimiter,
+  loginValidation,
+  validate,
+  loginUser
+);
+
+// OTP Verification
+router.post(
+  "/verify-otp",
+  otpLimiter,
+  verifyUserOtp
+);
+
+// Resend OTP
+router.post(
+  "/resend-otp",
+  otpLimiter,
+  resendOtp
+);
+
+// Forgot Password
+router.post(
+  "/forgot-password",
+  otpLimiter,
+  forgotPassword
+);
+
+// Reset Password
+router.post(
+  "/reset-password",
+  otpLimiter,
+  resetPassword
+);
 
 module.exports = router;
