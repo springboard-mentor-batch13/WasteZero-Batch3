@@ -75,38 +75,41 @@ export class Register {
  onRegister() {
 
   if (this.registerForm.invalid) {
-
     this.registerForm.markAllAsTouched();
     return;
-
   }
 
-  this.authService.register(this.registerForm.getRawValue()).subscribe({
+  const {
+    name,
+    username,
+    email,
+    password,
+    role
+  } = this.registerForm.getRawValue();
 
-    next: (response: any) => {
+  this.authService.register({
+    name: name!,
+    username: username!,
+    email: email!,
+    password: password!,
+    role: role!
+  }).subscribe({
 
-      console.log(response);
+    next: (response) => {
 
-      alert('Registration Successful');
+      alert(response.message);
 
-      this.router.navigate(['/login']);
+      this.router.navigate(['/login']);;
 
     },
 
-    error: (error: any) => {
+    error: (error) => {
 
-      console.error(error);
-
-      if (error.error?.message) {
-        alert(error.error.message);
-      } else {
-        alert('Registration Failed');
-      }
+      alert(error.error?.message || 'Registration Failed');
 
     }
 
   });
 
 }
-
 }

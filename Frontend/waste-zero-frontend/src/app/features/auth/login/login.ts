@@ -7,6 +7,8 @@ import {
 } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 
+import { AuthService } from '../../../core/services/auth.service';
+
 @Component({
   selector: 'app-login',
   standalone: true,
@@ -22,6 +24,7 @@ export class Login {
 
   private fb = inject(FormBuilder);
   private router = inject(Router);
+  private authService = inject(AuthService);
 
   loginForm = this.fb.group({
     username: ['', Validators.required],
@@ -35,9 +38,21 @@ export class Login {
       return;
     }
 
-    alert('Login Successful');
+    this.authService.login({
+      username: this.loginForm.value.username!,
+      password: this.loginForm.value.password!
+    }).subscribe({
 
-    this.router.navigate(['/dashboard']);
+      next: (response) => {
+        alert(response.message);
+        this.router.navigate(['/dashboard']);
+      },
+
+      error: (error) => {
+        alert(error.error?.message || 'Login Failed');
+      }
+
+    });
 
   }
 
