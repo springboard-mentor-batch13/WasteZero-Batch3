@@ -3,48 +3,37 @@ const { body, validationResult } = require("express-validator");
 const registerValidation = [
   body("name")
     .trim()
-    .notEmpty()
-    .isLength({min:2,max:50})
-    .matches(/^[A-Za-z ]+$/)
-    .withMessage("Name is required"),
+    .notEmpty().withMessage("Name is required").bail()
+    .isLength({ min: 2, max: 50 }).withMessage("Name must be between 2 and 50 characters").bail()
+    .matches(/^[A-Za-z ]+$/).withMessage("Name must contain only letters and spaces"),
 
   body("username")
     .trim()
-    .notEmpty()
-    .isLength({min:3,max:20})
-    .matches(/^[a-zA-Z0-9_]+$/)
-    .withMessage("Username is required"),
+    .notEmpty().withMessage("Username is required").bail()
+    .isLength({ min: 3, max: 20 }).withMessage("Username must be between 3 and 20 characters").bail()
+    .matches(/^[a-zA-Z0-9_]+$/).withMessage("Username can only contain letters, numbers, and underscores"),
 
   body("email")
     .trim()
-    .isEmail()
-    .withMessage("Please enter a valid email"),
+    .notEmpty().withMessage("Email is required").bail()
+    .isEmail().withMessage("Please enter a valid email"),
 
   body("password")
-    .isLength({ min: 8 })
-    .withMessage("Password must be at least 8 characters")
-    .matches(
-      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&]).{8,}$/
-      )
-      ];
+    .notEmpty().withMessage("Password is required").bail()
+    .isLength({ min: 8 }).withMessage("Password must be at least 8 characters").bail()
+    .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&]).{8,}$/)
+    .withMessage("Password must contain uppercase, lowercase, number, and special character"),
+];
 
 const loginValidation = [
   body("identifier")
     .trim()
     .notEmpty()
-    .withMessage("Username or email is required")
-    .custom((value) => {
-      const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
-      const isUsername = /^[a-zA-Z0-9_]{3,20}$/.test(value);
-      if (!isEmail && !isUsername) {
-        throw new Error("Enter a valid username or email address");
-      }
-      return true;
-    }),
+    .withMessage("Username or email is required"),
 
   body("password")
     .notEmpty()
-    .withMessage("Password is required")
+    .withMessage("Password is required"),
 ];
 
 const validate = (req, res, next) => {
