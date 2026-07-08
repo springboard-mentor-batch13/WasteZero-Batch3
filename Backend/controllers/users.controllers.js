@@ -37,11 +37,7 @@ const getUserProfile = async (req, res) => {
 const updateUserProfile = async (req, res) => {
     try {
 
-        console.log("Step 1");
-
         const user = await User.findById(req.user.id);
-
-        console.log("Step 2");
 
         if (!user) {
             return res.status(404).json({
@@ -50,19 +46,14 @@ const updateUserProfile = async (req, res) => {
             });
         }
 
-        console.log("Step 3");
 
         user.name = req.body.name || user.name;
         user.location = req.body.location || user.location;
         user.skills = req.body.skills || user.skills;
         user.bio = req.body.bio || user.bio;
 
-        console.log("Step 4");
 
         const updatedUser = await user.save();
-
-        console.log("Step 5");
-
         return res.status(200).json({
             success: true,
             user: updatedUser
@@ -86,8 +77,6 @@ const updateUserProfile = async (req, res) => {
 const changePassword = async (req, res) => {
     try {
         const { currentPassword, newPassword } = req.body;
-        
-        // Explicitly load selection string with password hash mapping
         const user = await User.findById(req.user.id).select('+password');
 
         if (!user) {
@@ -100,7 +89,6 @@ const changePassword = async (req, res) => {
             return res.status(400).json({ success: false, message: 'Current password is incorrect' });
         }
 
-       
         user.password = newPassword;
         await user.save();
 

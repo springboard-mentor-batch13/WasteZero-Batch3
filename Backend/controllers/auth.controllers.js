@@ -60,11 +60,8 @@ const registerUser = async (req, res) => {
 const loginUser = async (req, res) => {
     try {
         const { username, password } = req.body;
-
-       
         const user = await User.findOne({ username }).select('+password');
         if (!user) {
-            
             return res.status(401).json({
                 success: false,
                 message: 'Invalid username or password'
