@@ -1,0 +1,74 @@
+<div class="otp-page">
+  <div class="otp-card">
+
+    <!-- Brand -->
+    <div class="card-brand">
+      <span class="material-icons brand-icon">recycling</span>
+      <span class="brand-name">WasteZero</span>
+    </div>
+
+    <!-- Icon -->
+    <div class="card-hero-icon">
+      <span class="material-icons">mark_email_unread</span>
+    </div>
+
+    <h2 class="card-title">Verify Your Email</h2>
+    <p class="card-desc">
+      Enter the 6-digit OTP sent to your registered email address.
+    </p>
+
+    <form [formGroup]="otpForm" (ngSubmit)="verifyOtp()">
+
+      <!-- Email (read-only) -->
+      <div class="field-group">
+        <label class="field-label">Email</label>
+        <div class="input-wrap">
+          <span class="material-icons input-icon">mail_outline</span>
+          <input
+            type="email"
+            class="field-input readonly-input"
+            [value]="email"
+            readonly>
+        </div>
+      </div>
+
+      <!-- OTP -->
+      <div class="field-group">
+        <label class="field-label">One-Time Code</label>
+        <div class="input-wrap">
+          <span class="material-icons input-icon">pin</span>
+          <input
+            type="text"
+            maxlength="6"
+            class="field-input otp-input"
+            placeholder="• • • • • •"
+            formControlName="otp">
+        </div>
+        @if(otpForm.get('otp')?.touched && otpForm.get('otp')?.hasError('required')){
+        <div class="field-error">OTP is required.</div>
+        }
+        @if(otpForm.get('otp')?.touched && otpForm.get('otp')?.hasError('minlength')){
+        <div class="field-error">OTP must be 6 digits.</div>
+        }
+      </div>
+
+      <button class="submit-btn" type="submit" [disabled]="loading">
+        @if(!loading){
+          <span class="material-icons btn-icon">verified</span>
+          Verify OTP
+        }
+        @if(loading){
+          <span class="material-icons btn-icon spinning">sync</span>
+          Verifying...
+        }
+      </button>
+
+    </form>
+
+    <div class="card-footer-link">
+      Already verified?
+      <a routerLink="/login" class="text-link">Login</a>
+    </div>
+
+  </div>
+</div>

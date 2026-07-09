@@ -1,0 +1,206 @@
+<div class="dashboard-shell">
+
+  <!-- ===== SIDEBAR ===== -->
+  <aside class="sidebar">
+
+    <!-- Logo -->
+    <div class="logo">
+      <span class="material-icons logo-icon">recycling</span>
+      <span class="logo-text">WasteZero</span>
+    </div>
+
+    <!-- User Info -->
+    <div class="user-info">
+      <div class="avatar">
+        {{ authService.getCurrentUser()?.name?.charAt(0) }}
+      </div>
+      <div class="user-copy">
+        <h4>{{ authService.getCurrentUser()?.name }}</h4>
+        <span class="role-tag">{{ authService.getCurrentUser()?.role | titlecase }}</span>
+      </div>
+    </div>
+
+    <!-- Main Menu -->
+    <p class="menu-title">Main Menu</p>
+    <ul class="menu">
+      <li routerLink="/dashboard" routerLinkActive="active">
+        <span class="material-icons menu-icon">dashboard</span>
+        <span>Dashboard</span>
+      </li>
+      <li class="menu-item-disabled">
+        <span class="material-icons menu-icon">local_shipping</span>
+        <span>Schedule Pickup</span>
+        <span class="coming-soon-tag">Soon</span>
+      </li>
+      <li class="menu-item-disabled">
+        <span class="material-icons menu-icon">volunteer_activism</span>
+        <span>Opportunities</span>
+        <span class="coming-soon-tag">Soon</span>
+      </li>
+      <li class="menu-item-disabled">
+        <span class="material-icons menu-icon">chat_bubble_outline</span>
+        <span>Messages</span>
+        <span class="coming-soon-tag">Soon</span>
+      </li>
+      <li class="menu-item-disabled">
+        <span class="material-icons menu-icon">eco</span>
+        <span>My Impact</span>
+        <span class="coming-soon-tag">Soon</span>
+      </li>
+    </ul>
+
+    <!-- Settings Menu -->
+    <p class="menu-title">Settings</p>
+    <ul class="menu">
+      <li routerLink="/profile" routerLinkActive="active">
+        <span class="material-icons menu-icon">person_outline</span>
+        <span>My Profile</span>
+      </li>
+      <li class="menu-item-disabled">
+        <span class="material-icons menu-icon">settings</span>
+        <span>Settings</span>
+        <span class="coming-soon-tag">Soon</span>
+      </li>
+      <li class="menu-item-disabled">
+        <span class="material-icons menu-icon">help_outline</span>
+        <span>Help &amp; Support</span>
+      </li>
+
+      @if(authService.getCurrentUser()?.role === 'admin'){
+      <li class="menu-item-disabled">
+        <span class="material-icons menu-icon">admin_panel_settings</span>
+        <span>Admin Panel</span>
+        <span class="coming-soon-tag">Soon</span>
+      </li>
+      }
+    </ul>
+
+    <!-- Footer -->
+    <div class="sidebar-footer">
+      <div class="dark-mode-row">
+        <div class="dark-mode-label">
+          <span class="material-icons dm-icon">dark_mode</span>
+          <span>Dark Mode</span>
+        </div>
+        <label class="toggle-switch">
+          <input type="checkbox" disabled>
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+
+      <button class="logout-btn" (click)="logout()">
+        <span class="material-icons">logout</span>
+        Sign Out
+      </button>
+    </div>
+
+  </aside>
+
+  <!-- ===== CONTENT SHELL ===== -->
+  <div class="content-shell">
+
+    <header class="topbar">
+      <label class="search-bar" for="global-search">
+        <span class="material-icons search-icon">search</span>
+        <input
+          id="global-search"
+          type="text"
+          placeholder="Search pickups, opportunities...">
+      </label>
+
+      <div class="topbar-actions">
+
+        <!-- ── Notification Bell ── -->
+        <div class="dropdown-wrapper">
+          <button
+            type="button"
+            class="icon-btn"
+            [class.active]="notificationsOpen"
+            (click)="toggleNotifications($event)"
+            aria-label="Notifications"
+            aria-haspopup="true"
+            [attr.aria-expanded]="notificationsOpen">
+            <span class="material-icons">notifications_none</span>
+          </button>
+
+          @if(notificationsOpen){
+          <div
+            class="notifications-dropdown"
+            (click)="$event.stopPropagation()"
+            role="dialog"
+            aria-label="Notifications panel">
+            <div class="dropdown-panel-header">
+              <span class="material-icons dropdown-header-icon">notifications</span>
+              <h4>Notifications</h4>
+            </div>
+            <div class="notifications-empty">
+              <span class="material-icons empty-bell-icon">notifications_off</span>
+              <p>No Notifications Yet</p>
+              <small>You'll see updates here when they arrive.</small>
+            </div>
+          </div>
+          }
+        </div>
+
+        <!-- ── Profile Dropdown ── -->
+        <div class="dropdown-wrapper">
+          <button
+            type="button"
+            class="profile-pill"
+            [class.active]="profileDropdownOpen"
+            (click)="toggleProfileDropdown($event)"
+            aria-haspopup="true"
+            [attr.aria-expanded]="profileDropdownOpen">
+            <span class="profile-pill-avatar">
+              {{ authService.getCurrentUser()?.name?.charAt(0) }}
+            </span>
+            <span class="material-icons arrow-icon" [class.rotated]="profileDropdownOpen">expand_more</span>
+          </button>
+
+          @if(profileDropdownOpen){
+          <div
+            class="profile-dropdown"
+            (click)="$event.stopPropagation()"
+            role="dialog"
+            aria-label="User menu">
+
+            <div class="profile-dropdown-user">
+              <div class="profile-dropdown-avatar">
+                {{ authService.getCurrentUser()?.name?.charAt(0) }}
+              </div>
+              <div class="profile-dropdown-info">
+                <span class="profile-dropdown-name">
+                  {{ authService.getCurrentUser()?.name }}
+                </span>
+                <span class="profile-dropdown-email">
+                  {{ authService.getCurrentUser()?.email }}
+                </span>
+              </div>
+            </div>
+
+            <div class="profile-dropdown-role-row">
+              <span class="profile-dropdown-role">
+                {{ authService.getCurrentUser()?.role | titlecase }}
+              </span>
+            </div>
+
+            <div class="dropdown-divider"></div>
+
+            <button class="dropdown-signout-btn" (click)="logout()">
+              <span class="material-icons">logout</span>
+              Sign Out
+            </button>
+          </div>
+          }
+        </div>
+
+      </div>
+    </header>
+
+    <main class="main-content">
+      <router-outlet></router-outlet>
+    </main>
+
+  </div>
+
+</div>
