@@ -12,7 +12,8 @@ const verifyOtp = require("../utils/verifyOtp");
 const registerUser = async (req, res) => {
   try {
     const { name, username, email, password, role } = req.body;
-
+    const allowedRoles = ["volunteer", "ngo"];
+    const userRole = allowedRoles.includes(role) ? role : "volunteer";
     // Validate password
     if (!passwordValidator(password)) {
       return res.status(400).json({
@@ -43,7 +44,7 @@ const registerUser = async (req, res) => {
       username: username.trim().toLowerCase(),
       email: email.trim().toLowerCase(),
       password,
-      role,
+      role: userRole,
       isVerified: false,
     });
 

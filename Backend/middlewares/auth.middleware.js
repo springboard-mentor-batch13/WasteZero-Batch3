@@ -27,8 +27,8 @@ const protect = async (req, res, next) => {
     // Verify JWT
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    // Get User
-    const user = await User.findById(decoded.id);
+    // Find User
+    const user = await User.findById(decoded.id).select("-password");
 
     if (!user) {
       return res.status(401).json({
@@ -40,13 +40,26 @@ const protect = async (req, res, next) => {
     req.user = user;
 
     next();
-
   } catch (error) {
     console.error("Authentication Error:", error);
 
-    return res.status(401).json({
+    if (error.name === "TokenExpiredError") {
+      return res.status(401).json({
+        success: false,
+        message: "Token has expired.",
+      });
+    }
+
+    if (error.name === "JsonWebTokenError") {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid token.",
+      });
+    }
+
+    return res.status(500).json({
       success: false,
-      message: "Invalid or expired token.",
+      message: "Authentication failed.",
     });
   }
 };
@@ -57,7 +70,6 @@ const protect = async (req, res, next) => {
 
 const authorize = (...roles) => {
   return (req, res, next) => {
-
     if (!req.user) {
       return res.status(401).json({
         success: false,

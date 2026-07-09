@@ -11,13 +11,13 @@ const {
   changePasswordWithOtp,
 } = require("../controllers/users.controllers");
 
-const { protect } = require("../middlewares/auth.middleware");
+// Import BOTH protect and authorize
+const {
+  protect,
+  authorize,
+} = require("../middlewares/auth.middleware");
 
-console.log(protect);
-console.log(getUserProfile);
-console.log(updateUserProfile);
-
-// Import validation middleware
+// Validation
 const {
   updateProfileValidation,
   validate,
@@ -27,34 +27,41 @@ const {
    User Profile Routes
 ============================================ */
 
-// Get Logged-in User Profile
-router.get("/profile", protect, getUserProfile);
+// All logged-in users
+router.get(
+  "/profile",
+  protect,
+  authorize("volunteer", "ngo", "admin"),
+  getUserProfile
+);
 
-// Update Logged-in User Profile
+// All logged-in users
 router.put(
   "/profile",
   protect,
+  authorize("volunteer", "ngo", "admin"),
   updateProfileValidation,
   validate,
   updateUserProfile
 );
 
 /* ============================================
-   Change Password with OTP
+   Change Password
 ============================================ */
 
-// Send OTP to registered email
+// All logged-in users
 router.post(
   "/change-password/send-otp",
   protect,
+  authorize("volunteer", "ngo", "admin"),
   otpLimiter,
   sendChangePasswordOtp
 );
 
-// Verify OTP and change password
 router.put(
   "/change-password/verify-otp",
   protect,
+  authorize("volunteer", "ngo", "admin"),
   otpLimiter,
   changePasswordWithOtp
 );

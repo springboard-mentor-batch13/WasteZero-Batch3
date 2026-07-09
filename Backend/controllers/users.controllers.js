@@ -92,7 +92,21 @@ const updateUserProfile = async (req, res) => {
     }
 
     if (skills !== undefined) {
-      user.skills = skills;
+
+      const uniqueSkills = [...new Set(
+        skills
+          .map(skill => skill.trim())
+          .filter(skill => skill !== "")
+      )];
+
+      if (uniqueSkills.length > 10) {
+        return res.status(400).json({
+          success: false,
+          message: "You can add a maximum of 10 skills."
+        });
+      }
+
+      user.skills = uniqueSkills;
     }
 
     if (typeof bio === "string") {

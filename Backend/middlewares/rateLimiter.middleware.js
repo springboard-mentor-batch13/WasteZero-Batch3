@@ -13,7 +13,7 @@ const loginLimiter = rateLimit({
 // OTP limiter
 const otpLimiter = rateLimit({
   windowMs: 10 * 60 * 1000, // 10 minutes
-  max: 5,
+  max: 10,
   message: {
     success: false,
     message: "Too many OTP requests. Please try again after 10 minutes.",
