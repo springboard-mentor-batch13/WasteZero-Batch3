@@ -4,7 +4,7 @@
 
     <!-- Logo -->
     <div class="logo">
-      <span class="logo-icon">♻</span>
+      <span class="logo-icon"> <i class="bi bi-recycle"></i> </span>
       <span class="logo-text">WasteZero</span>
     </div>
 
@@ -34,21 +34,21 @@
     <ul class="menu">
 
       <li routerLink="/dashboard" routerLinkActive="active">
-        📊 <span>Dashboard</span>
+       <i class="bi bi-grid-fill"></i> <span>Dashboard</span>
       </li>
 
       @if(authService.getCurrentUser()?.role === 'volunteer'){
 
         <li>
-          📅 <span>Schedule Pickup</span>
+          <i class="bi bi-calendar"></i> <span>Schedule Pickup</span>
         </li>
 
         <li>
-          🌱 <span>My Impact</span>
+            <i class="bi bi-award-fill"></i>  <span>My Impact</span>
         </li>
 
         <li>
-          💬 <span>Messages</span>
+          <i class="bi bi-chat-square-text-fill"></i> <span>Messages</span>
         </li>
 
       }
@@ -56,15 +56,15 @@
       @if(authService.getCurrentUser()?.role === 'ngo'){
 
         <li>
-          ➕ <span>Create Opportunity</span>
+           <i class="bi bi-person-raised-hand"></i> <span>Create Opportunity</span>
         </li>
 
         <li>
-          💼 <span>Manage Opportunities</span>
+          <i class="bi bi-kanban-fill"></i> <span>Manage Opportunities</span>
         </li>
 
         <li>
-          💬 <span>Messages</span>
+          <i class="bi bi-chat-dots-fill"></i> <span>Messages</span>
         </li>
 
       }
@@ -72,15 +72,15 @@
       @if(authService.getCurrentUser()?.role === 'admin'){
 
         <li>
-          👥 <span>Users</span>
+           <span>Users</span>
         </li>
 
         <li>
-          📊 <span>Reports</span>
+           <span>Reports</span>
         </li>
 
         <li>
-          🛡️ <span>Admin Panel</span>
+           <span>Admin Panel</span>
         </li>
 
       }
@@ -96,15 +96,15 @@
     <ul class="menu">
 
       <li routerLink="/profile" routerLinkActive="active">
-        👤 <span>My Profile</span>
+        <i class="bi bi-person-fill"></i> <span>My Profile</span>
       </li>
 
       <li>
-        ⚙️ <span>Settings</span>
+        <i class="bi bi-gear-fill"></i> <span>Settings</span>
       </li>
 
       <li>
-        ❓ <span>Help & Support</span>
+       <i class="bi bi-question-circle-fill"></i> <span>Help & Support</span>
       </li>
 
     </ul>
@@ -113,7 +113,7 @@
 
     <div class="dark-mode">
 
-      <span>🌙 Dark Mode</span>
+      <span> Dark Mode</span>
 
       <input
         type="checkbox"
