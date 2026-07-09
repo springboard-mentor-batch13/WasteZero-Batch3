@@ -24,7 +24,7 @@ const UserSchema = new mongoose.Schema(
       lowercase: true,
       trim: true,
       match: [
-        /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/,
+        /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
         "Please add a valid email",
       ],
     },
@@ -32,7 +32,7 @@ const UserSchema = new mongoose.Schema(
     password: {
       type: String,
       required: [true, "Please add a password"],
-      minlength: [6, "Password must be at least 6 characters long"],
+      minlength: [8, "Password must be at least 8 characters long"],
       select: false,
     },
 
@@ -56,7 +56,37 @@ const UserSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
+
+  //==================OTP related fields==================//
+    otp: {
+      type: String,
+      default: null,
+      select: false,
+    },
+
+    otpExpiry: {
+      type: Date,
+      default: null,
+      select: false,
+    },
+
+    isVerified: {
+      type: Boolean,
+      default: false,
+    },
+
+    otpPurpose: {
+      type: String,
+      enum: [
+        "verify",
+        "forgot-password",
+        "change-password",
+      ],
+      default: null,
+      select: false,
+    },
   },
+
   {
     timestamps: true,
   }
