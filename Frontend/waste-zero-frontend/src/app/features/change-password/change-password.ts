@@ -48,18 +48,27 @@ export class ChangePassword {
   private router = inject(Router);
   private snackBar = inject(MatSnackBar);
 
+  loading = false;
+  otpSent = false;
+
   passwordForm = this.fb.group({
 
-    currentPassword: [
+    otp: [
       '',
-      Validators.required
+      [
+        Validators.required,
+        Validators.minLength(6),
+        Validators.maxLength(6)
+      ]
     ],
 
     newPassword: [
       '',
       [
         Validators.required,
-        Validators.minLength(6)
+        Validators.pattern(
+          /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&]).{8,}$/
+        )
       ]
     ],
 
@@ -72,6 +81,36 @@ export class ChangePassword {
     validators: passwordMatchValidator
   });
 
+  sendOtp(): void {
+
+    this.authService.sendChangePasswordOtp().subscribe({
+
+      next: (response) => {
+
+        this.otpSent = true;
+
+        this.snackBar.open(
+          response.message,
+          'Close',
+          { duration: 3000 }
+        );
+
+      },
+
+      error: (error) => {
+
+        this.snackBar.open(
+          error.error?.message || 'Failed to send OTP',
+          'Close',
+          { duration: 3000 }
+        );
+
+      }
+
+    });
+
+  }
+
   onChangePassword(): void {
 
     if (this.passwordForm.invalid) {
@@ -81,28 +120,25 @@ export class ChangePassword {
 
     }
 
-    const {
-      currentPassword,
-      newPassword
-    } = this.passwordForm.getRawValue();
+    this.loading = true;
 
-    this.authService.changePassword({
+    const { otp, newPassword } = this.passwordForm.getRawValue();
 
-      currentPassword: currentPassword!,
+    this.authService.verifyChangePasswordOtp({
+
+      otp: otp!,
       newPassword: newPassword!
 
     }).subscribe({
 
       next: (response) => {
 
+        this.loading = false;
+
         this.snackBar.open(
           response.message,
           'Close',
-          {
-            duration: 3000,
-            horizontalPosition: 'right',
-            verticalPosition: 'top'
-          }
+          { duration: 3000 }
         );
 
         this.passwordForm.reset();
@@ -113,14 +149,12 @@ export class ChangePassword {
 
       error: (error) => {
 
+        this.loading = false;
+
         this.snackBar.open(
           error.error?.message || 'Password update failed',
           'Close',
-          {
-            duration: 3000,
-            horizontalPosition: 'right',
-            verticalPosition: 'top'
-          }
+          { duration: 3000 }
         );
 
       }

@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import {
   FormBuilder,
   Validators,
-  ReactiveFormsModule
+  ReactiveFormsModule,
 } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 
@@ -18,71 +18,62 @@ import { AuthService } from '../../../core/services/auth.service';
     CommonModule,
     ReactiveFormsModule,
     RouterLink,
-    MatSnackBarModule
+    MatSnackBarModule,
   ],
   templateUrl: './login.html',
-  styleUrl: './login.css'
+  styleUrl: './login.css',
 })
 export class Login {
-
   private fb = inject(FormBuilder);
   private router = inject(Router);
   private authService = inject(AuthService);
   private snackBar = inject(MatSnackBar);
 
-  loginForm = this.fb.group({
+  loading = false;
+
+  loginForm = this.fb.nonNullable.group({
     username: ['', Validators.required],
-    password: ['', [Validators.required, Validators.minLength(6)]]
+    password: ['', [Validators.required, Validators.minLength(8)]],
   });
 
   onLogin(): void {
-
     if (this.loginForm.invalid) {
-
       this.loginForm.markAllAsTouched();
       return;
-
     }
 
-    this.authService.login({
+    this.loading = true;
 
-      username: this.loginForm.value.username!,
-      password: this.loginForm.value.password!
+    this.authService.login(this.loginForm.getRawValue()).subscribe({
+      next: (response: any) => {
+        this.loading = false;
 
-    }).subscribe({
-
-      next: (response) => {
-
-        this.snackBar.open(
-          response.message,
-          'Close',
-          {
-            duration: 3000,
-            horizontalPosition: 'right',
-            verticalPosition: 'top'
-          }
+        this.showMessage(
+          response.message || 'Login successful!'
         );
 
-        this.router.navigate(['/dashboard']);
+        // AuthService should already save JWT token.
+        // If not, we'll add it there.
 
+        this.router.navigate(['/dashboard']);
       },
 
       error: (error) => {
+        this.loading = false;
 
-        this.snackBar.open(
-          error.error?.message || 'Login failed',
-          'Close',
-          {
-            duration: 3000,
-            horizontalPosition: 'right',
-            verticalPosition: 'top'
-          }
+        this.showMessage(
+          error.error?.message ||
+            'Unable to login. Please try again.'
         );
-
-      }
-
+      },
     });
-
   }
 
+  private showMessage(message: string): void {
+    this.snackBar.open(message, 'Close', {
+      duration: 3000,
+      horizontalPosition: 'right',
+      verticalPosition: 'top',
+    });
+  }
 }

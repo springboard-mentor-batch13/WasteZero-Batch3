@@ -1,27 +1,17 @@
 <div class="page-container">
 
   <div class="page-header">
-
     <h1>My Profile</h1>
-
-    <p>
-      Manage your account information and security settings.
-    </p>
-
+    <p>Manage your account information and security settings.</p>
   </div>
 
-  <!-- Tabs -->
-
   <div class="tabs">
-
     <button
       type="button"
       class="tab-btn"
       [class.active]="activeTab === 'profile'"
       (click)="activeTab='profile'">
-
       Profile
-
     </button>
 
     <button
@@ -29,265 +19,155 @@
       class="tab-btn"
       [class.active]="activeTab === 'password'"
       (click)="activeTab='password'">
-
       Password
-
     </button>
-
   </div>
 
-  <!-- ================= PROFILE ================= -->
-
   @if(activeTab === 'profile'){
-
   <div class="profile-card">
-
-    <form
-      [formGroup]="profileForm"
-      (ngSubmit)="saveProfile()">
-
+    <form [formGroup]="profileForm" (ngSubmit)="saveProfile()">
       <div class="form-grid">
-
         <div class="form-group">
-
-          <label class="form-label">
-
-            Full Name
-
-          </label>
-
+          <label class="form-label">Full Name</label>
           <input
             type="text"
             class="form-input"
             formControlName="name"
             placeholder="Enter your full name">
 
-          @if(profileForm.get('name')?.invalid &&
-          profileForm.get('name')?.touched){
-
-          <span class="form-error">
-
-            Full Name is required.
-
-          </span>
-
+          @if(profileForm.get('name')?.invalid && profileForm.get('name')?.touched){
+            <span class="form-error">Full Name is required.</span>
           }
-
         </div>
 
         <div class="form-group">
-
-          <label class="form-label">
-
-            Email
-
-          </label>
-
+          <label class="form-label">Email</label>
           <input
             type="email"
             class="form-input"
             formControlName="email"
             readonly>
-
         </div>
-
       </div>
 
       <div class="form-group">
-
-        <label class="form-label">
-
-          Location
-
-        </label>
-
+        <label class="form-label">Location</label>
         <input
           type="text"
           class="form-input"
           formControlName="location"
           placeholder="Enter your location">
-
       </div>
 
       <div class="form-group">
-
-        <label class="form-label">
-
-          Skills
-
-        </label>
-
+        <label class="form-label">Skills</label>
         <input
           type="text"
           class="form-input"
           formControlName="skills"
           placeholder="Angular, Node.js, MongoDB">
-
-        <small class="form-helper">
-
-          Separate multiple skills using commas.
-
-        </small>
-
+        <small class="form-helper">Separate multiple skills using commas.</small>
       </div>
 
       <div class="form-group">
-
-        <label class="form-label">
-
-          Bio
-
-        </label>
-
+        <label class="form-label">Bio</label>
         <textarea
           rows="5"
           class="form-textarea"
           formControlName="bio"
           placeholder="Tell us something about yourself..."></textarea>
-
       </div>
 
       <div class="form-actions">
-
         <button
           class="btn-save"
-          type="submit">
-
-          Save Changes
-
+          type="submit"
+          [disabled]="loadingProfile">
+          @if(!loadingProfile){
+            Save Changes
+          } @else {
+            Saving...
+          }
         </button>
-
       </div>
-
     </form>
-
   </div>
-
   }
 
-  <!-- ================= PASSWORD ================= -->
-
   @if(activeTab === 'password'){
-
   <div class="profile-card">
-
-    <form
-      [formGroup]="passwordForm"
-      (ngSubmit)="changePassword()">
-
-      <div class="form-group">
-
-        <label class="form-label">
-
-          Current Password
-
-        </label>
-
-        <input
-          type="password"
-          class="form-input"
-          formControlName="currentPassword">
-
+    <form [formGroup]="passwordForm" (ngSubmit)="changePassword()">
+      
+      <div class="form-actions mb-4">
+        <button
+          type="button"
+          class="btn-save"
+          (click)="sendOtp()"
+          [disabled]="loadingPassword">
+          @if(!otpSent){
+            Send OTP
+          } @else {
+            OTP Sent ✓
+          }
+        </button>
       </div>
 
       <div class="form-group">
-
-        <label class="form-label">
-
-          New Password
-
-        </label>
-
+        <label class="form-label">OTP</label>
         <input
-          type="password"
+          type="text"
+          maxlength="6"
           class="form-input"
-          formControlName="newPassword">
-
-        @if(
-          passwordForm.get('newPassword')?.touched &&
-          passwordForm.get('newPassword')?.hasError('required')
-        ){
-
-        <span class="form-error">
-
-          New Password is required.
-
-        </span>
-
-        }
-
-        @if(
-          passwordForm.get('newPassword')?.touched &&
-          passwordForm.get('newPassword')?.hasError('minlength')
-        ){
-
-        <span class="form-error">
-
-          Password must be at least 6 characters.
-
-        </span>
-
-        }
-
+          formControlName="otp"
+          placeholder="Enter 6 digit OTP">
       </div>
 
       <div class="form-group">
-
-        <label class="form-label">
-
-          Confirm Password
-
-        </label>
-
+        <label class="form-label">New Password</label>
         <input
           type="password"
           class="form-input"
-          formControlName="confirmPassword">
+          formControlName="newPassword"
+          placeholder="Enter new password">
 
-        @if(
-          passwordForm.get('confirmPassword')?.touched &&
-          passwordForm.get('confirmPassword')?.hasError('required')
-        ){
-
-        <span class="form-error">
-
-          Confirm Password is required.
-
-        </span>
-
+        @if(passwordForm.get('newPassword')?.touched && passwordForm.get('newPassword')?.hasError('required')){
+          <span class="form-error">Password is required.</span>
         }
 
-        @if(
-          passwordForm.hasError('passwordMismatch') &&
-          passwordForm.get('confirmPassword')?.touched
-        ){
-
-        <span class="form-error">
-
-          Passwords do not match.
-
-        </span>
-
+        @if(passwordForm.get('newPassword')?.touched && passwordForm.get('newPassword')?.hasError('pattern')){
+          <span class="form-error">
+            Password must contain uppercase, lowercase, number, special character and be at least 8 characters.
+          </span>
         }
+      </div>
 
+      <div class="form-group">
+        <label class="form-label">Confirm Password</label>
+        <input
+          type="password"
+          class="form-input"
+          formControlName="confirmPassword"
+          placeholder="Confirm password">
+
+        @if(passwordForm.hasError('passwordMismatch') && passwordForm.get('confirmPassword')?.touched){
+          <span class="form-error">Passwords do not match.</span>
+        }
       </div>
 
       <div class="form-actions">
-
         <button
           type="submit"
-          class="btn-save">
-
-          Change Password
-
+          class="btn-save"
+          [disabled]="!otpSent || loadingPassword">
+          @if(!loadingPassword){
+            Change Password
+          } @else {
+            Changing Password...
+          }
         </button>
-
       </div>
-
     </form>
-
   </div>
-
   }
 
 </div>

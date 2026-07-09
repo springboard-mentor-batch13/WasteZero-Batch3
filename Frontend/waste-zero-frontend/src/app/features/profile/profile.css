@@ -241,3 +241,70 @@ width:100%;
 }
 
 }
+/* ===========================
+   BUTTON STATES
+=========================== */
+
+.btn-save:disabled{
+    opacity:.7;
+    cursor:not-allowed;
+    background:#90caf9;
+}
+
+.btn-save:disabled:hover{
+    background:#90caf9;
+}
+
+/* ===========================
+   OTP INPUT
+=========================== */
+
+input[formControlName="otp"]{
+    text-align:center;
+    letter-spacing:6px;
+    font-size:20px;
+    font-weight:600;
+}
+
+/* ===========================
+   FORM ANIMATION
+=========================== */
+
+.profile-card{
+    animation:fadeIn .3s ease;
+}
+
+@keyframes fadeIn{
+
+    from{
+        opacity:0;
+        transform:translateY(10px);
+    }
+
+    to{
+        opacity:1;
+        transform:translateY(0);
+    }
+
+}
+
+/* ===========================
+   MOBILE
+=========================== */
+
+@media(max-width:576px){
+
+    .page-header h1{
+        font-size:26px;
+    }
+
+    .profile-card{
+        padding:18px;
+    }
+
+    .form-input,
+    .form-textarea{
+        font-size:14px;
+    }
+
+}

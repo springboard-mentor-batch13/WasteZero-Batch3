@@ -1,152 +1,199 @@
 <div class="container-fluid login-page">
 
-    <div class="row vh-100">
+  <div class="row vh-100">
 
-        <div class="col-lg-6 left-section d-flex flex-column justify-content-center">
+    <!-- Left Section -->
 
-            <div class="brand">
+    <div class="col-lg-6 left-section d-flex flex-column justify-content-center">
 
-                <span class="material-icons recycle-icon">
-                    recycling
-                </span>
+      <div class="brand">
 
-                <h2>WasteZero</h2>
+        <span class="material-icons recycle-icon">
+          recycling
+        </span>
 
-            </div>
+        <h2>WasteZero</h2>
 
-            <h1>Join the Recycling Revolution</h1>
+      </div>
 
-            <p>
-                WasteZero connects volunteers, NGOs, and administrators
-                to schedule pickups, manage recycling opportunities,
-                and make a positive impact on our environment.
-            </p>
+      <h1>Join the Recycling Revolution</h1>
 
-            <div class="features">
+      <p>
+        WasteZero connects volunteers, NGOs, and administrators
+        to schedule pickups, manage recycling opportunities,
+        and create a greener future together.
+      </p>
 
-                <div>
-                    <h5>Schedule Pickups</h5>
-                    <small>Easily arrange waste collection</small>
-                </div>
+      <div class="features">
 
-                <div>
-                    <h5>Track Impact</h5>
-                    <small>Monitor environmental contribution</small>
-                </div>
-
-                <div>
-                    <h5>Volunteer</h5>
-                    <small>Join recycling initiatives</small>
-                </div>
-
-            </div>
-
+        <div>
+          <h5>Schedule Pickups</h5>
+          <small>Easily arrange waste collection</small>
         </div>
 
-        <div class="col-lg-6 d-flex justify-content-center align-items-center">
-
-            <div class="login-card">
-
-                <div class="tabs">
-
-                    <button
-                        type="button"
-                        class="active"
-                        routerLink="/login">
-
-                        Login
-
-                    </button>
-
-                    <button
-                        type="button"
-                        routerLink="/register">
-
-                        Register
-
-                    </button>
-
-                </div>
-
-                <h2>Login to your account</h2>
-
-                <p class="subtitle">
-                    Enter your credentials to access your account
-                </p>
-
-                <form
-                    [formGroup]="loginForm"
-                    (ngSubmit)="onLogin()">
-
-                    <div class="mb-3">
-
-                        <label class="form-label">
-                            Username
-                        </label>
-
-                        <input
-                            type="text"
-                            class="form-control"
-                            placeholder="Enter Username"
-                            formControlName="username">
-
-                        @if(loginForm.controls.username.touched &&
-                        loginForm.controls.username.errors?.['required']){
-
-                        <div class="text-danger mt-1">
-                            Username is required
-                        </div>
-
-                        }
-
-                    </div>
-
-                    <div class="mb-4">
-
-                        <label class="form-label">
-                            Password
-                        </label>
-
-                        <input
-                            type="password"
-                            class="form-control"
-                            placeholder="Enter Password"
-                            formControlName="password">
-
-                        @if(loginForm.controls.password.touched &&
-                        loginForm.controls.password.errors?.['required']){
-
-                        <div class="text-danger mt-1">
-                            Password is required
-                        </div>
-
-                        }
-
-                        @if(loginForm.controls.password.touched &&
-                        loginForm.controls.password.errors?.['minlength']){
-
-                        <div class="text-danger mt-1">
-                            Password must be at least 6 characters
-                        </div>
-
-                        }
-
-                    </div>
-
-                    <button
-                        class="btn btn-primary login-btn"
-                        type="submit">
-
-                        Login
-
-                    </button>
-
-                </form>
-
-            </div>
-
+        <div>
+          <h5>Track Impact</h5>
+          <small>Monitor your environmental contribution</small>
         </div>
+
+        <div>
+          <h5>Volunteer</h5>
+          <small>Join recycling initiatives</small>
+        </div>
+
+      </div>
 
     </div>
+
+    <!-- Right Section -->
+
+    <div class="col-lg-6 d-flex justify-content-center align-items-center">
+
+      <div class="login-card">
+
+        <div class="tabs">
+
+          <button
+            type="button"
+            class="active"
+            routerLink="/login">
+
+            Login
+
+          </button>
+
+          <button
+            type="button"
+            routerLink="/register">
+
+            Register
+
+          </button>
+
+        </div>
+
+        <h2>Login to your account</h2>
+
+        <p class="subtitle">
+          Enter your username or email and password to continue.
+        </p>
+
+        <form
+          [formGroup]="loginForm"
+          (ngSubmit)="onLogin()">
+
+          <!-- Username / Email -->
+
+          <div class="mb-3">
+
+            <label class="form-label">
+
+              Username or Email
+
+            </label>
+
+            <input
+              type="text"
+              class="form-control"
+              placeholder="Enter username or email"
+              formControlName="username"
+              autocomplete="username"
+              spellcheck="false">
+
+            @if(loginForm.controls.username.touched &&
+            loginForm.controls.username.errors?.['required']){
+
+              <div class="text-danger mt-1">
+
+                Username or Email is required
+
+              </div>
+
+            }
+
+          </div>
+
+          <!-- Password -->
+
+          <div class="mb-3">
+
+            <label class="form-label">
+
+              Password
+
+            </label>
+
+            <input
+              type="password"
+              class="form-control"
+              placeholder="Enter Password"
+              formControlName="password"
+              autocomplete="current-password">
+
+            @if(loginForm.controls.password.touched &&
+            loginForm.controls.password.errors?.['required']){
+
+              <div class="text-danger mt-1">
+
+                Password is required
+
+              </div>
+
+            }
+
+            @if(loginForm.controls.password.touched &&
+            loginForm.controls.password.errors?.['minlength']){
+
+              <div class="text-danger mt-1">
+
+                Password must be at least 8 characters
+
+              </div>
+
+            }
+
+          </div>
+
+
+          <!-- Login Button -->
+
+          <button
+            class="btn btn-primary login-btn w-100"
+            type="submit"
+            [disabled]="loginForm.invalid || loading">
+
+            @if(!loading){
+
+              Login
+
+            }
+
+            @else{
+
+              Logging in...
+
+            }
+
+          </button>
+
+          <div class="text-end mb-3">
+
+        <a
+        routerLink="/forgot-password"
+        class="forgot-link">
+
+        Forgot Password?
+
+        </a>
+
+      </div>
+
+        </form>
+
+      </div>
+
+    </div>
+
+  </div>
 
 </div>

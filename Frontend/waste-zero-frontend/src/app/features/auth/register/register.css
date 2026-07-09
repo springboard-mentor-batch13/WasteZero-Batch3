@@ -1,6 +1,9 @@
 .login-page{
     background:#f8fafc;
+    min-height:100vh;
 }
+
+/* Left Section */
 
 .left-section{
     padding:80px;
@@ -21,12 +24,14 @@
 .brand h2{
     font-size:36px;
     font-weight:700;
+    margin:0;
 }
 
 .left-section h1{
     font-size:56px;
     font-weight:800;
     margin-bottom:20px;
+    line-height:1.15;
 }
 
 .left-section p{
@@ -39,19 +44,23 @@
 .features{
     display:flex;
     gap:40px;
+    flex-wrap:wrap;
 }
 
 .features h5{
     font-weight:700;
+    margin-bottom:4px;
 }
 
 .features small{
     color:#6b7280;
 }
 
+/* Register Card */
+
 .login-card{
     width:500px;
-    background:white;
+    background:#fff;
     padding:40px;
     border-radius:16px;
     box-shadow:0 10px 30px rgba(0,0,0,.08);
@@ -59,11 +68,16 @@
 
 .login-card h2{
     font-weight:700;
+    margin-bottom:8px;
 }
 
-.login-card p{
+.subtitle{
     color:#6b7280;
+    margin-bottom:25px;
 }
+
+/* Tabs */
+
 .tabs{
     display:flex;
     margin-bottom:30px;
@@ -78,17 +92,41 @@
     background:#f8fafc;
     padding:12px;
     font-weight:600;
+    cursor:pointer;
+    transition:.25s ease;
+}
+
+.tabs button:hover{
+    background:#eef2ff;
 }
 
 .tabs button.active{
-    background:white;
+    background:#fff;
     color:#2563eb;
 }
 
-.form-control{
+/* Form */
+
+.form-label{
+    font-weight:600;
+    margin-bottom:6px;
+}
+
+.form-control,
+.form-select{
     height:48px;
     border-radius:8px;
+    border:1px solid #d1d5db;
+    transition:.25s;
 }
+
+.form-control:focus,
+.form-select:focus{
+    border-color:#2563eb;
+    box-shadow:0 0 0 .15rem rgba(37,99,235,.15);
+}
+
+/* Button */
 
 .login-btn{
     width:100%;
@@ -96,8 +134,52 @@
     border-radius:8px;
     font-size:16px;
     font-weight:600;
+    transition:.3s;
 }
 
-.subtitle{
-    margin-bottom:25px;
+.login-btn:hover:not(:disabled){
+    transform:translateY(-1px);
+}
+
+.login-btn:disabled{
+    opacity:.7;
+    cursor:not-allowed;
+}
+
+/* Error */
+
+.text-danger{
+    font-size:14px;
+}
+
+/* Responsive */
+
+@media (max-width:992px){
+
+    .left-section{
+        display:none !important;
+    }
+
+    .login-card{
+        width:100%;
+        max-width:500px;
+        margin:25px;
+    }
+
+}
+
+@media (max-width:576px){
+
+    .login-card{
+        padding:25px;
+    }
+
+    .brand h2{
+        font-size:28px;
+    }
+
+    .left-section h1{
+        font-size:40px;
+    }
+
 }

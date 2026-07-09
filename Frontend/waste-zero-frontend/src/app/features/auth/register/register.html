@@ -45,7 +45,7 @@
 
         </div>
 
-        <!-- Right -->
+        <!-- Right Section -->
 
         <div class="col-lg-6 d-flex justify-content-center align-items-center">
 
@@ -53,24 +53,24 @@
 
                 <div class="tabs">
 
-    <button
-        type="button"
-        routerLink="/login">
+                    <button
+                        type="button"
+                        routerLink="/login">
 
-        Login
+                        Login
 
-    </button>
+                    </button>
 
-    <button
-        type="button"
-        class="active"
-        routerLink="/register">
+                    <button
+                        type="button"
+                        class="active"
+                        routerLink="/register">
 
-        Register
+                        Register
 
-    </button>
+                    </button>
 
-</div>
+                </div>
 
                 <h2>Create Account</h2>
 
@@ -82,63 +82,85 @@
                     [formGroup]="registerForm"
                     (ngSubmit)="onRegister()">
 
+                    <!-- Name -->
+
                     <div class="mb-3">
 
-                        <label>Name</label>
+                        <label class="form-label">
+                            Full Name
+                        </label>
 
                         <input
                             type="text"
                             class="form-control"
                             formControlName="name"
-                            placeholder="Full Name">
+                            placeholder="Enter your full name"
+                            autocomplete="name">
 
                         @if(registerForm.controls.name.touched &&
                         registerForm.controls.name.errors?.['required']){
 
                         <div class="text-danger mt-1">
+
                             Name is required
+
                         </div>
 
                         }
 
                     </div>
 
+                    <!-- Username -->
+
                     <div class="mb-3">
 
-                        <label>Username</label>
+                        <label class="form-label">
+                            Username
+                        </label>
 
                         <input
                             type="text"
                             class="form-control"
                             formControlName="username"
-                            placeholder="Username">
+                            placeholder="Choose a username"
+                            autocomplete="username"
+                            spellcheck="false">
 
                         @if(registerForm.controls.username.touched &&
                         registerForm.controls.username.errors?.['required']){
 
                         <div class="text-danger mt-1">
+
                             Username is required
+
                         </div>
 
                         }
 
                     </div>
 
+                    <!-- Email -->
+
                     <div class="mb-3">
 
-                        <label>Email</label>
+                        <label class="form-label">
+                            Email
+                        </label>
 
                         <input
                             type="email"
                             class="form-control"
                             formControlName="email"
-                            placeholder="Email Address">
+                            placeholder="Enter your email"
+                            autocomplete="email">
 
                         @if(registerForm.controls.email.touched &&
                         registerForm.controls.email.errors?.['required']){
 
                         <div class="text-danger mt-1">
+
                             Email is required
+
                         </div>
 
                         }
@@ -147,28 +169,37 @@
                         registerForm.controls.email.errors?.['email']){
 
                         <div class="text-danger mt-1">
-                            Invalid email address
+
+                            Please enter a valid email address
+
                         </div>
 
                         }
 
                     </div>
 
+                    <!-- Password -->
+
                     <div class="mb-3">
 
-                        <label>Password</label>
+                        <label class="form-label">
+                            Password
+                        </label>
 
                         <input
                             type="password"
                             class="form-control"
                             formControlName="password"
-                            placeholder="Password">
+                            placeholder="Create a password"
+                            autocomplete="new-password">
 
                         @if(registerForm.controls.password.touched &&
                         registerForm.controls.password.errors?.['required']){
 
                         <div class="text-danger mt-1">
+
                             Password is required
+
                         </div>
 
                         }
@@ -177,22 +208,29 @@
                         registerForm.controls.password.errors?.['minlength']){
 
                         <div class="text-danger mt-1">
-                            Password must contain minimum 6 characters
+
+                            Password must be at least 8 characters
+
                         </div>
 
                         }
 
                     </div>
 
+                    <!-- Confirm Password -->
+
                     <div class="mb-3">
 
-                        <label>Confirm Password</label>
+                        <label class="form-label">
+                            Confirm Password
+                        </label>
 
                         <input
                             type="password"
                             class="form-control"
                             formControlName="confirmPassword"
-                            placeholder="Confirm Password">
+                            placeholder="Confirm your password"
+                            autocomplete="new-password">
 
                     </div>
 
@@ -207,9 +245,13 @@
 
                     }
 
+                    <!-- Role -->
+
                     <div class="mb-4">
 
-                        <label>Role</label>
+                        <label class="form-label">
+                            Role
+                        </label>
 
                         <select
                             class="form-select"
@@ -231,11 +273,24 @@
 
                     </div>
 
-                    <button
-                        class="btn btn-primary login-btn"
-                        type="submit">
+                    <!-- Register Button -->
 
-                        Register
+                    <button
+                        class="btn btn-primary login-btn w-100"
+                        type="submit"
+                        [disabled]="registerForm.invalid || loading">
+
+                        @if(!loading){
+
+                            Register
+
+                        }
+
+                        @else{
+
+                            Creating Account...
+
+                        }
 
                     </button>
 

@@ -1,15 +1,19 @@
 import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
+
 import {
   FormBuilder,
-  Validators,
   ReactiveFormsModule,
+  Validators,
   AbstractControl,
   ValidationErrors,
   ValidatorFn
 } from '@angular/forms';
 
-import { Router, RouterLink } from '@angular/router';
+import {
+  Router,
+  RouterLink
+} from '@angular/router';
 
 import {
   MatSnackBar,
@@ -22,17 +26,17 @@ const passwordMatchValidator: ValidatorFn = (
   group: AbstractControl
 ): ValidationErrors | null => {
 
-  const password = group.get('password')?.value;
+  const newPassword = group.get('newPassword')?.value;
   const confirmPassword = group.get('confirmPassword')?.value;
 
-  return password === confirmPassword
+  return newPassword === confirmPassword
     ? null
     : { passwordMismatch: true };
 
 };
 
 @Component({
-  selector: 'app-register',
+  selector: 'app-reset-password',
   standalone: true,
   imports: [
     CommonModule,
@@ -40,10 +44,10 @@ const passwordMatchValidator: ValidatorFn = (
     RouterLink,
     MatSnackBarModule
   ],
-  templateUrl: './register.html',
-  styleUrl: './register.css'
+  templateUrl: './reset-password.html',
+  styleUrl: './reset-password.css'
 })
-export class Register {
+export class ResetPassword {
 
   private fb = inject(FormBuilder);
   private authService = inject(AuthService);
@@ -52,21 +56,23 @@ export class Register {
 
   loading = false;
 
-  registerForm = this.fb.group({
+  email =
+    history.state.email ||
+    localStorage.getItem('resetEmail') ||
+    '';
 
-    name: ['', Validators.required],
+  resetPasswordForm = this.fb.group({
 
-    username: ['', Validators.required],
-
-    email: [
+    otp: [
       '',
       [
         Validators.required,
-        Validators.email
+        Validators.minLength(6),
+        Validators.maxLength(6)
       ]
     ],
 
-    password: [
+    newPassword: [
       '',
       [
         Validators.required,
@@ -74,38 +80,33 @@ export class Register {
       ]
     ],
 
-    confirmPassword: ['', Validators.required],
-
-    role: ['volunteer', Validators.required]
+    confirmPassword: [
+      '',
+      Validators.required
+    ]
 
   }, {
     validators: passwordMatchValidator
   });
 
-  onRegister(): void {
+  resetPassword(): void {
 
-    if (this.registerForm.invalid) {
-      this.registerForm.markAllAsTouched();
+    if (this.resetPasswordForm.invalid) {
+
+      this.resetPasswordForm.markAllAsTouched();
       return;
+
     }
 
     this.loading = true;
 
-    const {
-      name,
-      username,
-      email,
-      password,
-      role
-    } = this.registerForm.getRawValue();
+    this.authService.resetPassword({
 
-    this.authService.register({
+      email: this.email,
 
-      name: name!,
-      username: username!,
-      email: email!,
-      password: password!,
-      role: role!
+      otp: this.resetPasswordForm.value.otp!,
+
+      newPassword: this.resetPasswordForm.value.newPassword!
 
     }).subscribe({
 
@@ -114,28 +115,22 @@ export class Register {
         this.loading = false;
 
         this.snackBar.open(
+
           response.message,
+
           'Close',
+
           {
             duration: 3000,
             horizontalPosition: 'right',
             verticalPosition: 'top'
           }
+
         );
 
-        localStorage.setItem(
-          'verifyEmail',
-          this.registerForm.value.email!
-        );
+        localStorage.removeItem('resetEmail');
 
-        this.router.navigate(
-          ['/verify-otp'],
-          {
-            state: {
-              email: this.registerForm.value.email
-            }
-          }
-        );
+        this.router.navigate(['/login']);
 
       },
 
@@ -144,13 +139,17 @@ export class Register {
         this.loading = false;
 
         this.snackBar.open(
-          error.error?.message || 'Registration failed',
+
+          error.error?.message || 'Password reset failed',
+
           'Close',
+
           {
             duration: 3000,
             horizontalPosition: 'right',
             verticalPosition: 'top'
           }
+
         );
 
       }
