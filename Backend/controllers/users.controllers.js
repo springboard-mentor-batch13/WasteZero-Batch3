@@ -1,5 +1,5 @@
 const User = require("../models/users.model");
-const sendOtpToUser = require("../utils/sendOtpToUser");
+const issueOtp = require("../utils/issueOtp");
 const verifyOtp = require("../utils/verifyOtp");
 const passwordValidator = require("../utils/passwordValidator");
 
@@ -156,7 +156,7 @@ const sendChangePasswordOtp = async (req, res) => {
     }
 
     try {
-      await sendOtpToUser(user, "change-password");
+      await issueOtp(user, "change-password");
     } catch (otpError) {
       console.error("Send Change Password OTP - Email Error:", otpError);
 

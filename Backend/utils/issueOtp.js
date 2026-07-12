@@ -1,9 +1,9 @@
 const bcrypt = require("bcryptjs");
 
 const generateOtp = require("./generateOtp");
-const sendOtp = require("./sendOtp");
+const emailBody = require("./emailBody");
 
-const sendOtpToUser = async (
+const issueOtp = async (
   user,
   purpose = "verify"
 ) => {
@@ -28,7 +28,7 @@ const sendOtpToUser = async (
   if (purpose === "change-password")
     title = "Password Change";
 
-  await sendOtp(user.email, otp, title);
+  await  emailBody(user.email, otp, title);
 };
 
-module.exports = sendOtpToUser;
+module.exports = issueOtp;

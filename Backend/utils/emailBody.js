@@ -1,6 +1,6 @@
 const sendEmail = require("../utils/sendEmail");
 
-const sendOtp = async (email, otp, purpose = "Verification") => {
+const emailBody = async (email, otp, purpose = "Verification") => {
   const html = `
     <div style="font-family: Arial, sans-serif;">
       <h2>WasteZero</h2>
@@ -24,4 +24,4 @@ const sendOtp = async (email, otp, purpose = "Verification") => {
   );
 };
 
-module.exports = sendOtp;
+module.exports = emailBody;

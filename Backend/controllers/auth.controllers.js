@@ -1,6 +1,6 @@
 const User = require("../models/users.model");
 const generateToken = require("../utils/generateToken");
-const sendOtpToUser = require("../utils/sendOtpToUser");
+const issueOtp = require("../utils/issueOtp");
 const passwordValidator = require("../utils/passwordValidator");
 const verifyOtp = require("../utils/verifyOtp");
 
@@ -50,7 +50,7 @@ const registerUser = async (req, res) => {
 
     // Send verification OTP — if this fails, roll back the user
     try {
-      await sendOtpToUser(user, "verify");
+      await issueOtp(user, "verify");
     } catch (otpError) {
       console.error("OTP Send Error during registration:", otpError);
 
@@ -247,7 +247,7 @@ const resendOtp = async (req, res) => {
       });
     }
 
-    await sendOtpToUser(user, "verify");
+    await issueOtp(user, "verify");
 
     return res.status(200).json({
       success: true,
@@ -299,7 +299,7 @@ const forgotPassword = async (req, res) => {
       });
     }
 
-    await sendOtpToUser(user, "forgot-password");
+    await issueOtp(user, "forgot-password");
 
     return res.status(200).json({
       success: true,
