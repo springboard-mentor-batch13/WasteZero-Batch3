@@ -1,4 +1,5 @@
 // controllers/opportunity.controllers.js
+
 const opportunityService = require('../services/opportunity.service');
 const { sendSuccess, sendError } = require('../utils/apiResponse');
 

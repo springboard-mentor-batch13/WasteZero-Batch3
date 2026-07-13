@@ -1,3 +1,5 @@
+// Backend\utils\emailBody.js
+
 const sendEmail = require("../utils/sendEmail");
 
 const emailBody = async (email, otp, purpose = "Verification") => {

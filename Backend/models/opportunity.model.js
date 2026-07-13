@@ -1,4 +1,5 @@
-// models/opportunity.model.js
+// Backend\models\opportunity.model.js
+
 const mongoose = require('mongoose');
 
 const opportunitySchema = new mongoose.Schema(

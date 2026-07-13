@@ -1,4 +1,4 @@
-// validations/user.validation.js
+// Backend\validations\user.validation.js
 
 const { body, validationResult } = require("express-validator");
 

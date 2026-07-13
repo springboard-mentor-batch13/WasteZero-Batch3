@@ -1,4 +1,5 @@
 // validations/opportunity.validation.js
+
 const { body, validationResult } = require('express-validator');
 const { sendError } = require('../utils/apiResponse');
 

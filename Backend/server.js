@@ -1,3 +1,5 @@
+// Backend\server.js
+
 const dotenv = require('dotenv');
 dotenv.config();
 
@@ -7,6 +9,8 @@ const connectDB = require('./config/db');
 const authRoutes = require('./routes/auth.routes'); 
 const userRoutes = require('./routes/users.routes');
 const opportunityRouter = require('./routes/opportunity.routes');
+const applicationRoutes=require("./routes/application.routes");
+
 const errorHandler = require('./middlewares/error.middleware');
 
 const helmet = require("helmet");
@@ -38,6 +42,7 @@ console.log("ENV CHECK:", process.env.EMAIL, process.env.EMAIL_PASS ? "PASS SET"
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/opportunities', opportunityRouter);
+app.use('/api/applications',applicationRoutes);
 
 console.log("EMAIL:", process.env.EMAIL);
 console.log("EMAIL_PASS loaded:", !!process.env.EMAIL_PASS);

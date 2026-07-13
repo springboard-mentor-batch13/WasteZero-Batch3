@@ -1,3 +1,5 @@
+// Backend\controllers\users.controllers.js
+
 const User = require("../models/users.model");
 const issueOtp = require("../utils/issueOtp");
 const verifyOtp = require("../utils/verifyOtp");

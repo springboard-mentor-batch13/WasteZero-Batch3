@@ -1,3 +1,5 @@
+// Backend\validations\auth.validation.js
+
 const { body, validationResult } = require("express-validator");
 
 const registerValidation = [

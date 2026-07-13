@@ -1,3 +1,5 @@
+// Backend\models\users.model.js
+
 const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
 

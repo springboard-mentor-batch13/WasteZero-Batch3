@@ -1,4 +1,5 @@
 // services/opportunity.service.js
+
 const Opportunity = require('../models/opportunity.model');
 
 /**

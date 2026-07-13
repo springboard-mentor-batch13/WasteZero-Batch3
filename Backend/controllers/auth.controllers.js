@@ -1,3 +1,5 @@
+// Backend\controllers\auth.controllers.js
+
 const User = require("../models/users.model");
 const generateToken = require("../utils/generateToken");
 const issueOtp = require("../utils/issueOtp");

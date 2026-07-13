@@ -1,4 +1,4 @@
-// utils/apiResponse.js
+// Backend\utils\apiResponse.js
 
 /**
  * @desc    Sends a successful HTTP response

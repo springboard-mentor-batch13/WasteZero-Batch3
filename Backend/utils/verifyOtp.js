@@ -1,3 +1,5 @@
+// Backend\utils\verifyOtp.js
+
 const bcrypt = require("bcryptjs");
 
 const verifyOtp = async (user, otp, purpose) => {
