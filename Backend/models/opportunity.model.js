@@ -39,6 +39,10 @@ const opportunitySchema = new mongoose.Schema(
             required: [true, 'Location is required'],
             trim: true
         },
+        image: {
+            type: String,
+            default: "" // Default empty string agar image upload na ki jaye
+        },
         status: {
             type: String,
             enum: {
