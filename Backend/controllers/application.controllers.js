@@ -52,6 +52,9 @@ const applyForOpportunity = async (req, res) => {
         );
 
     } catch (error) {
+        if (error.code === 11000) {
+            return sendError(res, "You have already applied for this opportunity", 409);
+        }
         return sendError(res, "Failed to apply", 500, error.message);
     }
 };
@@ -144,6 +147,14 @@ const updateApplicationStatus = async (req, res) => {
 
     try {
 
+        if (req.application.status !== "pending") {
+            return sendError(
+                res,
+                `Application already ${req.application.status}`,
+                400
+            );
+        }
+
         const updated = await applicationService.updateStatus(
             req.application._id,
             req.body.status
@@ -162,7 +173,6 @@ const updateApplicationStatus = async (req, res) => {
     }
 
 };
-
 
 /**
  * @desc    Withdraw application. Ownership already verified by

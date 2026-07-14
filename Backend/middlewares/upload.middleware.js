@@ -32,7 +32,10 @@ const upload = multer({
 const uploadToCloudinary = async (req, res, next) => {
     try {
         if (!req.file) {
-            return next(); // Agar image upload nahi ho rahi toh skip karke aage badho
+            // No real upload happened — never trust a client-supplied
+            // image URL/string here, only Cloudinary's own result counts.
+            delete req.body.image;
+            return next();
         }
 
         // Buffer streaming directly to Cloudinary folder management pipeline

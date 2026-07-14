@@ -7,8 +7,8 @@ const Opportunity = require('../models/opportunity.model');
  */
 const createOpportunity = async (ngoId, opportunityData) => {
     const newOpportunity = new Opportunity({
-        ngo_id: ngoId,
-        ...opportunityData
+        ...opportunityData,
+        ngo_id: ngoId
     });
     return await newOpportunity.save();
 };
@@ -92,9 +92,9 @@ const searchOpportunities = async (searchQuery) => {
 const filterOpportunities = async ({ status, skill, location }) => {
     let queryFilter = {};
 
-    if (status) queryFilter.status = status;
-    if (location) queryFilter.location = new RegExp(location.trim(), 'i');
-    if (skill) queryFilter.required_skills = { $in: [new RegExp(skill.trim(), 'i')] };
+    if (status && typeof status === "string") queryFilter.status = status;
+    if (location && typeof location === "string") queryFilter.location = new RegExp(location.trim(), 'i');
+    if (skill && typeof skill === "string") queryFilter.required_skills = { $in: [new RegExp(skill.trim(), 'i')] };
 
     return await Opportunity.find(queryFilter).sort({ createdAt: -1 });
 };
