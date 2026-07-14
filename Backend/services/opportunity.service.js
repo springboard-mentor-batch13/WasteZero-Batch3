@@ -47,8 +47,12 @@ const getOpportunityById = async (id) => {
 /**
  * Update opportunity instance directly using mongoose save (handles validation)
  */
+/**
+ * Update opportunity instance directly using mongoose save (handles validation)
+ */
 const updateOpportunityInstance = async (opportunityInstance, updateData) => {
-    const fieldsToUpdate = ['title', 'description', 'required_skills', 'duration', 'location', 'status'];
+    // ADDED 'image' TO THE FIELDS ARRAY BELOW
+    const fieldsToUpdate = ['title', 'description', 'required_skills', 'duration', 'location', 'status', 'image'];
     
     fieldsToUpdate.forEach(field => {
         if (updateData[field] !== undefined) {
@@ -58,7 +62,6 @@ const updateOpportunityInstance = async (opportunityInstance, updateData) => {
 
     return await opportunityInstance.save();
 };
-
 /**
  * Delete opportunity by ID
  */
