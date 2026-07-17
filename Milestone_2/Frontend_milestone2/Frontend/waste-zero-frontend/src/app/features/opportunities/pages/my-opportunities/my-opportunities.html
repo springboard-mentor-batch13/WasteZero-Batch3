@@ -1,0 +1,87 @@
+<div class="page-container">
+
+  <!-- Page Header -->
+  <div class="page-header">
+    <div class="header-text">
+      <h1>My Opportunities</h1>
+      <p>Volunteer opportunities created by your organization.</p>
+    </div>
+    <a routerLink="/opportunities/create" class="btn-create">
+      <span class="material-icons">add</span>
+      Create New
+    </a>
+  </div>
+
+  <!-- Loading Skeleton -->
+  @if(loading()){
+  <div class="opp-grid">
+    @for(i of [1,2,3]; track i){
+    <div class="skeleton-card">
+      <div class="skeleton-image"></div>
+      <div class="skeleton-body">
+        <div class="skeleton-line wide"></div>
+        <div class="skeleton-line medium"></div>
+        <div class="skeleton-line short"></div>
+      </div>
+    </div>
+    }
+  </div>
+  }
+
+  <!-- Error State -->
+  @else if(error()){
+  <div class="state-card error-state">
+    <span class="material-icons state-icon">error_outline</span>
+    <h2>Something went wrong</h2>
+    <p>{{ error() }}</p>
+    <button type="button" class="btn-retry" (click)="loadMyOpportunities()">
+      <span class="material-icons">refresh</span>
+      Try Again
+    </button>
+  </div>
+  }
+
+  <!-- Empty State -->
+  @else if(isEmpty()){
+  <div class="state-card empty-state">
+    <span class="material-icons state-icon">folder_open</span>
+    <h2>No opportunities yet</h2>
+    <p>You haven't created any volunteer opportunities.</p>
+    <a routerLink="/opportunities/create" class="btn-retry">
+      <span class="material-icons">add</span>
+      Create Your First Opportunity
+    </a>
+  </div>
+  }
+
+  <!-- Grid -->
+  @else {
+  <!-- Summary Bar -->
+  <div class="summary-bar">
+    <span class="summary-count">
+      {{ opportunities().length }} {{ opportunities().length !== 1 ? 'opportunities' : 'opportunity' }}
+    </span>
+  </div>
+  <div class="opp-grid">
+    @for(opp of opportunities(); track opp._id){
+    <app-opportunity-card
+      [opportunity]="opp"
+      [showActions]="canEdit(opp)"
+      (editClicked)="onEditClicked($event)"
+      (deleteClicked)="onDeleteClicked($event)">
+    </app-opportunity-card>
+    }
+  </div>
+  }
+
+</div>
+
+<!-- Delete Confirm Dialog -->
+@if(showDeleteDialog() && selectedOpportunity()){
+<app-delete-confirm-dialog
+  [opportunityTitle]="selectedOpportunity()!.title"
+  [isDeleting]="isDeleting()"
+  (confirmed)="onDeleteConfirmed()"
+  (cancelled)="onDeleteCancelled()">
+</app-delete-confirm-dialog>
+}

@@ -1,0 +1,130 @@
+<div class="container-fluid auth-page">
+  <div class="row min-vh-100">
+
+    <!-- ===== LEFT HERO PANEL ===== -->
+    <div class="col-lg-6 left-section d-flex flex-column justify-content-center">
+      <div class="brand">
+        <span class="material-icons brand-icon">recycling</span>
+        <span class="brand-name">WasteZero</span>
+      </div>
+
+      <h1>Join the<br>Recycling<br>Revolution</h1>
+
+      <p class="hero-desc">
+        WasteZero connects volunteers, NGOs, and administrators to coordinate
+        responsible waste action through one simple workflow.
+      </p>
+
+      <div class="feature-grid">
+        <div class="feature-card">
+          <div class="feature-icon-wrap">
+            <span class="material-icons">local_shipping</span>
+          </div>
+          <h5>Schedule Pickups</h5>
+          <small>Easily arrange waste collection</small>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon-wrap">
+            <span class="material-icons">eco</span>
+          </div>
+          <h5>Track Impact</h5>
+          <small>See your environmental contribution</small>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon-wrap">
+            <span class="material-icons">group</span>
+          </div>
+          <h5>Volunteer</h5>
+          <small>Join community recycling drives</small>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== RIGHT FORM PANEL ===== -->
+    <div class="col-lg-6 form-section d-flex justify-content-center align-items-center">
+      <div class="auth-card">
+        <div class="segmented-tabs">
+          <button
+            type="button"
+            class="tab-btn active"
+            routerLink="/login">
+            Login
+          </button>
+
+          <button
+            type="button"
+            class="tab-btn"
+            routerLink="/register">
+            Register
+          </button>
+        </div>
+
+        <h2 class="form-title">Welcome back</h2>
+        <p class="form-subtitle">Enter your username or email and password to continue.</p>
+
+        <form [formGroup]="loginForm" (ngSubmit)="onLogin()">
+
+          <!-- Username / Email -->
+          <div class="field-group">
+            <label class="field-label">Username or Email</label>
+            <div class="input-wrap">
+              <span class="material-icons input-icon">person_outline</span>
+              <input
+                type="text"
+                class="field-input"
+                placeholder="Enter username or email"
+                formControlName="username"
+                autocomplete="username"
+                spellcheck="false">
+            </div>
+            @if(loginForm.controls.username.touched && loginForm.controls.username.errors?.['required']){
+            <div class="field-error">Username or Email is required</div>
+            }
+          </div>
+
+          <!-- Password -->
+          <div class="field-group">
+            <label class="field-label">Password</label>
+            <div class="input-wrap">
+              <span class="material-icons input-icon">lock_outline</span>
+              <input
+                type="password"
+                class="field-input"
+                placeholder="Enter password"
+                formControlName="password"
+                autocomplete="current-password">
+            </div>
+            @if(loginForm.controls.password.touched && loginForm.controls.password.errors?.['required']){
+            <div class="field-error">Password is required</div>
+            }
+            @if(loginForm.controls.password.touched && loginForm.controls.password.errors?.['minlength']){
+            <div class="field-error">Password must be at least 8 characters</div>
+            }
+          </div>
+
+          <!-- Forgot -->
+          <div class="forgot-row">
+            <a routerLink="/forgot-password" class="forgot-link">Forgot Password?</a>
+          </div>
+
+          <!-- Submit -->
+          <button
+            class="submit-btn"
+            type="submit"
+            [disabled]="loginForm.invalid || loading">
+            @if(!loading){
+              <span class="material-icons btn-icon">login</span>
+              Login
+            } @else {
+              <span class="material-icons btn-icon spinning">sync</span>
+              Logging in...
+            }
+          </button>
+        </form>
+      </div>
+    </div>
+
+  </div>
+</div>

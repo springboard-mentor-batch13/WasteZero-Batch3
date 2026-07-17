@@ -1,0 +1,82 @@
+<div class="opp-card">
+
+  <!-- Cover Image -->
+  <div class="opp-card-image">
+    @if(opportunity().image){
+    <img [src]="opportunity().image" [alt]="opportunity().title" loading="lazy">
+    } @else {
+    <div class="opp-card-image-placeholder">
+      <span class="material-icons">volunteer_activism</span>
+    </div>
+    }
+  </div>
+
+  <!-- Card Body -->
+  <div class="opp-card-body">
+
+    <!-- Title + Status -->
+    <div class="opp-card-header">
+      <h3 class="opp-card-title">{{ opportunity().title }}</h3>
+      <span class="status-badge" [ngClass]="statusClass()">{{ statusLabel() }}</span>
+    </div>
+
+    <!-- Description -->
+    <p class="opp-card-desc">{{ opportunity().description }}</p>
+
+    <!-- Metadata -->
+    <ul class="opp-card-meta">
+      <li>
+        <span class="material-icons meta-icon">calendar_today</span>
+        <span>{{ formattedDate() }}</span>
+      </li>
+      <li>
+        <span class="material-icons meta-icon">location_on</span>
+        <span>{{ opportunity().location }}</span>
+      </li>
+      <li>
+        <span class="material-icons meta-icon">schedule</span>
+        <span>{{ opportunity().duration }}</span>
+      </li>
+    </ul>
+
+  </div>
+
+  <!-- Footer -->
+  <div class="opp-card-footer">
+
+    @if(showActions()){
+    <!-- NGO/Admin owner actions -->
+    <div class="card-actions">
+      <a
+        class="btn-view-details"
+        [routerLink]="['/opportunities', opportunity()._id]"
+        style="flex:1">
+        <span>View</span>
+        <span class="material-icons">arrow_forward</span>
+      </a>
+      <button
+        type="button"
+        class="btn-card-edit"
+        (click)="onEdit($event)"
+        title="Edit opportunity">
+        <span class="material-icons">edit</span>
+      </button>
+      <button
+        type="button"
+        class="btn-card-delete"
+        (click)="onDelete($event)"
+        title="Delete opportunity">
+        <span class="material-icons">delete</span>
+      </button>
+    </div>
+    } @else {
+    <!-- Default view for volunteers -->
+    <a class="btn-view-details" [routerLink]="['/opportunities', opportunity()._id]">
+      <span>View Details</span>
+      <span class="material-icons">arrow_forward</span>
+    </a>
+    }
+
+  </div>
+
+</div>

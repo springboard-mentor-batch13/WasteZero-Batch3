@@ -1,0 +1,137 @@
+<div class="page-container">
+
+  <!-- Page Header -->
+  <div class="page-header">
+    <div class="header-text">
+      <h1>My Applications</h1>
+      <p>Track the status of your volunteer applications.</p>
+    </div>
+    <a routerLink="/opportunities" class="btn-browse">
+      <span class="material-icons">volunteer_activism</span>
+      Browse Opportunities
+    </a>
+  </div>
+
+  <!-- Loading Skeleton -->
+  @if(loading()){
+  <div class="app-list">
+    @for(i of [1,2,3,4]; track i){
+    <div class="skeleton-card">
+      <div class="skeleton-row">
+        <div class="skeleton-icon"></div>
+        <div class="skeleton-content">
+          <div class="skeleton-line wide"></div>
+          <div class="skeleton-line medium"></div>
+          <div class="skeleton-line short"></div>
+        </div>
+        <div class="skeleton-badge"></div>
+      </div>
+    </div>
+    }
+  </div>
+  }
+
+  <!-- Error State -->
+  @else if(error()){
+  <div class="state-card error-state">
+    <span class="material-icons state-icon">error_outline</span>
+    <h2>Something went wrong</h2>
+    <p>{{ error() }}</p>
+    <button type="button" class="btn-retry" (click)="loadMyApplications()">
+      <span class="material-icons">refresh</span>
+      Try Again
+    </button>
+  </div>
+  }
+
+  <!-- Empty State -->
+  @else if(isEmpty()){
+  <div class="state-card empty-state">
+    <span class="material-icons state-icon">assignment</span>
+    <h2>No applications yet</h2>
+    <p>You haven't applied to any volunteer opportunities.</p>
+    <a routerLink="/opportunities" class="btn-retry">
+      <span class="material-icons">search</span>
+      Find Opportunities
+    </a>
+  </div>
+  }
+
+  <!-- Applications List -->
+  @else {
+  <!-- Stats Bar -->
+  <div class="stats-bar">
+    <span class="total-count">{{ applications().length }} application{{ applications().length !== 1 ? 's' : '' }}</span>
+    <div class="stats-pills">
+      <span class="stat-pill status-accepted">
+        <span class="material-icons">check_circle</span>
+        {{ countByStatus('accepted') }} Accepted
+      </span>
+      <span class="stat-pill status-pending">
+        <span class="material-icons">hourglass_empty</span>
+        {{ countByStatus('pending') }} Pending
+      </span>
+      <span class="stat-pill status-rejected">
+        <span class="material-icons">cancel</span>
+        {{ countByStatus('rejected') }} Rejected
+      </span>
+    </div>
+  </div>
+
+  <div class="app-list">
+    @for(app of applications(); track app._id){
+    <div class="app-card" [ngClass]="statusClass(app.status)">
+
+      <!-- Icon -->
+      <div class="app-icon-wrap" [ngClass]="'icon-' + app.status">
+        <span class="material-icons">{{ statusIcon(app.status) }}</span>
+      </div>
+
+      <!-- Main Content -->
+      <div class="app-content">
+        <a class="app-opp-title" [routerLink]="['/opportunities', getOpportunityId(app)]">
+          {{ getOpportunityTitle(app) }}
+        </a>
+
+        <div class="app-meta">
+          <span>
+            <span class="material-icons meta-icon">location_on</span>
+            {{ getOpportunityLocation(app) }}
+          </span>
+          <span>
+            <span class="material-icons meta-icon">calendar_today</span>
+            Applied {{ formatDate(app.createdAt) }}
+          </span>
+        </div>
+      </div>
+
+      <!-- Status Badge + Withdraw -->
+      <div class="app-actions">
+        <span class="status-badge" [ngClass]="statusClass(app.status)">
+          <span class="material-icons badge-icon">{{ statusIcon(app.status) }}</span>
+          {{ statusLabel(app.status) }}
+        </span>
+
+        @if(app.status === 'pending'){
+        <button
+          type="button"
+          class="btn-withdraw"
+          (click)="withdraw(app._id)"
+          [disabled]="withdrawingId() === app._id"
+          [attr.aria-label]="'Withdraw application for ' + getOpportunityTitle(app)">
+          @if(withdrawingId() === app._id){
+          <span class="material-icons spinning">autorenew</span>
+          } @else {
+          <span class="material-icons">close</span>
+          Withdraw
+          }
+        </button>
+        }
+      </div>
+
+    </div>
+    }
+  </div>
+  }
+
+</div>

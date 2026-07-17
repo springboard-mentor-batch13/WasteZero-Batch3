@@ -1,0 +1,216 @@
+<div class="page-container">
+
+  <!-- Page Header -->
+  <div class="page-header">
+    <div class="header-text">
+      <h1>{{ userRole | titlecase }} Dashboard</h1>
+      <p>Welcome back, <strong>{{ userName }}</strong> 👋</p>
+    </div>
+    <span class="role-badge">
+      <span class="material-icons role-badge-icon">verified_user</span>
+      {{ userRole | titlecase }}
+    </span>
+  </div>
+
+  <!-- ===== VOLUNTEER DASHBOARD ===== -->
+  @if(userRole === 'volunteer'){
+
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-icon-wrap blue">
+        <span class="material-icons">local_shipping</span>
+      </div>
+      <div class="stat-info">
+        <span class="stat-value">0</span>
+        <span class="stat-label">Pickup Requests</span>
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-icon-wrap green">
+        <span class="material-icons">recycling</span>
+      </div>
+      <div class="stat-info">
+        <span class="stat-value">0</span>
+        <span class="stat-label">Recycled Waste</span>
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-icon-wrap orange">
+        <span class="material-icons">event</span>
+      </div>
+      <div class="stat-info">
+        <span class="stat-value">0</span>
+        <span class="stat-label">Scheduled Pickups</span>
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-icon-wrap purple">
+        <span class="material-icons">eco</span>
+      </div>
+      <div class="stat-info">
+        <span class="stat-value">0</span>
+        <span class="stat-label">Eco Points</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="info-card">
+    <div class="info-card-icon">
+      <span class="material-icons">volunteer_activism</span>
+    </div>
+    <div>
+      <h2>Volunteer Portal</h2>
+      <p>Schedule waste pickups, track your recycling activities and contribute towards a cleaner environment.</p>
+    </div>
+  </div>
+
+  }
+
+  <!-- ===== NGO DASHBOARD ===== -->
+  @else if(userRole === 'ngo'){
+
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-icon-wrap blue">
+        <span class="material-icons">add_circle_outline</span>
+      </div>
+      <div class="stat-info">
+        <span class="stat-value">0</span>
+        <span class="stat-label">Create Opportunities</span>
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-icon-wrap green">
+        <span class="material-icons">folder_open</span>
+      </div>
+      <div class="stat-info">
+        <span class="stat-value">0</span>
+        <span class="stat-label">Manage Opportunities</span>
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-icon-wrap orange">
+        <span class="material-icons">groups</span>
+      </div>
+      <div class="stat-info">
+        <span class="stat-value">0</span>
+        <span class="stat-label">Volunteer Applications</span>
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-icon-wrap purple">
+        <span class="material-icons">chat_bubble_outline</span>
+      </div>
+      <div class="stat-info">
+        <span class="stat-value">0</span>
+        <span class="stat-label">Messages</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="info-card">
+    <div class="info-card-icon">
+      <span class="material-icons">corporate_fare</span>
+    </div>
+    <div>
+      <h2>NGO Portal</h2>
+      <p>Create volunteering opportunities, manage campaigns and connect with volunteers for waste management drives.</p>
+    </div>
+  </div>
+
+  }
+
+  <!-- ===== ADMIN DASHBOARD ===== -->
+  @else if(userRole === 'admin'){
+
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-icon-wrap blue">
+        <span class="material-icons">person_outline</span>
+      </div>
+      <div class="stat-info">
+        <span class="stat-value">0</span>
+        <span class="stat-label">Users</span>
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-icon-wrap green">
+        <span class="material-icons">bar_chart</span>
+      </div>
+      <div class="stat-info">
+        <span class="stat-value">0</span>
+        <span class="stat-label">Reports</span>
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-icon-wrap orange">
+        <span class="material-icons">settings_suggest</span>
+      </div>
+      <div class="stat-info">
+        <span class="stat-value">0</span>
+        <span class="stat-label">Platform Status</span>
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-icon-wrap purple">
+        <span class="material-icons">history</span>
+      </div>
+      <div class="stat-info">
+        <span class="stat-value">0</span>
+        <span class="stat-label">Admin Logs</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="info-card">
+    <div class="info-card-icon">
+      <span class="material-icons">admin_panel_settings</span>
+    </div>
+    <div>
+      <h2>Administrator Portal</h2>
+      <p>Monitor platform activities, manage users and oversee reports to ensure smooth platform operations.</p>
+    </div>
+  </div>
+
+  }
+
+  <!-- ===== RECENT ACTIVITIES ===== -->
+  <div class="activity-card">
+    <div class="activity-header">
+      <span class="material-icons activity-header-icon">timeline</span>
+      <h2>Recent Activities</h2>
+    </div>
+    <ul class="activity-list">
+      <li>
+        <span class="activity-dot green"></span>
+        <span class="material-icons activity-icon">check_circle_outline</span>
+        Login Successful
+      </li>
+      <li>
+        <span class="activity-dot blue"></span>
+        <span class="material-icons activity-icon">manage_accounts</span>
+        Profile Updated
+      </li>
+      <li>
+        <span class="activity-dot orange"></span>
+        <span class="material-icons activity-icon">lock_outline</span>
+        Password Changed Successfully
+      </li>
+      <li>
+        <span class="activity-dot purple"></span>
+        <span class="material-icons activity-icon">eco</span>
+        Welcome to WasteZero
+      </li>
+    </ul>
+  </div>
+
+</div>
