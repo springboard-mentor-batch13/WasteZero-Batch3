@@ -39,6 +39,9 @@ export class OpportunityForm implements OnInit, OnDestroy {
   private snackBar           = inject(MatSnackBar);
   private destroy$           = new Subject<void>();
 
+  // Today's date in YYYY-MM-DD format for the [min] attribute on the date input
+  readonly today = new Date().toISOString().split('T')[0];
+
   // ── Signals ────────────────────────────────────────────────────────
   mode         = signal<'create' | 'edit'>('create');
   opportunityId = signal<string | null>(null);
@@ -66,7 +69,8 @@ export class OpportunityForm implements OnInit, OnDestroy {
     description: ['', Validators.required],
     duration:    ['', Validators.required],
     location:    ['', Validators.required],
-    status:      ['open' as OpportunityStatus]
+    status:      ['open' as OpportunityStatus],
+    date:        [null as string | null]   // ISO date string or null
   });
 
   // ── Lifecycle ──────────────────────────────────────────────────────
@@ -106,7 +110,11 @@ export class OpportunityForm implements OnInit, OnDestroy {
             description: res.data.description,
             duration:    res.data.duration,
             location:    res.data.location,
-            status:      res.data.status
+            status:      res.data.status,
+            // Convert ISO date string to YYYY-MM-DD for the native date input
+            date: res.data.date
+              ? new Date(res.data.date).toISOString().split('T')[0]
+              : null
           });
 
           // Set loading=false AFTER patchValue so form only shows with data
@@ -194,14 +202,15 @@ export class OpportunityForm implements OnInit, OnDestroy {
 
     this.submitting.set(true);
 
-    const { title, description, duration, location, status } = this.form.getRawValue();
+    const { title, description, duration, location, status, date } = this.form.getRawValue();
     const payload: CreateOpportunityPayload = {
       title:           title!,
       description:     description!,
-      required_skills: this.skills(),   // always an array in JSON body
+      required_skills: this.skills(),
       duration:        duration!,
       location:        location!,
-      status:          (status ?? 'open') as OpportunityStatus
+      status:          (status ?? 'open') as OpportunityStatus,
+      date:            date || null
     };
 
     const imageFile = this.selectedImageFile();

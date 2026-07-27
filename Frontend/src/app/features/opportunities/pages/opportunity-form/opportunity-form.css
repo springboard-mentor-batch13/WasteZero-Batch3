@@ -442,3 +442,19 @@
   .form-actions { flex-direction: column-reverse; }
   .btn-cancel-action, .btn-submit { width: 100%; justify-content: center; }
 }
+
+/* ── Form Helper Text ──────────────────────── */
+
+.form-helper {
+  font-size: 0.78rem;
+  color: var(--color-text-secondary, #888);
+  margin-top: 0.35rem;
+  margin-bottom: 0;
+}
+
+.form-helper-inline {
+  font-size: 0.78rem;
+  color: var(--color-text-secondary, #888);
+  font-weight: 400;
+  margin-left: 0.25rem;
+}

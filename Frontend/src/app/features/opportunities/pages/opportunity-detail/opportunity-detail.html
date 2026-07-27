@@ -81,6 +81,12 @@
 
       <!-- Metadata Row -->
       <ul class="detail-meta-row">
+        @if(formattedEventDate()){
+        <li>
+          <span class="material-icons meta-icon">event</span>
+          <span>Event: {{ formattedEventDate() }}</span>
+        </li>
+        }
         <li>
           <span class="material-icons meta-icon">calendar_today</span>
           <span>Posted {{ formattedDate() }}</span>

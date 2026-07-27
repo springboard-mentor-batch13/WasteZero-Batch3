@@ -20,7 +20,9 @@ export interface Opportunity {
   duration: string;
   location: string;
   image: string;
+  imagePublicId?: string;
   status: OpportunityStatus;
+  date?: string | null;    // ISO 8601 event date (optional)
   createdAt: string;
   updatedAt: string;
 }
@@ -67,6 +69,7 @@ export interface CreateOpportunityPayload {
   location: string;
   status?: OpportunityStatus;
   image?: string;
+  date?: string | null;    // ISO 8601 event date (optional)
 }
 
 export interface UpdateOpportunityPayload {
@@ -77,4 +80,5 @@ export interface UpdateOpportunityPayload {
   location?: string;
   status?: OpportunityStatus;
   image?: string;
+  date?: string | null;    // ISO 8601 event date (optional)
 }

@@ -1,7 +1,15 @@
-// Backend\utils\generateOtp.js
+// Backend/utils/generateOtp.js
+//
+// Generates a cryptographically secure 6-digit OTP using Node's built-in
+// crypto module.  crypto.randomInt(min, max) uses a CSPRNG (Cryptographically
+// Secure Pseudo-Random Number Generator), unlike Math.random() which is
+// predictable and unsuitable for security-sensitive tokens.
+
+const { randomInt } = require('crypto');
 
 const generateOTP = () => {
-  return Math.floor(100000 + Math.random() * 900000).toString();
-}
+  // randomInt(100000, 1000000) → integer in [100000, 999999] inclusive
+  return randomInt(100000, 1000000).toString();
+};
 
-module.exports = generateOTP;
+module.exports = generateOTP;

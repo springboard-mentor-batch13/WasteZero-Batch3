@@ -64,6 +64,15 @@ export class OpportunityCard {
     });
   });
 
+  /** Formatted event date (the scheduled opportunity date, NOT createdAt) */
+  readonly formattedEventDate = computed(() => {
+    const opp = this.opportunity();
+    if (!opp.date) return null;
+    return new Date(opp.date).toLocaleDateString('en-US', {
+      year: 'numeric', month: 'short', day: 'numeric'
+    });
+  });
+
   // ── Handlers ──────────────────────────────────────────────────────────
 
   onEdit(event: Event): void {

@@ -193,6 +193,24 @@
         </div>
       </div>
 
+      <!-- Event Date -->
+      <div class="form-group">
+        <label class="form-label" for="opp-date">
+          Event Date
+          <span class="form-helper-inline">(optional)</span>
+        </label>
+        <div class="input-wrap">
+          <span class="material-icons input-icon">event</span>
+          <input
+            id="opp-date"
+            class="form-input"
+            type="date"
+            formControlName="date"
+            [min]="today">
+        </div>
+        <p class="form-helper">The scheduled date for this volunteer opportunity.</p>
+      </div>
+
     </div>
 
     <!-- Required Skills -->

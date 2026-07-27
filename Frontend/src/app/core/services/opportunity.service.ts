@@ -107,17 +107,17 @@ export class OpportunityService {
     });
   }
 
-  // ── GET /api/opportunities/filter?status=&skill=&location= ────────
-
   filterOpportunities(filters: {
     status?: string;
     skill?: string;
     location?: string;
+    sort?: 'newest' | 'oldest' | 'upcoming';
   }): Observable<OpportunityArrayResponse> {
     let params = new HttpParams();
-    if (filters.status)   params = params.set('status', filters.status);
-    if (filters.skill)    params = params.set('skill', filters.skill);
+    if (filters.status)   params = params.set('status',   filters.status);
+    if (filters.skill)    params = params.set('skill',    filters.skill);
     if (filters.location) params = params.set('location', filters.location);
+    if (filters.sort)     params = params.set('sort',     filters.sort);
 
     return this.http.get<OpportunityArrayResponse>(`${this.baseUrl}/filter`, {
       headers: this.getHeaders(),

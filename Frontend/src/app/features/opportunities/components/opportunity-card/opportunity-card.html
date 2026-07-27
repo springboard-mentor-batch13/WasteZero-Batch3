@@ -25,6 +25,12 @@
 
     <!-- Metadata -->
     <ul class="opp-card-meta">
+      @if(formattedEventDate()){
+      <li>
+        <span class="material-icons meta-icon">event</span>
+        <span>{{ formattedEventDate() }}</span>
+      </li>
+      }
       <li>
         <span class="material-icons meta-icon">calendar_today</span>
         <span>{{ formattedDate() }}</span>

@@ -82,6 +82,15 @@ export class OpportunityDetail implements OnInit, OnDestroy {
     });
   });
 
+  /** Formatted event date (scheduled date for the opportunity, NOT createdAt) */
+  readonly formattedEventDate = computed(() => {
+    const opp = this.opportunity();
+    if (!opp?.date) return null;
+    return new Date(opp.date).toLocaleDateString('en-US', {
+      year: 'numeric', month: 'long', day: 'numeric'
+    });
+  });
+
   readonly statusClass = computed(() => {
     const map: Record<string, string> = {
       'open': 'status-open',
