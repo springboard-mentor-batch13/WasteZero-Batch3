@@ -207,15 +207,39 @@ const verifyUserOtp = async (req, res) => {
       });
     }
 
-    // Atomically create the verified User record
-    await User.create({
-      name: payload.name,
-      username: payload.username,
-      email: payload.email,
-      password: payload.password,   // Pre-save hook hashes this automatically
-      role: payload.role,
-      isVerified: true,
-    });
+    // Atomically create the verified User record.
+    //
+    // Race note: the duplicate-username check in registerUser only queries
+    // the User collection, and a pending registration lives only in the
+    // OTP document's payload (not uniqueness-enforced) until this point.
+    // So two people can both start registering with the same username —
+    // neither exists as a User yet, so both pass that check — and whoever
+    // verifies second hits the username unique-index here. That's caught
+    // explicitly below instead of falling through to the generic 500,
+    // since by this point their OTP has already been consumed (deleted by
+    // verifyOtp) and they need a clear signal to register again.
+    try {
+      await User.create({
+        name: payload.name,
+        username: payload.username,
+        email: payload.email,
+        password: payload.password,   // Pre-save hook hashes this automatically
+        role: payload.role,
+        isVerified: true,
+      });
+    } catch (createError) {
+      if (createError.code === 11000) {
+        const field = Object.keys(createError.keyValue || {})[0] || 'username';
+        return res.status(409).json({
+          success: false,
+          message:
+            field === 'username'
+              ? 'That username was taken by another registration just now. Please register again with a different username.'
+              : `That ${field} was just registered by someone else. Please register again.`,
+        });
+      }
+      throw createError;
+    }
 
     return res.status(200).json({
       success: true,

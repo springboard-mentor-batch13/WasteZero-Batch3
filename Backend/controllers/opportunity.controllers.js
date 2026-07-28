@@ -2,6 +2,7 @@
 
 const mongoose = require('mongoose');
 const opportunityService = require('../services/opportunity.service');
+const matchingService = require('../services/matching.service');
 const { sendSuccess, sendError } = require('../utils/apiResponse');
 
 // ── ObjectId validation guard ───────────────────────────────────────────────
@@ -19,6 +20,14 @@ const createOpportunity = async (req, res) => {
       req.user.id,
       req.body
     );
+
+    // Fire-and-forget: find volunteers whose skills + location match this
+    // opportunity and notify them to apply. Matching/notification failures
+    // must never fail opportunity creation, so errors are only logged.
+    matchingService.notifyMatchedVolunteers(savedOpportunity).catch((err) => {
+      console.error('[Matching] Failed to notify matched volunteers:', err.message);
+    });
+
     return sendSuccess(res, savedOpportunity, 'Opportunity created successfully', 201);
   } catch (error) {
     // If DB write failed after a successful Cloudinary upload, clean up the orphan

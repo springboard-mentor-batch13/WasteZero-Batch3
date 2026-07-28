@@ -51,6 +51,33 @@ const UserSchema = new mongoose.Schema(
       default: '',
     },
 
+    // Structured coverage/home area — used by:
+    //   - the Pickup module to match NGOs to pickups by city (see
+    //     services/pickup.service.js: getUserCities, isNgoEligibleForPickup)
+    //   - the volunteer-opportunity matching engine to match volunteers to
+    //     opportunities by city/state (see services/matching.service.js)
+    // Distinct from the legacy free-text `location` field above.
+    locations: {
+      primary: {
+        city: { type: String, trim: true },
+        state: { type: String, trim: true },
+      },
+      secondary: [
+        {
+          city: { type: String, trim: true },
+          state: { type: String, trim: true },
+        },
+      ],
+    },
+
+    // NGO's accepted waste categories — used by the Pickup module to match
+    // NGOs to pickups whose wasteTypes overlap with this list (see
+    // services/pickup.service.js: getPickupsForNgo, isNgoEligibleForPickup).
+    wasteTypes: {
+      type: [String],
+      default: [],
+    },
+
     skills: {
       type: [String],
       default: [],

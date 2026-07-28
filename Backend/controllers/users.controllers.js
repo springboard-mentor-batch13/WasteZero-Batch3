@@ -16,6 +16,8 @@ const toSafeUser = (user, { includeCreatedAt = false } = {}) => {
     email: user.email,
     role: user.role,
     location: user.location,
+    locations: user.locations,
+    wasteTypes: user.wasteTypes,
     skills: user.skills,
     bio: user.bio,
     isVerified: user.isVerified,
@@ -73,7 +75,7 @@ const updateUserProfile = async (req, res) => {
       });
     }
 
-    const { name, location, skills, bio } = req.body;
+    const { name, location, locations, wasteTypes, skills, bio } = req.body;
 
     if (typeof name === 'string') {
       user.name = name.trim();
@@ -81,6 +83,45 @@ const updateUserProfile = async (req, res) => {
 
     if (typeof location === 'string') {
       user.location = location.trim();
+    }
+
+    // Coverage/home area (city + state) is used by both the Pickup module
+    // (NGO coverage matching) and the volunteer-opportunity matching engine
+    // (services/matching.service.js), so any role may set it.
+    if (locations !== undefined) {
+      const sanitizeLoc = (loc) => ({
+        city: typeof loc?.city === 'string' ? loc.city.trim() : undefined,
+        state: typeof loc?.state === 'string' ? loc.state.trim() : undefined,
+      });
+
+      user.locations = {
+        primary: locations.primary ? sanitizeLoc(locations.primary) : undefined,
+        secondary: Array.isArray(locations.secondary)
+          ? locations.secondary.map(sanitizeLoc)
+          : undefined,
+      };
+    }
+
+    // wasteTypes is an NGO-only concept — the Pickup module only ever reads
+    // it off NGO users (services/pickup.service.js).
+    if (user.role === 'ngo' && wasteTypes !== undefined) {
+      if (!Array.isArray(wasteTypes)) {
+        return res.status(400).json({
+          success: false,
+          message: 'wasteTypes must be an array of strings.',
+        });
+      }
+
+      const uniqueWasteTypes = [
+        ...new Set(
+          wasteTypes
+            .filter((w) => typeof w === 'string')
+            .map((w) => w.trim())
+            .filter((w) => w !== '')
+        ),
+      ];
+
+      user.wasteTypes = uniqueWasteTypes;
     }
 
     if (skills !== undefined) {
