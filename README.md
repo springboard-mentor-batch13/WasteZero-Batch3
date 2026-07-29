@@ -127,17 +127,17 @@ All routes require a `Bearer <token>` Authorization header (except login/registe
 
 ### Pickup Module — Role Access
 
-| Action | Volunteer | NGO | Admin |
-|---|---|---|---|
-| Create pickup | ✅ (owner only) | ❌ | ❌ |
-| View own pickups | ✅ | — | — |
-| View pickup by ID | ✅ (own) | ✅ (if assigned) | ✅ (any) |
-| View all pickups | ❌ | ❌ | ✅ |
-| View matched pending pickups | — | ✅ (`/available`) | — |
-| Edit / delete pickup | ✅ (own, Pending only) | ❌ | ❌ |
-| Cancel pending pickup | ✅ (own) | ❌ | ❌ |
-| Claim pickup | ❌ | ✅ (location + waste type match) | ❌ |
-| Complete / cancel assigned pickup | ❌ | ✅ (assigned NGO only) | ❌ |
+| Action                              | Volunteer                  | NGO                              | Admin |
+|-------------------------------------|----------------------------|----------------------------------|-------|
+| Create Pickup                       | Yes (Owner Only)           | No                               | No    |
+| View Own Pickups                    | Yes                        | N/A                              | N/A   |
+| View Pickup by ID                   | Yes (Own Pickup Only)      | Yes (Assigned Pickup Only)       | Yes (Any Pickup) |
+| View All Pickups                    | No                         | No                               | Yes   |
+| View Matched Pending Pickups        | N/A                        | Yes (`/available`)               | N/A   |
+| Edit/Delete Pickup                  | Yes (Own, Pending Only)    | No                               | No    |
+| Cancel Pending Pickup               | Yes (Own Pickup Only)      | No                               | No    |
+| Claim Pickup                        | No                         | Yes (Location & Waste Type Match)| No    |
+| Complete/Cancel Assigned Pickup     | No                         | Yes (Assigned NGO Only)          | No    |
 
 ### Matching Algorithm
 
