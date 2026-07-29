@@ -1,11 +1,15 @@
 // Backend/controllers/application.controllers.js
 
-const applicationService = require("../services/application.service");
-const Opportunity = require("../models/opportunity.model");
-const Application = require("../models/application.model");
-const { sendSuccess, sendError } = require("../utils/apiResponse");
-const buildQuery = require("../utils/queryBuilder");
-const { getOwnedOpportunityIds } = require("../middlewares/role.middleware");
+const mongoose = require('mongoose');
+const applicationService = require('../services/application.service');
+const Opportunity = require('../models/opportunity.model');
+const Application = require('../models/application.model');
+const { sendSuccess, sendError } = require('../utils/apiResponse');
+const buildQuery = require('../utils/queryBuilder');
+const { getOwnedOpportunityIds } = require('../middlewares/role.middleware');
+
+// ObjectId validation guard — prevents CastError crashes on malformed :id params
+const isValidObjectId = (id) => mongoose.Types.ObjectId.isValid(id);
 
 /**
  * @desc    Apply for an opportunity
@@ -76,20 +80,26 @@ const getApplications = async (req, res) => {
         const filter = {};
 
         // Filter by specific opportunity
-        if (req.query.opportunity) {
+       // Filter by specific opportunity
+if (req.query.opportunity) {
 
-            if (req.user.role !== "admin") {
+    // Prevent malformed ObjectId values
+    if (!isValidObjectId(req.query.opportunity)) {
+        return sendError(res, "Invalid opportunity ID", 400);
+    }
 
-                const opportunity = await Opportunity.findById(req.query.opportunity);
+    if (req.user.role !== "admin") {
 
-                if (!opportunity || opportunity.ngo_id.toString() !== req.user.id.toString()) {
-                    return sendError(res, "Access denied", 403);
-                }
-            }
+        const opportunity = await Opportunity.findById(req.query.opportunity);
 
-            filter.opportunity_id = req.query.opportunity;
+        if (!opportunity || opportunity.ngo_id.toString() !== req.user.id.toString()) {
+            return sendError(res, "Access denied", 403);
+        }
+    }
 
-        } else if (req.user.role !== "admin") {
+    filter.opportunity_id = req.query.opportunity;
+
+}else if (req.user.role !== "admin") {
 
             // NGO can only view applications for their own opportunities
             const ownedIds = await getOwnedOpportunityIds(req.user.id);
@@ -153,20 +163,19 @@ const getApplicationById = async (req, res) => {
 
     try {
 
+        if (!isValidObjectId(req.params.id)) {
+            return sendError(res, 'Invalid application ID', 400);
+        }
+
         return sendSuccess(
             res,
             req.application,
-            "Application fetched successfully"
+            'Application fetched successfully'
         );
 
     } catch (error) {
 
-        return sendError(
-            res,
-            "Failed to fetch application",
-            500,
-            error.message
-        );
+        return sendError(res, 'Failed to fetch application', 500, error.message);
 
     }
 
@@ -260,7 +269,8 @@ const getMyApplications = async (req, res) => {
         const applications = await Application.find({
             volunteer_id: req.user.id
         })
-            .populate("opportunity_id");
+            .populate('opportunity_id')
+            .lean();  // Read-only list — no Mongoose document methods needed
 
         return sendSuccess(
             res,

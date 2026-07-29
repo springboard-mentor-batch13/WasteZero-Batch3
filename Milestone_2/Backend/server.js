@@ -1,27 +1,41 @@
-// Backend\server.js
+// Backend/server.js
 
 const dotenv = require('dotenv');
 dotenv.config();
 
 const express = require('express');
-const cors = require('cors'); 
+const cors = require('cors');
+const helmet = require('helmet');
+const http = require('http');
+
 const connectDB = require('./config/db');
-const authRoutes = require('./routes/auth.routes'); 
+
+const authRoutes = require('./routes/auth.routes');
 const userRoutes = require('./routes/users.routes');
 const opportunityRouter = require('./routes/opportunity.routes');
-const applicationRoutes=require("./routes/application.routes");
+const applicationRoutes = require('./routes/application.routes');
+
+// ===== Milestone 3 Routes =====
+// const messageRoutes = require('./routes/message.routes');
+// const notificationRoutes = require('./routes/notification.routes');
+// const matchingRoutes = require('./routes/matching.routes');
+
+// ===== Socket =====
+const { initSocket } = require('./sockets');
 
 const errorHandler = require('./middlewares/error.middleware');
-
-const helmet = require("helmet");
-
+const { verifySmtpConnection } = require('./utils/sendEmail');
 
 const app = express();
 
-
-// Security Middlewares
+// ======================================================
+// Security Headers
+// ======================================================
 app.use(helmet());
 
+// ======================================================
+// CORS
+// ======================================================
 app.use(
   cors({
     origin: process.env.CLIENT_URL,
@@ -29,32 +43,85 @@ app.use(
   })
 );
 
-app.use(express.json());
- 
+// ======================================================
+// Body Parsers
+// ======================================================
+app.use(express.json({ limit: '2mb' }));
+app.use(express.urlencoded({ extended: true, limit: '2mb' }));
 
-// Connect Database
+// ======================================================
+// Database
+// ======================================================
 connectDB();
 
+// ======================================================
+// SMTP Verification
+// ======================================================
+verifySmtpConnection();
 
-console.log("ENV CHECK:", process.env.EMAIL, process.env.EMAIL_PASS ? "PASS SET" : "PASS MISSING");
+// ======================================================
+// API Routes
+// ======================================================
 
-// API Endpoints Mount
 app.use('/api/auth', authRoutes);
+
 app.use('/api/users', userRoutes);
+
 app.use('/api/opportunities', opportunityRouter);
-app.use('/api/applications',applicationRoutes);
 
-console.log("EMAIL:", process.env.EMAIL);
-console.log("EMAIL_PASS loaded:", !!process.env.EMAIL_PASS);
+app.use('/api/applications', applicationRoutes);
 
-//For system errors
-app.use(errorHandler);
+// ================= Milestone 3 =================
+
+// app.use('/api/messages', messageRoutes);
+
+// app.use('/api/notifications', notificationRoutes);
+
+// app.use('/api/matching', matchingRoutes);
+
+// ======================================================
+// Health Check
+// ======================================================
 app.get('/', (req, res) => {
-    res.send('WasteZero Backend API Engine is Running...');
+  res.json({
+    status: 'ok',
+    message: 'WasteZero API is running.',
+  });
 });
 
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-    console.log(`Server securely operating on port ${PORT}`);
+// ======================================================
+// 404 Handler
+// ======================================================
+app.use((req, res) => {
+  res.status(404).json({
+    success: false,
+    message: `Route ${req.method} ${req.originalUrl} not found.`,
+  });
 });
 
+// ======================================================
+// Global Error Handler
+// ======================================================
+app.use(errorHandler);
+
+// ======================================================
+// HTTP Server + Socket.IO
+// ======================================================
+
+const httpServer = http.createServer(app);
+
+initSocket(httpServer);
+
+// ======================================================
+// Start Server
+// ======================================================
+
+const PORT = process.env.PORT || 5001;
+
+httpServer.listen(PORT, () => {
+  console.log(
+    `WasteZero API running on port ${PORT} [${
+      process.env.NODE_ENV || 'development'
+    }]`
+  );
+});

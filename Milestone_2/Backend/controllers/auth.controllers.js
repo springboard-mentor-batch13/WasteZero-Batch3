@@ -1,14 +1,18 @@
-// Backend\controllers\auth.controllers.js
+// Backend/controllers/auth.controllers.js
 
-const User = require("../models/users.model");
-const generateToken = require("../utils/generateToken");
-const issueOtp = require("../utils/issueOtp");
-const passwordValidator = require("../utils/passwordValidator");
-const verifyOtp = require("../utils/verifyOtp");
+const User = require('../models/users.model');
+const generateToken = require('../utils/generateToken');
+const issueOtp = require('../utils/issueOtp');
+const passwordValidator = require('../utils/passwordValidator');
+const verifyOtp = require('../utils/verifyOtp');
 
 /* ============================================
-   Register User
+   Register User (Atomic Flow)
    POST /api/auth/register
+   
+   SECURITY: The User record is NOT created until email is verified.
+   Instead, registration data is stored in the OTP document's payload.
+   This prevents unverified ghost accounts accumulating in the DB.
 ============================================ */
 
 const registerUser = async (req, res) => {
@@ -16,83 +20,74 @@ const registerUser = async (req, res) => {
     const { name, username, email, password, role } = req.body;
 
     // Allow only valid roles
-    const allowedRoles = ["volunteer", "ngo", "admin"];
-
+    const allowedRoles = ['volunteer', 'ngo', 'admin'];
     if (!allowedRoles.includes(role)) {
       return res.status(400).json({
         success: false,
-        message: "Invalid role. Allowed roles are volunteer, ngo and admin.",
+        message: 'Invalid role. Allowed roles are volunteer, ngo and admin.',
       });
     }
 
-    const userRole = role;
-
-    // Validate password
+    // Validate password strength
     if (!passwordValidator(password)) {
       return res.status(400).json({
         success: false,
         message:
-          "Password must contain uppercase, lowercase, number, special character and be at least 8 characters long.",
+          'Password must contain uppercase, lowercase, number, special character and be at least 8 characters long.',
       });
     }
 
-    // Check existing user
+    // Check for existing verified users only
+    // (pending registrations are stored in the OTP collection, not the User collection)
     const existingUser = await User.findOne({
       $or: [
         { email: email.trim().toLowerCase() },
         { username: username.trim().toLowerCase() },
       ],
-    });
+    }).lean();
 
     if (existingUser) {
       return res.status(409).json({
         success: false,
-        message: "Email or username already exists.",
+        message: 'Email or username already exists.',
       });
     }
 
-    // Create user
-    const user = await User.create({
+    // Store registration payload inside the OTP document — no User created yet.
+    // The User record will be atomically created when the OTP is verified.
+    const pendingPayload = {
       name: name.trim(),
       username: username.trim().toLowerCase(),
       email: email.trim().toLowerCase(),
-      password,
-      role: userRole,
-      isVerified: false,
-    });
+      password,   // Will be hashed by the User model pre-save hook on creation
+      role,
+    };
 
-    // Send verification OTP
     try {
-      await issueOtp(user, "verify");
+      await issueOtp(email.trim().toLowerCase(), 'verify', pendingPayload);
     } catch (otpError) {
-      console.error("OTP Send Error during registration:", otpError);
-
-      // Roll back user creation
-      await User.findByIdAndDelete(user._id);
-
+      console.error('OTP Send Error during registration:', otpError);
       return res.status(500).json({
         success: false,
         message:
-          "Registration failed while sending the verification email. Please try registering again.",
+          'Registration failed while sending the verification email. Please try registering again.',
       });
     }
 
     return res.status(201).json({
       success: true,
       message:
-        "Registration successful. Please verify your email using the OTP sent to your email address.",
+        'Registration initiated. Please verify your email using the OTP sent to your email address.',
     });
-
   } catch (error) {
-    console.error("Register Error:", error);
-
+    console.error('Register Error:', error);
     return res.status(500).json({
       success: false,
-      message: "Registration failed.",
-      error: error.message,
+      message: 'Registration failed.',
     });
   }
 };
+
 /* ============================================
    Login User
    POST /api/auth/login
@@ -105,7 +100,7 @@ const loginUser = async (req, res) => {
     if (!identifier || !password) {
       return res.status(400).json({
         success: false,
-        message: "Username/email and password are required.",
+        message: 'Username/email and password are required.',
       });
     }
 
@@ -115,40 +110,40 @@ const loginUser = async (req, res) => {
         { username: identifier.trim().toLowerCase() },
         { email: identifier.trim().toLowerCase() },
       ],
-    }).select("+password");
+    }).select('+password');
 
     if (!user) {
       return res.status(401).json({
         success: false,
-        message: "Invalid username/email or password.",
+        message: 'Invalid username/email or password.',
       });
     }
 
-    // Check password
+    // Constant-time password comparison (via bcrypt)
     const isMatch = await user.matchPassword(password);
 
     if (!isMatch) {
       return res.status(401).json({
         success: false,
-        message: "Invalid username/email or password.",
+        message: 'Invalid username/email or password.',
       });
     }
 
-    // Check email verification
+    // Email must be verified before login is permitted
     if (!user.isVerified) {
       return res.status(403).json({
         success: false,
         message:
-          "Your email is not verified. Please verify your account before logging in.",
+          'Your email is not verified. Please verify your account before logging in.',
       });
     }
 
-    // Generate JWT
+    // Issue JWT
     const token = generateToken(user._id, user.role);
 
     return res.status(200).json({
       success: true,
-      message: "Login successful.",
+      message: 'Login successful.',
       token,
       user: {
         id: user._id,
@@ -159,19 +154,20 @@ const loginUser = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Login Error:", error);
-
+    console.error('Login Error:', error);
     return res.status(500).json({
       success: false,
-      message: "Login failed.",
-      error: error.message,
+      message: 'Login failed.',
     });
   }
 };
 
 /* ============================================
-   Verify Email OTP
+   Verify Email OTP (Atomic User Creation)
    POST /api/auth/verify-otp
+   
+   On valid OTP: extract payload from OTP doc,
+   create the User record, delete the OTP doc.
 ============================================ */
 
 const verifyUserOtp = async (req, res) => {
@@ -181,54 +177,65 @@ const verifyUserOtp = async (req, res) => {
     if (!email || !otp) {
       return res.status(400).json({
         success: false,
-        message: "Email and OTP are required.",
+        message: 'Email and OTP are required.',
       });
     }
 
-    const user = await User.findOne({
-      email: email.trim().toLowerCase(),
-    }).select("+otp +otpExpiry +otpPurpose");
+    const normalizedEmail = email.trim().toLowerCase();
 
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: "User not found.",
-      });
-    }
-
-    const result = await verifyOtp(user, otp, "verify");
+    const result = await verifyOtp(normalizedEmail, otp, 'verify');
 
     if (!result.success) {
       return res.status(400).json(result);
     }
 
-    user.isVerified = true;
-    user.otp = null;
-    user.otpExpiry = null;
-    user.otpPurpose = null;
+    // Check if user was already created (handles duplicate verify-otp submissions)
+    const existingUser = await User.findOne({ email: normalizedEmail }).lean();
+    if (existingUser) {
+      return res.status(200).json({
+        success: true,
+        message: 'Email already verified. You can now log in.',
+      });
+    }
 
-    await user.save();
+    // Extract registration payload stored in the OTP document
+    const payload = result.payload;
+    if (!payload) {
+      return res.status(400).json({
+        success: false,
+        message: 'Registration data not found. Please register again.',
+      });
+    }
+
+    // Atomically create the verified User record
+    await User.create({
+      name: payload.name,
+      username: payload.username,
+      email: payload.email,
+      password: payload.password,   // Pre-save hook hashes this automatically
+      role: payload.role,
+      isVerified: true,
+    });
 
     return res.status(200).json({
       success: true,
-      message: "Email verified successfully.",
+      message: 'Email verified successfully. You can now log in.',
     });
-
   } catch (error) {
-    console.error("Verify OTP Error:", error);
-
+    console.error('Verify OTP Error:', error);
     return res.status(500).json({
       success: false,
-      message: "OTP verification failed.",
-      error: error.message,
+      message: 'OTP verification failed.',
     });
   }
 };
 
-
 /* ============================================
    Resend Verification OTP
    POST /api/auth/resend-otp
+   
+   SECURITY: Returns a generic success message regardless of whether
+   the email exists — prevents user enumeration attacks.
 ============================================ */
 
 const resendOtp = async (req, res) => {
@@ -238,42 +245,36 @@ const resendOtp = async (req, res) => {
     if (!email) {
       return res.status(400).json({
         success: false,
-        message: "Email is required.",
+        message: 'Email is required.',
       });
     }
 
-    const user = await User.findOne({
-      email: email.trim().toLowerCase(),
-    });
+    const normalizedEmail = email.trim().toLowerCase();
 
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: "User not found.",
+    // Lookup the pending OTP document (not the User — user may not exist yet)
+    const OtpModel = require('../models/otp.model');
+
+    const otpDoc = await OtpModel.findOne({ email: normalizedEmail, purpose: 'verify' });
+
+    // Privacy: do not reveal whether the email is known to us
+    if (!otpDoc || !otpDoc.payload) {
+      return res.status(200).json({
+        success: true,
+        message: 'If this email is awaiting verification, a new OTP has been sent.',
       });
     }
 
-    if (user.isVerified) {
-      return res.status(400).json({
-        success: false,
-        message: "User is already verified.",
-      });
-    }
-
-    await issueOtp(user, "verify");
+    await issueOtp(normalizedEmail, 'verify', otpDoc.payload);
 
     return res.status(200).json({
       success: true,
-      message: "OTP sent successfully.",
+      message: 'If this email is awaiting verification, a new OTP has been sent.',
     });
-
   } catch (error) {
-    console.error("Resend OTP Error:", error);
-
+    console.error('Resend OTP Error:', error);
     return res.status(500).json({
       success: false,
-      message: "Failed to resend OTP.",
-      error: error.message,
+      message: 'Failed to resend OTP.',
     });
   }
 };
@@ -281,6 +282,9 @@ const resendOtp = async (req, res) => {
 /* ============================================
    Forgot Password
    POST /api/auth/forgot-password
+   
+   SECURITY: Returns a generic message regardless of whether the email
+   exists — prevents user enumeration attacks.
 ============================================ */
 
 const forgotPassword = async (req, res) => {
@@ -290,46 +294,38 @@ const forgotPassword = async (req, res) => {
     if (!email) {
       return res.status(400).json({
         success: false,
-        message: "Email is required.",
+        message: 'Email is required.',
       });
     }
 
-    const user = await User.findOne({
-      email: email.trim().toLowerCase(),
-    });
+    const normalizedEmail = email.trim().toLowerCase();
 
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: "User not found.",
-      });
+    // Only dispatch if a verified user exists; never reveal which branch runs
+    const user = await User.findOne({ email: normalizedEmail, isVerified: true }).lean();
+
+    if (user) {
+      try {
+        await issueOtp(normalizedEmail, 'forgot-password');
+      } catch (otpError) {
+        console.error('Forgot Password OTP Error:', otpError);
+        // Intentional: swallow error to keep generic response
+      }
     }
 
-    if (!user.isVerified) {
-      return res.status(400).json({
-        success: false,
-        message: "Please verify your email before resetting your password.",
-      });
-    }
-
-    await issueOtp(user, "forgot-password");
-
+    // Always return the same response regardless of user existence
     return res.status(200).json({
       success: true,
-      message: "Password reset OTP sent successfully.",
+      message:
+        'If this email is registered, a password reset OTP has been sent.',
     });
-
   } catch (error) {
-    console.error("Forgot Password Error:", error);
-
+    console.error('Forgot Password Error:', error);
     return res.status(500).json({
       success: false,
-      message: "Failed to send password reset OTP.",
-      error: error.message,
+      message: 'Failed to process the request.',
     });
   }
 };
-
 
 /* ============================================
    Reset Password
@@ -343,7 +339,7 @@ const resetPassword = async (req, res) => {
     if (!email || !otp || !newPassword) {
       return res.status(400).json({
         success: false,
-        message: "Email, OTP and new password are required.",
+        message: 'Email, OTP and new password are required.',
       });
     }
 
@@ -351,59 +347,51 @@ const resetPassword = async (req, res) => {
       return res.status(400).json({
         success: false,
         message:
-          "Password must contain uppercase, lowercase, number, special character and be at least 8 characters long.",
+          'Password must contain uppercase, lowercase, number, special character and be at least 8 characters long.',
       });
     }
 
-    const user = await User.findOne({
-      email: email.trim().toLowerCase(),
-    }).select("+password +otp +otpExpiry +otpPurpose");
+    const normalizedEmail = email.trim().toLowerCase();
 
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: "User not found.",
-      });
-    }
-
-    const result = await verifyOtp(user, otp, "forgot-password");
+    // Verify OTP against the Otp collection
+    const result = await verifyOtp(normalizedEmail, otp, 'forgot-password');
 
     if (!result.success) {
       return res.status(400).json(result);
     }
 
-    // Prevent reusing the current password
-    const samePassword = await user.matchPassword(newPassword);
+    // Load the user document with the password field for comparison
+    const user = await User.findOne({ email: normalizedEmail }).select('+password');
 
-    if (samePassword) {
-      return res.status(400).json({
+    if (!user) {
+      return res.status(404).json({
         success: false,
-        message: "New password must be different from the current password.",
+        message: 'User not found.',
       });
     }
 
-    // Password will be hashed by the pre-save hook
+    // Prevent reusing the current password
+    const samePassword = await user.matchPassword(newPassword);
+    if (samePassword) {
+      return res.status(400).json({
+        success: false,
+        message: 'New password must be different from the current password.',
+      });
+    }
+
+    // Assign new password — pre-save hook will hash it
     user.password = newPassword;
-
-    // Clear OTP
-    user.otp = null;
-    user.otpExpiry = null;
-    user.otpPurpose = null;
-
     await user.save();
 
     return res.status(200).json({
       success: true,
-      message: "Password reset successful.",
+      message: 'Password reset successful.',
     });
-
   } catch (error) {
-    console.error("Reset Password Error:", error);
-
+    console.error('Reset Password Error:', error);
     return res.status(500).json({
       success: false,
-      message: "Password reset failed.",
-      error: error.message,
+      message: 'Password reset failed.',
     });
   }
 };
