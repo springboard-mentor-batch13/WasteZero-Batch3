@@ -186,9 +186,11 @@ const notifyMatchedVolunteers = async (opportunity) => {
  *   3. Score each: +1 per required_skill the volunteer also has, plus
  *      LOCATION_MATCH_SCORE if the opportunity's location matches the
  *      volunteer's city/state.
- *   4. Drop zero-score opportunities (an unrelated opportunity isn't a
- *      "match" just because it exists) and sort the rest by score, highest
- *      first — ties broken by newest first.
+ *   4. Require BOTH at least one matching skill AND a location match — same
+ *      contract as findMatchingVolunteers/the push-notification path, so a
+ *      matching city with zero skill overlap (or vice versa) is not a
+ *      "match" — and sort the rest by score, highest first — ties broken by
+ *      newest first.
  *   5. Return the top N (default 10).
  *
  * @param {string} volunteerId
@@ -219,7 +221,7 @@ const getMatchesForVolunteer = async (volunteerId, limit = 10) => {
   });
 
   return scored
-    .filter((m) => m.matchScore > 0)
+    .filter((m) => m.matchedSkillCount > 0 && m.locationMatch)
     .sort((a, b) => b.matchScore - a.matchScore)
     .slice(0, limit)
     .map(({ opportunity, matchScore, matchedSkillCount, locationMatch }) => ({

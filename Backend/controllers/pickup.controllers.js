@@ -5,6 +5,7 @@ const matchingService = require('../services/matching.service');
 const Pickup = require('../models/pickup.model');
 const buildQuery = require('../utils/queryBuilder');
 const { sendSuccess, sendError } = require('../utils/apiResponse');
+const { checkProfileCompleteness } = require('../utils/profileCompleteness');
 
 /**
  * @desc    Create a new pickup request
@@ -62,6 +63,16 @@ const updatePickup = async (req, res) => {
     }
 
     const updated = await pickupService.updatePickupInstance(req.pickup, req.body);
+
+    // Fire-and-forget: re-run NGO matching on every update (not just
+    // creation) so any NGO now matching the pickup's current city/
+    // wasteTypes gets notified, regardless of which field changed.
+    // Matching/notification failures must never fail the update, so
+    // errors are only logged.
+    matchingService.notifyMatchedNgos(updated).catch((err) => {
+      console.error('[Matching] Failed to notify matched NGOs on update:', err.message);
+    });
+
     return sendSuccess(res, updated, 'Pickup updated successfully');
   } catch (error) {
     return sendError(res, 'Failed to update pickup', 500, error.message);
@@ -176,6 +187,19 @@ const getMyPickups = async (req, res) => {
  */
 const getAvailablePickups = async (req, res) => {
   try {
+    // Matching needs wasteTypes + location. pickupService.getPickupsForNgo
+    // already degrades to an empty result when these are missing, but that
+    // looks identical to "no pickups right now" — tell the NGO explicitly
+    // what's missing instead of leaving them guessing.
+    const { complete, missing } = checkProfileCompleteness(req.user);
+    if (!complete) {
+      return res.status(400).json({
+        success: false,
+        message: `Complete your profile to see matched pickups. Missing: ${missing.join(', ')}.`,
+        missingFields: missing,
+      });
+    }
+
     const { skip, limit, page, sort } = buildQuery(req);
 
     const { pickups, total } = await pickupService.getPickupsForNgo(req.user, {

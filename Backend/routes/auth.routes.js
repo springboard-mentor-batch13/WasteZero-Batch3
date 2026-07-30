@@ -27,6 +27,7 @@ const {
 // Register
 router.post(
   "/register",
+  otpLimiter,
   registerValidation,
   validate,
   registerUser

@@ -2,6 +2,7 @@
 
 const { body, validationResult } = require('express-validator');
 const { sendError } = require('../utils/apiResponse');
+const opportunityService = require('../services/opportunity.service');
 
 /**
  * Validation rules for Create (POST) and Update (PUT) opportunity requests.
@@ -70,10 +71,20 @@ const opportunityValidationRules = () => {
  * Errors are formatted as an array of { field: message } objects,
  * matching the apiResponse.sendError convention used throughout the app.
  */
-const validate = (req, res, next) => {
+const validate = async (req, res, next) => {
   const errors = validationResult(req);
   if (errors.isEmpty()) {
     return next();
+  }
+
+  // If a file was uploaded to Cloudinary earlier in this request's middleware
+  // chain (upload.single -> uploadToCloudinary) but body validation now fails,
+  // the request will never reach the controller's catch block, so the
+  // just-created asset would otherwise be orphaned in Cloudinary forever.
+  // Clean it up here, since this is the last point that still has access to
+  // req.body.imagePublicId before the request is rejected.
+  if (req.body.imagePublicId) {
+    await opportunityService.deleteCloudinaryAsset(req.body.imagePublicId);
   }
 
   const extractedErrors = errors.array().map((err) => ({ [err.path]: err.msg }));

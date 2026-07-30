@@ -4,6 +4,7 @@ const User = require('../models/users.model');
 const issueOtp = require('../utils/issueOtp');
 const verifyOtp = require('../utils/verifyOtp');
 const passwordValidator = require('../utils/passwordValidator');
+const { checkProfileCompleteness } = require('../utils/profileCompleteness');
 
 /* ============================================
    Helper: Shape a safe user object for responses
@@ -145,6 +146,24 @@ const updateUserProfile = async (req, res) => {
 
     if (typeof bio === 'string') {
       user.bio = bio.trim();
+    }
+
+    // SECURITY/DATA-INTEGRITY: location, skills (volunteer), and wasteTypes
+    // (NGO) are not cosmetic — the matching engine (opportunity matching for
+    // volunteers, pickup matching for NGOs) silently returns zero matches
+    // for anyone missing them. Rather than let that fail silently, block
+    // the save here and tell the user exactly what's still needed. This
+    // runs on the merged (existing + incoming) document, so it only fires
+    // when the profile is *still* incomplete after this update — a user
+    // who already completed their profile isn't re-blocked by an unrelated
+    // partial update (e.g. just changing their bio).
+    const { complete, missing } = checkProfileCompleteness(user);
+    if (!complete) {
+      return res.status(400).json({
+        success: false,
+        message: `Please complete your profile before saving. Missing: ${missing.join(', ')}.`,
+        missingFields: missing,
+      });
     }
 
     await user.save();

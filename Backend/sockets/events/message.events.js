@@ -50,18 +50,29 @@ module.exports = function registerMessageEvents(io, socket) {
       // Broadcast to every connected socket session of the recipient
       io.to(getUserRoom(receiverId)).emit('message:new', message);
 
-      // Acknowledge back to sender
+      // Acknowledge back to sender. From this point on the message is
+      // already persisted and delivered — nothing below may cause a second,
+      // conflicting ack() call.
       if (typeof ack === 'function') {
         ack({ success: true, data: message });
       }
 
-      // Dispatch persistent notification
-      await notificationService.dispatch({
-        user_id: receiverId,
-        type: 'message',
-        message: `New message from ${socket.user.name || 'a user'}`,
-        reference_id: socket.user.id,
-      });
+      // Dispatch persistent notification — isolated in its own try/catch so
+      // a failure here (e.g. a transient DB error creating the Notification
+      // doc) can never fall through to the outer catch below and re-ack
+      // this already-successful send with {success: false}, which would
+      // wrongly tell the sender their message failed after it had already
+      // gone through.
+      try {
+        await notificationService.dispatch({
+          user_id: receiverId,
+          type: 'message',
+          message: `New message from ${socket.user.name || 'a user'}`,
+          reference_id: socket.user.id,
+        });
+      } catch (notifyErr) {
+        console.error('[Messages] Failed to dispatch message notification:', notifyErr.message);
+      }
     } catch (err) {
       // rate-limiter-flexible rejects consume() with a RateLimiterRes
       // instance on limit-exceeded — NOT an Error, so it has no `.name`
@@ -88,11 +99,22 @@ module.exports = function registerMessageEvents(io, socket) {
         throw new Error('conversationId is required');
       }
 
+      // Verify the caller is actually one of the two participants encoded
+      // in conversationId ("<idA>_<idB>") BEFORE doing anything else.
+      // markConversationRead is already safely scoped by receiver_id (an
+      // arbitrary conversationId just matches zero documents), but without
+      // this check the code below would still broadcast a "message:read"
+      // event to the other id in the string regardless — letting any
+      // authenticated socket spoof a read-receipt for a conversation it was
+      // never part of.
+      const participantIds = conversationId.split('_');
+      if (participantIds.length !== 2 || !participantIds.includes(socket.user.id)) {
+        throw new Error('You are not a participant in this conversation');
+      }
+
       await messageService.markConversationRead(conversationId, socket.user.id);
 
-      const otherUserId = conversationId
-        .split('_')
-        .find((id) => id !== socket.user.id);
+      const otherUserId = participantIds.find((id) => id !== socket.user.id);
 
       if (otherUserId) {
         io.to(getUserRoom(otherUserId)).emit('message:read', {

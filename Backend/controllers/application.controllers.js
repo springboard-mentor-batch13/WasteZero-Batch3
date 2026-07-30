@@ -235,6 +235,16 @@ const withdrawApplication = async (req, res) => {
 
     try {
 
+        if (req.application.status !== "pending") {
+
+            return sendError(
+                res,
+                `This application has already been ${req.application.status} and can no longer be withdrawn`,
+                400
+            );
+
+        }
+
         await applicationService.withdraw(req.application._id);
 
         return sendSuccess(

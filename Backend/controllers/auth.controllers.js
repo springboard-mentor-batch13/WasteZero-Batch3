@@ -5,6 +5,7 @@ const generateToken = require('../utils/generateToken');
 const issueOtp = require('../utils/issueOtp');
 const passwordValidator = require('../utils/passwordValidator');
 const verifyOtp = require('../utils/verifyOtp');
+const OtpModel = require('../models/otp.model');
 
 /* ============================================
    Register User (Atomic Flow)
@@ -35,6 +36,21 @@ const registerUser = async (req, res) => {
         message:
           'Password must contain uppercase, lowercase, number, special character and be at least 8 characters long.',
       });
+    }
+
+    // SECURITY: Only one admin account may ever exist. This is an early,
+    // friendly check (avoids sending an OTP email for a request that can
+    // never succeed) — the real, race-safe guarantee is the partial unique
+    // index on { role: 'admin' } in the User model, enforced again below
+    // when the OTP is verified and the User document is actually created.
+    if (role === 'admin') {
+      const adminExists = await User.exists({ role: 'admin' });
+      if (adminExists) {
+        return res.status(403).json({
+          success: false,
+          message: 'An admin account already exists. Only one admin is allowed.',
+        });
+      }
     }
 
     // Check for existing verified users only
@@ -230,6 +246,20 @@ const verifyUserOtp = async (req, res) => {
     } catch (createError) {
       if (createError.code === 11000) {
         const field = Object.keys(createError.keyValue || {})[0] || 'username';
+
+        // Race case: two admin registrations were both verified before
+        // either User document existed, so the early check in registerUser
+        // couldn't catch it. The partial unique index on { role: 'admin' }
+        // rejects the second insert here — surface a clear message instead
+        // of the generic duplicate-field one.
+        if (field === 'role' && payload.role === 'admin') {
+          return res.status(409).json({
+            success: false,
+            message:
+              'An admin account was just registered by someone else. Only one admin is allowed.',
+          });
+        }
+
         return res.status(409).json({
           success: false,
           message:
@@ -276,8 +306,6 @@ const resendOtp = async (req, res) => {
     const normalizedEmail = email.trim().toLowerCase();
 
     // Lookup the pending OTP document (not the User — user may not exist yet)
-    const OtpModel = require('../models/otp.model');
-
     const otpDoc = await OtpModel.findOne({ email: normalizedEmail, purpose: 'verify' });
 
     // Privacy: do not reveal whether the email is known to us

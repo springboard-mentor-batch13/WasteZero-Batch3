@@ -117,4 +117,16 @@ UserSchema.methods.matchPassword = async function (enteredPassword) {
   return await bcrypt.compare(enteredPassword, this.password);
 };
 
+// SECURITY: Enforce a single admin account at the database level.
+// A partial unique index only applies to documents matching the filter
+// (role: 'admin'), so non-admin users are completely unaffected, but
+// MongoDB will reject (E11000) any attempt to insert/update a *second*
+// document with role: 'admin'. This is race-safe — unlike an
+// application-level "does an admin already exist?" check, it holds even
+// if two admin-registration requests are verified at the same instant.
+UserSchema.index(
+  { role: 1 },
+  { unique: true, partialFilterExpression: { role: 'admin' } }
+);
+
 module.exports = mongoose.model('User', UserSchema);
