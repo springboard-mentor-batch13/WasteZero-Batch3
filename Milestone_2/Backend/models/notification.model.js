@@ -22,15 +22,30 @@ const notificationSchema = new mongoose.Schema(
       required: true,
     },
 
+    // Stores AES-256-GCM ciphertext (hex-encoded). Plaintext is never persisted.
     message: {
       type: String,
       required: [true, 'Notification message is required'],
-      trim: true,
-      maxlength: [300, 'Notification message cannot exceed 300 characters'],
+    },
+
+    // Initialization Vector (hex) — required for AES-256-GCM decryption
+    iv: {
+      type: String,
+      required: true,
+    },
+
+    // Authentication Tag (hex) — required for AES-256-GCM decryption
+    authTag: {
+      type: String,
+      required: true,
     },
 
     reference_id: {
-      type: mongoose.Schema.Types.ObjectId,
+      // Polymorphic reference: String conversation_id for 'message' type,
+      // or a MongoDB ObjectId for 'opportunity_match' type.
+      // Must be Mixed — not ObjectId — because deterministic conversation IDs
+      // (e.g. "abc123_def456") are Strings and cannot be cast to ObjectId.
+      type: mongoose.Schema.Types.Mixed,
       default: null,
     },
 

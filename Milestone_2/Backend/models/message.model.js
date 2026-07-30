@@ -1,56 +1,53 @@
-// Backend/models/message.model.js
-//
-// Real-time direct message between two users.
-// Uses sender_id / receiver_id references and a deterministic conversation_id.
-
 const mongoose = require('mongoose');
+const { Schema } = mongoose;
 
-const messageSchema = new mongoose.Schema(
+const messageSchema = new Schema(
   {
-    sender_id: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
-      required: true,
-    },
-
-    receiver_id: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
-      required: true,
-    },
-
-    // Deterministic thread identifier: min(A,B)_max(A,B)
+    // Deterministic ID for a 1:1 thread: sort(sender_id, receiver_id).join('_')
     conversation_id: {
       type: String,
       required: true,
     },
-
+    sender_id: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+    },
+    receiver_id: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+    },
+    // Content holds AES-256-GCM ciphertext (hex encoded)
     content: {
       type: String,
-      required: [true, 'Message content is required'],
-      trim: true,
-      minlength: [1, 'Message content cannot be empty'],
-      maxlength: [2000, 'Message content cannot exceed 2000 characters'],
+      required: true,
     },
-
+    // Initialization Vector (hex)
+    iv: {
+      type: String,
+      required: true,
+    },
+    // Authentication Tag (hex)
+    authTag: {
+      type: String,
+      required: true,
+    },
     status: {
       type: String,
-      enum: {
-        values: ['sent', 'delivered', 'read'],
-        message: '{VALUE} is not a valid message status',
-      },
+      enum: ['sent', 'delivered', 'read'],
       default: 'sent',
     },
+    readAt: {
+      type: Date,
+    },
   },
-  {
-    timestamps: true,
-  }
+  { timestamps: true }
 );
 
-// ── MongoDB Indexes ────────────────────────────────────────────────────
-
-// Compound index: fetch one conversation's history, newest first, paginated.
-// Leading field (conversation_id) covers all conversation history queries.
+// Compound indexes
 messageSchema.index({ conversation_id: 1, createdAt: -1 });
+messageSchema.index({ sender_id: 1, createdAt: -1 });
+messageSchema.index({ receiver_id: 1, createdAt: -1 });
 
 module.exports = mongoose.model('Message', messageSchema);

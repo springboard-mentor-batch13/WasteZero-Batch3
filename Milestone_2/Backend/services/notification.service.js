@@ -2,18 +2,35 @@
 
 const mongoose = require('mongoose');
 const Notification = require('../models/notification.model');
+const { encrypt, decrypt } = require('../utils/crypto');
 
 /**
  * Create a notification record and (best-effort) push it over the socket
  * layer if the recipient is currently connected.
  */
 const dispatch = async ({ user_id, type, message, reference_id = null }) => {
-  const notification = await Notification.create({ user_id, type, message, reference_id });
+  // Encrypt plaintext before persisting — MongoDB stores only ciphertext.
+  // Pattern mirrors createMessage() in message.service.js.
+  const { encryptedData, iv, authTag } = encrypt(message);
+
+  const notification = await Notification.create({
+    user_id,
+    type,
+    message: encryptedData,
+    iv,
+    authTag,
+    reference_id,
+  });
 
   try {
     const { getIO } = require('../sockets');
     const { getUserRoom } = require('../sockets/rooms');
-    getIO().to(getUserRoom(user_id)).emit('notification:new', notification);
+    // Emit the ORIGINAL plaintext to the connected client — never the crypto fields.
+    const { iv: _iv, authTag: _authTag, ...rest } = notification.toObject();
+    getIO().to(getUserRoom(user_id)).emit('notification:new', {
+      ...rest,
+      message,
+    });
   } catch (err) {
     console.error('[Notification] Socket push skipped:', err.message);
   }
@@ -24,16 +41,28 @@ const dispatch = async ({ user_id, type, message, reference_id = null }) => {
 /**
  * Get notifications for a user, paginated, newest first.
  */
-const listForUser = (userId, skip = 0, limit = 20) => {
+const listForUser = async (userId, skip = 0, limit = 20) => {
   if (!mongoose.Types.ObjectId.isValid(userId)) {
     throw new Error('Invalid user ID format');
   }
 
-  return Notification.find({ user_id: userId })
+  const notifications = await Notification.find({ user_id: userId })
     .sort({ createdAt: -1 })
     .skip(skip)
     .limit(limit)
     .lean();
+
+  // Decrypt each notification message before returning to the client.
+  // iv and authTag are stripped — they must never be exposed to the frontend.
+  return notifications.map((n) => {
+    try {
+      const { iv, authTag, ...rest } = n;
+      return { ...rest, message: decrypt(n.message, n.iv, n.authTag) };
+    } catch {
+      const { iv, authTag, ...rest } = n;
+      return { ...rest, message: '[Notification Decryption Failed]' };
+    }
+  });
 };
 
 /**
@@ -55,7 +84,13 @@ const markRead = async (notificationId, userId) => {
     throw new Error('Notification not found or unauthorized');
   }
 
-  return notification;
+  // Decrypt before returning — caller/client must receive readable text.
+  const { iv, authTag, ...rest } = notification.toObject();
+  try {
+    return { ...rest, message: decrypt(notification.message, iv, authTag) };
+  } catch {
+    return { ...rest, message: '[Notification Decryption Failed]' };
+  }
 };
 
 module.exports = {

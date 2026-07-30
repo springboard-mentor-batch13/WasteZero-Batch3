@@ -1,85 +1,105 @@
-// Backend/services/message.service.js
-
+const mongoose = require('mongoose');
 const Message = require('../models/message.model');
-const User = require('../models/users.model');
+const { encrypt, decrypt } = require('../utils/crypto');
 
-/**
- * @internal
- * Build the deterministic conversation_id for a pair of user ids.
- * Sorting guarantees (A, B) and (B, A) always resolve to the same thread.
- */
-const buildConversationId = (idA, idB) => [String(idA), String(idB)].sort().join('_');
+// Encrypt plaintext message before saving to MongoDB
+const createMessage = async ({ conversation_id, sender_id, receiver_id, content }) => {
+  const { encryptedData, iv, authTag } = encrypt(content);
 
-/**
- * Create a new message.
- * Enforces strict Volunteer <-> NGO communication role pairing.
- */
-const createMessage = async ({ sender_id, sender_role, receiver_id, content }) => {
-  // 1. Fetch receiver to check existence and role
-  const receiver = await User.findById(receiver_id).select('role').lean();
-
-  if (!receiver) {
-    throw new Error('Recipient user does not exist');
-  }
-
-  // 2. Strict Role Check: Must be Volunteer <-> NGO only
-  const isVolunteerToNgo = sender_role === 'volunteer' && receiver.role === 'ngo';
-  const isNgoToVolunteer = sender_role === 'ngo' && receiver.role === 'volunteer';
-
-  if (!isVolunteerToNgo && !isNgoToVolunteer) {
-    throw new Error('Messaging is only allowed between Volunteers and NGOs');
-  }
-
-  // 3. Create Message
-  return Message.create({
+  const messageDoc = await Message.create({
+    conversation_id,
     sender_id,
     receiver_id,
-    content,
-    conversation_id: buildConversationId(sender_id, receiver_id),
+    content: encryptedData,
+    iv,
+    authTag,
   });
+
+  const rawObj = messageDoc.toObject();
+
+  // Return original plaintext in-memory so socket emission receives normal text
+  return {
+    ...rawObj,
+    content: content,
+    iv: undefined,      // Do not leak IV to client
+    authTag: undefined, // Do not leak AuthTag to client
+  };
 };
 
-/**
- * Get one conversation's history, paginated, newest first.
- * Uses .lean() — read-only list, no document methods needed.
- */
-const getConversationHistory = (conversationId, skip, limit) => {
-  return Message.find({ conversation_id: conversationId })
+// Fetch conversation history and decrypt messages
+const getConversationHistory = async (conversationId, { skip, limit }) => {
+  const messages = await Message.find({ conversation_id: conversationId })
     .sort({ createdAt: -1 })
     .skip(skip)
     .limit(limit)
     .lean();
+
+  return messages.map((msg) => {
+    try {
+      return {
+        ...msg,
+        content: decrypt(msg.content, msg.iv, msg.authTag),
+        iv: undefined,
+        authTag: undefined,
+      };
+    } catch (err) {
+      return {
+        ...msg,
+        content: '[Message Decryption Failed]',
+        iv: undefined,
+        authTag: undefined,
+      };
+    }
+  });
 };
 
-/**
- * Mark every unread message in a conversation as read, scoped to messages
- * where the given user was the receiver.
- */
-const markConversationRead = (conversationId, readerId) => {
+const markConversationRead = async (conversationId, readerId) => {
   return Message.updateMany(
     {
       conversation_id: conversationId,
-      receiver_id: readerId,
-      status: { $ne: 'read' },
+      receiver_id: new mongoose.Types.ObjectId(readerId),
+      status: { $ne: "read" },
     },
-    { $set: { status: 'read' } }
+    {
+      $set: {
+        status: "read",
+        readAt: new Date(),
+      },
+    }
   );
 };
-
-/**
- * List the most recent message per conversation the user is part of.
- */
-const listConversationsForUser = (userId) => {
-  return Message.aggregate([
-    { $match: { $or: [{ sender_id: userId }, { receiver_id: userId }] } },
+// List conversations with decrypted lastMessage preview
+const listConversationsForUser = async (userId) => {
+  // userId arrives as a String from socket.user.id (socket.middleware.js casts
+  // user._id to string). Aggregation pipelines do NOT auto-cast — we must
+  // explicitly convert to ObjectId so $match finds documents in MongoDB.
+  const oid = new mongoose.Types.ObjectId(userId);
+  const conversations = await Message.aggregate([
+    { $match: { $or: [{ sender_id: oid }, { receiver_id: oid }] } },
     { $sort: { createdAt: -1 } },
     { $group: { _id: '$conversation_id', lastMessage: { $first: '$$ROOT' } } },
     { $sort: { 'lastMessage.createdAt': -1 } },
   ]);
+
+  return conversations.map((item) => {
+    if (item.lastMessage) {
+      try {
+        item.lastMessage.content = decrypt(
+          item.lastMessage.content,
+          item.lastMessage.iv,
+          item.lastMessage.authTag
+        );
+      } catch (err) {
+        item.lastMessage.content = '[Encrypted Message]';
+      }
+      delete item.lastMessage.iv;
+      delete item.lastMessage.authTag;
+    }
+    return item;
+  });
 };
 
 module.exports = {
-  buildConversationId,
   createMessage,
   getConversationHistory,
   markConversationRead,

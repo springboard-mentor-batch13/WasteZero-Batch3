@@ -9,4 +9,18 @@
 
 const getUserRoom = (userId) => `user:${userId}`;
 
-module.exports = { getUserRoom };
+const getConversationRoom = (conversationId) => `conversation:${conversationId}`;
+
+/**
+ * Generates a deterministic, consistent conversation ID from two user IDs
+ * regardless of who initiated the conversation (e.g. userA + userB == userB + userA).
+ */
+const buildConversationId = (id1, id2) => {
+  return [id1.toString(), id2.toString()].sort().join('_');
+};
+
+module.exports = { 
+  getUserRoom,
+  getConversationRoom,
+  buildConversationId,
+};
