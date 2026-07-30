@@ -2,18 +2,41 @@
 
 const mongoose = require('mongoose');
 const Notification = require('../models/notification.model');
+const { encrypt, decrypt } = require('../utils/crypto');
 
 /**
  * Create a notification record and (best-effort) push it over the socket
  * layer if the recipient is currently connected.
+ *
+ * Encrypts the plaintext message with AES-256-GCM before persisting to
+ * MongoDB — the database never stores readable notification text.
+ * The socket push always emits the original plaintext so the connected
+ * client sees a readable message immediately without a round-trip decrypt.
  */
 const dispatch = async ({ user_id, type, message, reference_id = null }) => {
-  const notification = await Notification.create({ user_id, type, message, reference_id });
+  // Encrypt plaintext before persisting — MongoDB stores only ciphertext.
+  const { encryptedData, iv, authTag } = encrypt(message);
+
+  const notification = await Notification.create({
+    user_id,
+    type,
+    message: encryptedData,
+    iv,
+    authTag,
+    reference_id,
+  });
 
   try {
     const { getIO } = require('../sockets');
     const { getUserRoom } = require('../sockets/rooms');
-    getIO().to(getUserRoom(user_id)).emit('notification:new', notification);
+
+    // Emit the ORIGINAL plaintext to the connected client —
+    // never expose iv/authTag/ciphertext to the frontend.
+    const { iv: _iv, authTag: _authTag, ...rest } = notification.toObject();
+    getIO().to(getUserRoom(user_id)).emit('notification:new', {
+      ...rest,
+      message, // original plaintext
+    });
   } catch (err) {
     console.error('[Notification] Socket push skipped:', err.message);
   }
@@ -23,25 +46,41 @@ const dispatch = async ({ user_id, type, message, reference_id = null }) => {
 
 /**
  * Get notifications for a user, paginated, newest first.
+ * Decrypts each notification's message before returning to the caller.
+ * iv and authTag are stripped — they must never be exposed to the frontend.
  */
-const listForUser = (userId, skip = 0, limit = 20) => {
+const listForUser = async (userId, skip = 0, limit = 20) => {
   if (!mongoose.Types.ObjectId.isValid(userId)) {
     throw new Error('Invalid user ID format');
   }
 
-  return Notification.find({ user_id: userId })
+  const notifications = await Notification.find({ user_id: userId })
     .sort({ createdAt: -1 })
     .skip(skip)
     .limit(limit)
     .lean();
+
+  return notifications.map((n) => {
+    try {
+      const { iv, authTag, ...rest } = n;
+      return { ...rest, message: decrypt(n.message, n.iv, n.authTag) };
+    } catch {
+      const { iv, authTag, ...rest } = n;
+      return { ...rest, message: '[Notification Decryption Failed]' };
+    }
+  });
 };
 
 /**
  * Mark a single notification as read. Scoped to user_id so a user cannot
  * mark another user's notification as read.
+ * Decrypts message before returning to caller.
  */
 const markRead = async (notificationId, userId) => {
-  if (!mongoose.Types.ObjectId.isValid(notificationId) || !mongoose.Types.ObjectId.isValid(userId)) {
+  if (
+    !mongoose.Types.ObjectId.isValid(notificationId) ||
+    !mongoose.Types.ObjectId.isValid(userId)
+  ) {
     throw new Error('Invalid ID format');
   }
 
@@ -55,7 +94,13 @@ const markRead = async (notificationId, userId) => {
     throw new Error('Notification not found or unauthorized');
   }
 
-  return notification;
+  // Decrypt before returning — caller/client must receive readable text.
+  const { iv, authTag, ...rest } = notification.toObject();
+  try {
+    return { ...rest, message: decrypt(notification.message, iv, authTag) };
+  } catch {
+    return { ...rest, message: '[Notification Decryption Failed]' };
+  }
 };
 
 // ── Developer 2 spec — REST-facing function names ──────────────────────
@@ -78,7 +123,8 @@ const createNotification = (userId, type, message, relatedId = null) =>
 /**
  * Get notifications for a user, paginated, newest first.
  */
-const getNotificationsForUser = (userId, skip = 0, limit = 20) => listForUser(userId, skip, limit);
+const getNotificationsForUser = (userId, skip = 0, limit = 20) =>
+  listForUser(userId, skip, limit);
 
 /**
  * Mark a single notification as read. NOTE: takes (notificationId, userId)

@@ -3,6 +3,7 @@
 const mongoose = require('mongoose');
 const Message = require('../models/message.model');
 const User = require('../models/users.model');
+const { encrypt, decrypt } = require('../utils/crypto');
 
 /**
  * @internal
@@ -14,6 +15,9 @@ const buildConversationId = (idA, idB) => [String(idA), String(idB)].sort().join
 /**
  * Create a new message.
  * Enforces strict Volunteer <-> NGO communication role pairing.
+ * Encrypts content with AES-256-GCM before persisting to MongoDB.
+ * Returns an object with decrypted (plaintext) content so callers and
+ * socket events always receive human-readable text — never ciphertext.
  */
 const createMessage = async ({ sender_id, sender_role, receiver_id, content }) => {
   // 1. Fetch receiver to check existence and role
@@ -31,63 +35,120 @@ const createMessage = async ({ sender_id, sender_role, receiver_id, content }) =
     throw new Error('Messaging is only allowed between Volunteers and NGOs');
   }
 
-  // 3. Create Message
-  return Message.create({
+  // 3. Encrypt plaintext before saving — MongoDB stores only ciphertext.
+  const { encryptedData, iv, authTag } = encrypt(content);
+
+  // 4. Create Message document with ciphertext
+  const messageDoc = await Message.create({
     sender_id,
     receiver_id,
-    content,
+    content: encryptedData,
+    iv,
+    authTag,
     conversation_id: buildConversationId(sender_id, receiver_id),
   });
+
+  // 5. Return plaintext content in-memory — strip iv/authTag so crypto
+  //    internals are never exposed to socket event handlers or REST callers.
+  const rawObj = messageDoc.toObject();
+  return {
+    ...rawObj,
+    content,       // original plaintext
+    iv: undefined,
+    authTag: undefined,
+  };
 };
 
 /**
  * Get one conversation's history, paginated, newest first.
- * Uses .lean() — read-only list, no document methods needed.
+ * Decrypts each message before returning — callers always receive plaintext.
  */
-const getConversationHistory = (conversationId, skip, limit) => {
-  return Message.find({ conversation_id: conversationId })
+const getConversationHistory = async (conversationId, skip, limit) => {
+  const messages = await Message.find({ conversation_id: conversationId })
     .sort({ createdAt: -1 })
     .skip(skip)
     .limit(limit)
     .lean();
+
+  return messages.map((msg) => {
+    try {
+      return {
+        ...msg,
+        content: decrypt(msg.content, msg.iv, msg.authTag),
+        iv: undefined,
+        authTag: undefined,
+      };
+    } catch {
+      return {
+        ...msg,
+        content: '[Message Decryption Failed]',
+        iv: undefined,
+        authTag: undefined,
+      };
+    }
+  });
 };
 
 /**
  * Mark every unread message in a conversation as read, scoped to messages
  * where the given user was the receiver.
+ * Also records the readAt timestamp.
  */
 const markConversationRead = (conversationId, readerId) => {
   return Message.updateMany(
     {
       conversation_id: conversationId,
-      receiver_id: readerId,
+      receiver_id: new mongoose.Types.ObjectId(readerId),
       status: { $ne: 'read' },
     },
-    { $set: { status: 'read' } }
+    {
+      $set: {
+        status: 'read',
+        readAt: new Date(),
+      },
+    }
   );
 };
 
 /**
  * List the most recent message per conversation the user is part of.
+ * Decrypts lastMessage.content before returning.
  * NOTE: aggregate() does not apply Mongoose's automatic string->ObjectId
  * casting the way find() does, so userId must be cast explicitly here —
  * passing the raw string would silently match zero documents.
  */
-const listConversationsForUser = (userId) => {
+const listConversationsForUser = async (userId) => {
   const userObjectId = new mongoose.Types.ObjectId(userId);
 
-  return Message.aggregate([
+  const conversations = await Message.aggregate([
     { $match: { $or: [{ sender_id: userObjectId }, { receiver_id: userObjectId }] } },
     { $sort: { createdAt: -1 } },
     { $group: { _id: '$conversation_id', lastMessage: { $first: '$$ROOT' } } },
     { $sort: { 'lastMessage.createdAt': -1 } },
   ]);
+
+  return conversations.map((item) => {
+    if (item.lastMessage) {
+      try {
+        item.lastMessage.content = decrypt(
+          item.lastMessage.content,
+          item.lastMessage.iv,
+          item.lastMessage.authTag
+        );
+      } catch {
+        item.lastMessage.content = '[Encrypted Message]';
+      }
+      delete item.lastMessage.iv;
+      delete item.lastMessage.authTag;
+    }
+    return item;
+  });
 };
 
 // ── Developer 2 spec — REST-facing function names ──────────────────────
 // Thin, purpose-named wrappers over the primitives above, so the REST
 // controller layer can depend on the exact names/signatures from the spec
-// without duplicating logic (and without disturbing Vaishnavi's existing
+// without duplicating logic (and without disturbing the existing
 // socket-layer calls to createMessage / markConversationRead above).
 
 /**
@@ -114,7 +175,8 @@ const saveMessage = async (senderId, receiverId, content) => {
 /**
  * WhatsApp-style conversation list: the latest message with every distinct
  * person the user has messaged, each annotated with the other person's
- * basic profile info.
+ * basic profile info. LastMessage content is already decrypted by
+ * listConversationsForUser().
  */
 const getConversationsForUser = async (userId) => {
   const conversations = await listConversationsForUser(userId);
@@ -141,17 +203,32 @@ const getConversationsForUser = async (userId) => {
 };
 
 /**
- * Full message history between two specific users, oldest first — matches
- * the spec's "(sender=me AND receiver=them) OR (sender=them AND
- * receiver=me), sorted ascending" query logic. Implemented via the
- * indexed conversation_id (equivalent result set, cheaper query) rather
- * than a literal $or, but the semantics are identical.
+ * Full message history between two specific users, oldest first.
+ * Decrypts each message's content before returning.
  */
-const getMessagesBetween = (userId1, userId2) => {
+const getMessagesBetween = async (userId1, userId2) => {
   const conversationId = buildConversationId(userId1, userId2);
-  return Message.find({ conversation_id: conversationId })
+  const messages = await Message.find({ conversation_id: conversationId })
     .sort({ createdAt: 1 })
     .lean();
+
+  return messages.map((msg) => {
+    try {
+      return {
+        ...msg,
+        content: decrypt(msg.content, msg.iv, msg.authTag),
+        iv: undefined,
+        authTag: undefined,
+      };
+    } catch {
+      return {
+        ...msg,
+        content: '[Message Decryption Failed]',
+        iv: undefined,
+        authTag: undefined,
+      };
+    }
+  });
 };
 
 /**
@@ -160,7 +237,11 @@ const getMessagesBetween = (userId1, userId2) => {
  * the single-message primitive called out in the spec.
  */
 const markAsRead = (messageId) => {
-  return Message.findByIdAndUpdate(messageId, { $set: { status: 'read' } }, { new: true });
+  return Message.findByIdAndUpdate(
+    messageId,
+    { $set: { status: 'read', readAt: new Date() } },
+    { new: true }
+  );
 };
 
 module.exports = {

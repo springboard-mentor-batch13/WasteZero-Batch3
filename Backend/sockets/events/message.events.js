@@ -33,13 +33,19 @@ const assertValidSendPayload = (payload) => {
 };
 
 module.exports = function registerMessageEvents(io, socket) {
+  // ─── message:send ───────────────────────────────────────────────────
+  // Validates payload, enforces rate limit, delegates to messageService
+  // (which handles Volunteer<->NGO role check and AES-256-GCM encryption),
+  // broadcasts decrypted message to receiver, acks sender, then dispatches
+  // an encrypted notification in the background.
   socket.on('message:send', async (payload, ack) => {
     try {
       await messageLimiter.consume(socket.user.id);
 
       const { receiverId, content } = assertValidSendPayload(payload);
 
-      // Pass sender_role along with sender_id to strictly enforce Volunteer <-> NGO messaging
+      // Pass sender_role along with sender_id to strictly enforce Volunteer <-> NGO messaging.
+      // messageService.createMessage() handles encryption transparently.
       const message = await messageService.createMessage({
         sender_id: socket.user.id,
         sender_role: socket.user.role,
@@ -47,7 +53,7 @@ module.exports = function registerMessageEvents(io, socket) {
         content,
       });
 
-      // Broadcast to every connected socket session of the recipient
+      // Broadcast decrypted message to every connected socket session of the recipient.
       io.to(getUserRoom(receiverId)).emit('message:new', message);
 
       // Acknowledge back to sender. From this point on the message is
@@ -62,7 +68,7 @@ module.exports = function registerMessageEvents(io, socket) {
       // doc) can never fall through to the outer catch below and re-ack
       // this already-successful send with {success: false}, which would
       // wrongly tell the sender their message failed after it had already
-      // gone through.
+      // gone through. notificationService.dispatch() handles encryption internally.
       try {
         await notificationService.dispatch({
           user_id: receiverId,
@@ -93,6 +99,9 @@ module.exports = function registerMessageEvents(io, socket) {
     }
   });
 
+  // ─── message:read ───────────────────────────────────────────────────
+  // Marks all unread messages in a conversation as read (scoped to this
+  // user as receiver) and broadcasts a read receipt to the other participant.
   socket.on('message:read', async ({ conversationId } = {}, ack) => {
     try {
       if (!conversationId) {
@@ -133,5 +142,17 @@ module.exports = function registerMessageEvents(io, socket) {
         socket.emit('error', { event: 'message:read', message: err.message });
       }
     }
+  });
+
+  // ─── message:typing ─────────────────────────────────────────────────
+  // Relays a typing indicator to the intended recipient's room.
+  // Fire-and-forget — no ack, no DB write, no rate limiting (typing events
+  // are ephemeral UI signals, not persistent data). Invalid receiverId is
+  // silently ignored to avoid spamming error logs on noisy clients.
+  socket.on('message:typing', ({ receiverId } = {}) => {
+    if (!receiverId || !mongoose.Types.ObjectId.isValid(receiverId)) return;
+    io.to(getUserRoom(receiverId)).emit('message:typing', {
+      senderId: socket.user.id,
+    });
   });
 };
