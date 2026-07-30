@@ -46,17 +46,11 @@ const UserSchema = new mongoose.Schema(
       default: 'volunteer',
     },
 
-    location: {
-      type: String,
-      default: '',
-    },
-
     // Structured coverage/home area — used by:
     //   - the Pickup module to match NGOs to pickups by city (see
     //     services/pickup.service.js: getUserCities, isNgoEligibleForPickup)
     //   - the volunteer-opportunity matching engine to match volunteers to
     //     opportunities by city/state (see services/matching.service.js)
-    // Distinct from the legacy free-text `location` field above.
     locations: {
       primary: {
         city: { type: String, trim: true },
@@ -102,9 +96,23 @@ const UserSchema = new mongoose.Schema(
   }
 );
 
-// Hash password before saving — only runs when password field is modified
+// Hash password before saving — only runs when password field is modified.
+//
+// SECURITY: the atomic-registration flow (controllers/auth.controllers.js)
+// already bcrypt-hashes the password itself before it ever leaves that
+// controller, so a plaintext password never sits in the Otp collection.
+// That means the value arriving here at User-creation time is *already* a
+// bcrypt hash. To avoid hashing an already-hashed value (which would break
+// login, since matchPassword would then compare against a hash-of-a-hash),
+// the caller sets `this.$locals.skipHash = true` before saving. `$locals`
+// is Mongoose's built-in per-document scratch space for passing flags into
+// hooks — it is never persisted to MongoDB.
 UserSchema.pre('save', async function () {
   if (!this.isModified('password')) {
+    return;
+  }
+
+  if (this.$locals.skipHash) {
     return;
   }
 

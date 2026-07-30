@@ -22,10 +22,10 @@ const OtpModel = require('../models/otp.model');
 const OTP_VALIDITY_MS = 10 * 60 * 1000;
 
 // Pending registration payloads (purpose 'verify' + a payload) are kept
-// around for 24 hours so resendOtp() can still find them and issue a fresh
+// around for 5 hours so resendOtp() can still find them and issue a fresh
 // code well after the original 10-minute code has expired, instead of
 // silently discarding the user's in-progress registration.
-const PENDING_REGISTRATION_TTL_MS = 24 * 60 * 60 * 1000;
+const PENDING_REGISTRATION_TTL_MS = 5 * 60 * 60 * 1000;
 
 /**
  * @param {string} email   - Recipient's email address

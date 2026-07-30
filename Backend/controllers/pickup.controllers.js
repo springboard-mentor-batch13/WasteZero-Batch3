@@ -62,16 +62,32 @@ const updatePickup = async (req, res) => {
       );
     }
 
+    // Snapshot the fields that drive NGO matching *before* the update, so we
+    // can tell afterward whether this edit actually changed who's eligible.
+    const previousCity = req.pickup.address?.city;
+    const previousWasteTypes = Array.isArray(req.pickup.wasteTypes)
+      ? [...req.pickup.wasteTypes].sort()
+      : [];
+
     const updated = await pickupService.updatePickupInstance(req.pickup, req.body);
 
-    // Fire-and-forget: re-run NGO matching on every update (not just
-    // creation) so any NGO now matching the pickup's current city/
-    // wasteTypes gets notified, regardless of which field changed.
-    // Matching/notification failures must never fail the update, so
-    // errors are only logged.
-    matchingService.notifyMatchedNgos(updated).catch((err) => {
-      console.error('[Matching] Failed to notify matched NGOs on update:', err.message);
-    });
+    const cityChanged = previousCity !== updated.address?.city;
+    const updatedWasteTypes = Array.isArray(updated.wasteTypes)
+      ? [...updated.wasteTypes].sort()
+      : [];
+    const wasteTypesChanged =
+      JSON.stringify(previousWasteTypes) !== JSON.stringify(updatedWasteTypes);
+
+    // Fire-and-forget: only re-run NGO matching when the fields that
+    // determine eligibility (city, wasteTypes) actually changed — an edit
+    // to notes/schedule alone shouldn't re-notify the same NGOs every time.
+    // Matching/notification failures must never fail the update, so errors
+    // are only logged.
+    if (cityChanged || wasteTypesChanged) {
+      matchingService.notifyMatchedNgos(updated).catch((err) => {
+        console.error('[Matching] Failed to notify matched NGOs on update:', err.message);
+      });
+    }
 
     return sendSuccess(res, updated, 'Pickup updated successfully');
   } catch (error) {
@@ -96,7 +112,19 @@ const deletePickup = async (req, res) => {
       );
     }
 
-    await pickupService.deletePickupById(req.pickup._id);
+    const deleted = await pickupService.deletePickupById(req.pickup._id, req.user.id);
+
+    // null means the pickup was claimed by an NGO (or otherwise changed)
+    // between our read (checkPickupDeleteAccess) and this delete — someone
+    // else won the race.
+    if (!deleted) {
+      return sendError(
+        res,
+        'This pickup was just updated by someone else. Please refresh and try again.',
+        409
+      );
+    }
+
     return sendSuccess(res, null, 'Pickup deleted successfully');
   } catch (error) {
     return sendError(res, 'Failed to delete pickup', 500, error.message);

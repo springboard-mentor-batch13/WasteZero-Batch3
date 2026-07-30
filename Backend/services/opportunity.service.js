@@ -39,14 +39,39 @@ const deleteCloudinaryAsset = async (publicId) => {
 
 /**
  * Create a new opportunity.
+ * Only whitelisted, NGO-editable fields are pulled from opportunityData —
+ * mirrors the whitelist used by updatePickupInstance (pickup.service.js) —
+ * so unexpected keys in the request body (e.g. a stray `_id`, or a
+ * client-supplied `status` trying to skip the default 'open' state) can
+ * never reach the document.
+ *
  * If a Cloudinary upload had already succeeded but this DB write fails,
  * the controller should call deleteCloudinaryAsset on the public_id to
  * avoid orphaned assets (transaction-safety pattern).
  */
 const createOpportunity = async (ngoId, opportunityData) => {
+  const {
+    title,
+    description,
+    required_skills,
+    duration,
+    location,
+    date,
+    image,
+    imagePublicId,
+  } = opportunityData;
+
   const newOpportunity = new Opportunity({
-    ...opportunityData,
+    title,
+    description,
+    required_skills,
+    duration,
+    location,
+    date,
+    image,
+    imagePublicId,
     ngo_id: ngoId,
+    status: 'open',
   });
   return await newOpportunity.save();
 };

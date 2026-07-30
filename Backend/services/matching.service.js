@@ -38,9 +38,7 @@ const escapeRegex = (str) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 /**
  * @internal
  * Collect every city/state term associated with a volunteer: their
- * structured locations.primary + locations.secondary[], plus a fallback to
- * the legacy free-text `location` field for volunteers who haven't migrated
- * to the structured field yet.
+ * structured primary location, plus every structured secondary location.
  */
 const getVolunteerLocationTerms = (volunteer) => {
   const terms = new Set();
@@ -51,12 +49,9 @@ const getVolunteerLocationTerms = (volunteer) => {
   };
 
   addLoc(volunteer?.locations?.primary);
+
   if (Array.isArray(volunteer?.locations?.secondary)) {
     volunteer.locations.secondary.forEach(addLoc);
-  }
-
-  if (typeof volunteer?.location === 'string' && volunteer.location.trim()) {
-    terms.add(volunteer.location.trim());
   }
 
   return [...terms].filter(Boolean);

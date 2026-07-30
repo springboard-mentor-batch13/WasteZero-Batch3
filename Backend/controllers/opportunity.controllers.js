@@ -45,8 +45,12 @@ const createOpportunity = async (req, res) => {
  */
 const getAllOpportunities = async (req, res) => {
   try {
-    const page  = parseInt(req.query.page,  10) || 1;
-    const limit = parseInt(req.query.limit, 10) || 10;
+    // Clamp both values — an unvalidated negative/zero page produces a
+    // negative skip() (Mongoose throws), and an unbounded limit lets a
+    // caller request the entire collection in one response. Mirrors the
+    // clamping already applied in utils/queryBuilder.js for pickups.
+    const page  = Math.max(parseInt(req.query.page, 10)  || 1, 1);
+    const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 10, 1), 100);
 
     const result = await opportunityService.getAllOpportunities(page, limit);
     return sendSuccess(res, result, 'Opportunities fetched successfully');

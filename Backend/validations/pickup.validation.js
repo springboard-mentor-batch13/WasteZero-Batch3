@@ -49,7 +49,32 @@ const pickupValidationRules = () => {
     body('preferredTimeSlot.start')
       .if((value, { req }) => req.method === 'POST' || req.body.preferredTimeSlot !== undefined)
       .notEmpty().withMessage('Preferred time slot start is required')
-      .matches(TIME_REGEX).withMessage('Start time must be in HH:mm 24-hour format'),
+      .matches(TIME_REGEX).withMessage('Start time must be in HH:mm 24-hour format')
+      .custom((value, { req }) => {
+        // Only enforceable on POST: that's the only path where scheduledDate
+        // and preferredTimeSlot are both guaranteed to be the full, current
+        // intended values in the same request. On PUT, scheduledDate may be
+        // omitted (unchanged) while only preferredTimeSlot is sent (or vice
+        // versa), so checking one against a possibly-stale copy of the other
+        // would produce false positives/negatives.
+        if (req.method !== 'POST') return true;
+
+        const scheduledDate = new Date(req.body.scheduledDate);
+        if (isNaN(scheduledDate.getTime())) return true; // reported separately
+
+        const now = new Date();
+        const isToday = scheduledDate.toDateString() === now.toDateString();
+        if (!isToday) return true;
+
+        const [hours, minutes] = value.split(':').map(Number);
+        const slotStart = new Date();
+        slotStart.setHours(hours, minutes, 0, 0);
+
+        if (slotStart < now) {
+          throw new Error('Preferred time slot cannot be in the past for a same-day pickup');
+        }
+        return true;
+      }),
 
     body('preferredTimeSlot.end')
       .if((value, { req }) => req.method === 'POST' || req.body.preferredTimeSlot !== undefined)

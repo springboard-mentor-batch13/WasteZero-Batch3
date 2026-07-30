@@ -9,10 +9,6 @@ const updateProfileValidation = [
     .trim()
     .isLength({ min: 2 }),
 
-  body("location")
-    .optional()
-    .trim(),
-
   body("bio")
     .optional()
     .trim()
@@ -35,7 +31,7 @@ const updateProfileValidation = [
     .trim(),
 
   body("locations.secondary")
-    .optional()
+    .optional({ nullable: true })
     .isArray().withMessage("Secondary locations must be an array"),
 
   body("locations.secondary.*.city")

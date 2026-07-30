@@ -14,13 +14,14 @@
 
 /**
  * True if the user has at least one usable location signal — either the
- * structured locations.primary.city, or (for users who haven't migrated)
- * the legacy free-text `location` field. Matches the same fallback logic
- * matching.service.js#getVolunteerLocationTerms already uses.
+ * structured locations.primary.city, or a structured secondary city.
  */
 const hasLocation = (user) =>
   Boolean(user?.locations?.primary?.city?.trim()) ||
-  Boolean(typeof user?.location === 'string' && user.location.trim());
+  Boolean(
+    Array.isArray(user?.locations?.secondary) &&
+      user.locations.secondary.some((loc) => loc?.city?.trim())
+  );
 
 const hasNonEmptyArray = (value) => Array.isArray(value) && value.length > 0;
 

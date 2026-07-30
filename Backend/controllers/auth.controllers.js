@@ -1,5 +1,6 @@
 // Backend/controllers/auth.controllers.js
 
+const bcrypt = require('bcryptjs');
 const User = require('../models/users.model');
 const generateToken = require('../utils/generateToken');
 const issueOtp = require('../utils/issueOtp');
@@ -69,13 +70,26 @@ const registerUser = async (req, res) => {
       });
     }
 
+    // SECURITY: Hash the password now, before it ever gets written to the
+    // Otp collection. Otp documents carrying a registration payload are
+    // deliberately kept around for up to 24h (PENDING_REGISTRATION_TTL_MS,
+    // see models/otp.model.js) so resendOtp keeps working — that's far too
+    // long for a plaintext password to sit unencrypted in MongoDB. Hashing
+    // here means only the bcrypt hash ever touches the Otp collection (and
+    // any resend of it via resendOtp), and if a user re-registers before
+    // verifying, the old plaintext was never stored at all.
+    const hashedPassword = await bcrypt.hash(password, 10);
+
     // Store registration payload inside the OTP document — no User created yet.
     // The User record will be atomically created when the OTP is verified.
+    // NOTE: password is already hashed above — the User pre-save hook is
+    // told to skip re-hashing it (see models/users.model.js / $locals.skipHash
+    // usage in verifyUserOtp below).
     const pendingPayload = {
       name: name.trim(),
       username: username.trim().toLowerCase(),
       email: email.trim().toLowerCase(),
-      password,   // Will be hashed by the User model pre-save hook on creation
+      password: hashedPassword,
       role,
     };
 
@@ -235,14 +249,19 @@ const verifyUserOtp = async (req, res) => {
     // since by this point their OTP has already been consumed (deleted by
     // verifyOtp) and they need a clear signal to register again.
     try {
-      await User.create({
+      // payload.password is already a bcrypt hash (hashed in registerUser
+      // before it was ever written to the Otp document) — set skipHash so
+      // the pre-save hook doesn't hash it a second time.
+      const newUser = new User({
         name: payload.name,
         username: payload.username,
         email: payload.email,
-        password: payload.password,   // Pre-save hook hashes this automatically
+        password: payload.password,
         role: payload.role,
         isVerified: true,
       });
+      newUser.$locals.skipHash = true;
+      await newUser.save();
     } catch (createError) {
       if (createError.code === 11000) {
         const field = Object.keys(createError.keyValue || {})[0] || 'username';

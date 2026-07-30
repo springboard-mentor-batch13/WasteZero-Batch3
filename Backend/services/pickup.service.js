@@ -26,7 +26,7 @@ const cityRegexList = (cities = []) =>
 /**
  * @internal
  * Derive the list of cities a user (volunteer or NGO) is associated with,
- * from User.locations.primary + User.locations.secondary[].
+ * from User.locations.primary.city AND every User.locations.secondary[].city.
  */
 const getUserCities = (user) => {
   const cities = [];
@@ -41,8 +41,8 @@ const getUserCities = (user) => {
 
 /**
  * Check whether a given NGO user is eligible to claim a specific pickup —
- * i.e. the pickup's address.city matches one of the NGO's coverage cities
- * (primary/secondary, case-insensitive) AND at least one of the pickup's
+ * i.e. the pickup's address.city matches the NGO's coverage city
+ * (case-insensitive) AND at least one of the pickup's
  * wasteTypes overlaps with the NGO's configured wasteTypes.
  * Shared by getPickupsForNgo (list-level filter) and checkPickupNgoMatch
  * (single-resource claim guard) so the matching rule can't drift between
@@ -125,8 +125,7 @@ const getPickupsByVolunteer = async (volunteerId, { status, skip, limit, sort })
  * status filter (defaults to 'Pending' at the controller level).
  *
  * Matching rules:
- *   - address.city must equal (case-insensitively) one of the NGO's
- *     primary/secondary cities.
+ *   - address.city must equal (case-insensitively) the NGO's city.
  *   - wasteTypes must overlap with at least one of the NGO's wasteTypes.
  */
 const getPickupsForNgo = async (ngoUser, { status, skip, limit, sort }) => {
@@ -277,19 +276,44 @@ const cancelPendingPickup = async (pickupId, volunteerId) => {
  * enforced by the controller/middleware before this is called).
  */
 const updatePickupInstance = async (pickupInstance, updateData) => {
-  const fieldsToUpdate = [
-    'address',
-    'scheduledDate',
-    'preferredTimeSlot',
-    'wasteTypes',
-    'notes',
-  ];
+  // Flat (top-level) fields are safe to overwrite wholesale — the client is
+  // always sending the field's full intended value.
+  const flatFieldsToUpdate = ['scheduledDate', 'wasteTypes', 'notes'];
 
-  fieldsToUpdate.forEach((field) => {
+  flatFieldsToUpdate.forEach((field) => {
     if (updateData[field] !== undefined) {
       pickupInstance[field] = updateData[field];
     }
   });
+
+  // Nested fields (address, preferredTimeSlot) are merged key-by-key instead
+  // of replaced wholesale. Whole-object assignment (e.g.
+  // `pickupInstance.address = { city: 'X' }`) would silently drop sibling
+  // keys the client didn't send (e.g. `area`) — city is required whenever
+  // `address` is sent, but `area` is always optional, so a request that only
+  // means to change the city can legally omit `area` entirely. Merging by
+  // key preserves whatever wasn't explicitly touched.
+  if (updateData.address !== undefined) {
+    if (updateData.address.city !== undefined) {
+      pickupInstance.address.city = updateData.address.city;
+    }
+    if (updateData.address.area !== undefined) {
+      pickupInstance.address.area = updateData.address.area;
+    }
+  }
+
+  // preferredTimeSlot.start/.end are both required whenever the key is
+  // present (enforced in pickup.validation.js), so this can't currently be
+  // partial in practice — merging anyway is defense-in-depth in case that
+  // validation ever loosens.
+  if (updateData.preferredTimeSlot !== undefined) {
+    if (updateData.preferredTimeSlot.start !== undefined) {
+      pickupInstance.preferredTimeSlot.start = updateData.preferredTimeSlot.start;
+    }
+    if (updateData.preferredTimeSlot.end !== undefined) {
+      pickupInstance.preferredTimeSlot.end = updateData.preferredTimeSlot.end;
+    }
+  }
 
   return await pickupInstance.save();
 };
@@ -297,12 +321,28 @@ const updatePickupInstance = async (pickupInstance, updateData) => {
 // ── Delete ──────────────────────────────────────────────────────────────
 
 /**
- * Delete a pickup by ID. Only called after the controller has verified
- * ownership and that the pickup is still Pending (hard-delete is a
- * volunteer-only, pre-assignment action — see createPickup/README notes).
+ * Delete a pickup by ID — ATOMICALLY.
+ *
+ * Why atomic: the controller's Pending-only check runs against req.pickup,
+ * which was fetched earlier by the checkPickupOwnershipByVolunteer
+ * middleware — a stale snapshot by the time this actually executes. An NGO
+ * could claim this same pickup (Pending -> Assigned, atomically, via
+ * transitionPickupStatus) in the gap between that read and this delete. A
+ * plain findByIdAndDelete would still go through, silently destroying a
+ * pickup an NGO has just been assigned to (no 409, no trace, agent_id
+ * reference just disappears). The filter re-asserts status === 'Pending'
+ * AND user_id === volunteerId as part of the same operation that performs
+ * the delete, mirroring the pattern already used by
+ * transitionPickupStatus/cancelPendingPickup above — only one of the two
+ * concurrent requests (the NGO's claim or the volunteer's delete) can win.
+ * The loser gets `null` back and the controller returns a 409.
  */
-const deletePickupById = async (id) => {
-  return await Pickup.findByIdAndDelete(id);
+const deletePickupById = async (id, volunteerId) => {
+  return await Pickup.findOneAndDelete({
+    _id: id,
+    status: 'Pending',
+    user_id: volunteerId,
+  });
 };
 
 module.exports = {

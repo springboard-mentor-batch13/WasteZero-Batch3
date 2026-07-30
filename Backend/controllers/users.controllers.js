@@ -16,7 +16,6 @@ const toSafeUser = (user, { includeCreatedAt = false } = {}) => {
     username: user.username,
     email: user.email,
     role: user.role,
-    location: user.location,
     locations: user.locations,
     wasteTypes: user.wasteTypes,
     skills: user.skills,
@@ -76,19 +75,15 @@ const updateUserProfile = async (req, res) => {
       });
     }
 
-    const { name, location, locations, wasteTypes, skills, bio } = req.body;
+    const { name, locations, wasteTypes, skills, bio } = req.body;
 
     if (typeof name === 'string') {
       user.name = name.trim();
     }
 
-    if (typeof location === 'string') {
-      user.location = location.trim();
-    }
-
-    // Coverage/home area (city + state) is used by both the Pickup module
-    // (NGO coverage matching) and the volunteer-opportunity matching engine
-    // (services/matching.service.js), so any role may set it.
+    // Coverage/home area (primary + secondary city/state) is used by both
+    // the Pickup module (NGO coverage matching) and the volunteer-opportunity
+    // matching engine (services/matching.service.js), so any role may set it.
     if (locations !== undefined) {
       const sanitizeLoc = (loc) => ({
         city: typeof loc?.city === 'string' ? loc.city.trim() : undefined,
@@ -99,7 +94,7 @@ const updateUserProfile = async (req, res) => {
         primary: locations.primary ? sanitizeLoc(locations.primary) : undefined,
         secondary: Array.isArray(locations.secondary)
           ? locations.secondary.map(sanitizeLoc)
-          : undefined,
+          : [],
       };
     }
 
