@@ -39,6 +39,7 @@
 
     <form [formGroup]="profileForm" (ngSubmit)="saveProfile()">
 
+      <!-- Full Name -->
       <div class="form-group">
         <label class="form-label">Full Name</label>
         <div class="input-wrap">
@@ -54,6 +55,7 @@
         }
       </div>
 
+      <!-- Email (read-only) -->
       <div class="form-group">
         <label class="form-label">Email</label>
         <div class="input-wrap">
@@ -67,19 +69,52 @@
         <small class="form-helper">Email is read-only because it is tied to account verification.</small>
       </div>
 
+      <!-- Location — two separate fields mapping to locations.primary.city / state -->
       <div class="form-group">
-        <label class="form-label">Location</label>
+        <label class="form-label">City</label>
         <div class="input-wrap">
-          <span class="material-icons input-icon">location_on</span>
+          <span class="material-icons input-icon">location_city</span>
           <input
             type="text"
             class="form-input"
-            formControlName="location"
-            placeholder="Enter your location">
+            formControlName="primaryCity"
+            placeholder="e.g. Mumbai">
         </div>
-        <small class="form-helper">Use your city or area so role-based features can stay relevant.</small>
+        <small class="form-helper">Your primary city — used to match you with nearby opportunities.</small>
       </div>
 
+      <div class="form-group">
+        <label class="form-label">State</label>
+        <div class="input-wrap">
+          <span class="material-icons input-icon">map</span>
+          <input
+            type="text"
+            class="form-input"
+            formControlName="primaryState"
+            placeholder="e.g. Maharashtra">
+        </div>
+        <small class="form-helper">Your state — helps broaden location-based matching.</small>
+      </div>
+
+      <!-- Waste Types — NGO only -->
+      @if(currentRole === 'ngo'){
+      <div class="form-group">
+        <label class="form-label">Waste Types Accepted</label>
+        <div class="input-wrap">
+          <span class="material-icons input-icon">delete_outline</span>
+          <input
+            type="text"
+            class="form-input"
+            formControlName="wasteTypes"
+            placeholder="e.g. Organic, Plastic, E-Waste">
+        </div>
+        <small class="form-helper">
+          Separate multiple waste types with commas. Required to appear in pickup matching.
+        </small>
+      </div>
+      }
+
+      <!-- Skills -->
       <div class="form-group">
         <label class="form-label">Skills</label>
         <div class="input-wrap">
@@ -93,6 +128,7 @@
         <small class="form-helper">Separate multiple skills using commas.</small>
       </div>
 
+      <!-- Bio -->
       <div class="form-group">
         <label class="form-label">Bio</label>
         <textarea

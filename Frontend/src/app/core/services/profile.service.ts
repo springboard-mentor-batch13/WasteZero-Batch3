@@ -35,11 +35,11 @@ export class ProfileService {
 
   }
 
-  updateProfile(user: Partial<User>): Observable<ProfileResponse> {
+  updateProfile(payload: Record<string, unknown>): Observable<ProfileResponse> {
 
     return this.http.put<ProfileResponse>(
       `${this.baseUrl}/profile`,
-      user,
+      payload,
       {
         headers: this.getHeaders()
       }

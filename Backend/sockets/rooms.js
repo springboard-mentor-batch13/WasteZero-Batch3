@@ -24,8 +24,7 @@ const getConversationRoom = (conversationId) => `conversation:${conversationId}`
  * Generates a deterministic, consistent conversation ID from two user IDs
  * regardless of who initiated the conversation (e.g. userA + userB == userB + userA).
  * This is the single source of truth for conversation ID generation —
- * message.service.js also has an internal copy for historical reasons,
- * but all new code should import from here.
+ * message.service.js now imports from here rather than maintaining its own copy.
  */
 const buildConversationId = (id1, id2) => {
   return [id1.toString(), id2.toString()].sort().join('_');

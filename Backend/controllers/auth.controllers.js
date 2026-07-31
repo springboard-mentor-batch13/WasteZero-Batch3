@@ -181,6 +181,11 @@ const loginUser = async (req, res) => {
         username: user.username,
         email: user.email,
         role: user.role,
+        locations: user.locations,
+        wasteTypes: user.wasteTypes,
+        skills: user.skills,
+        bio: user.bio,
+        isVerified: user.isVerified,
       },
     });
   } catch (error) {

@@ -4,7 +4,7 @@ const express = require("express");
 
 const router = express.Router();
 
-const { otpLimiter } = require("../middlewares/rateLimiter.middleware");
+const { otpLimiter, generalLimiter } = require("../middlewares/rateLimiter.middleware");
 
 const {
   getUserProfile,
@@ -42,6 +42,7 @@ router.put(
   "/profile",
   protect,
   authorize("volunteer", "ngo", "admin"),
+  generalLimiter,
   updateProfileValidation,
   validate,
   updateUserProfile

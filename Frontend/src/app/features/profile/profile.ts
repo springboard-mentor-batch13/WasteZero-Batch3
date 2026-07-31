@@ -10,9 +10,7 @@ import {
 } from '@angular/forms';
 
 import {
-  Router,
-  RouterLink,
-  RouterLinkActive
+  Router
 } from '@angular/router';
 
 import {
@@ -40,8 +38,6 @@ const passwordMatchValidator: ValidatorFn = (
   imports: [
     CommonModule,
     ReactiveFormsModule,
-    RouterLink,
-    RouterLinkActive,
     MatSnackBarModule
   ],
   templateUrl: './profile.html',
@@ -52,7 +48,7 @@ export class Profile implements OnInit {
   private router = inject(Router);
 
   private profileService = inject(ProfileService);
-  private authService = inject(AuthService);
+  public authService = inject(AuthService);
   private snackBar = inject(MatSnackBar);
 
   activeTab: 'profile' | 'password' = 'profile';
@@ -60,6 +56,11 @@ export class Profile implements OnInit {
   loadingProfile = false;
   loadingPassword = false;
   otpSent = false;
+
+  // Expose current user role so the template can conditionally show NGO fields
+  get currentRole(): string {
+    return this.authService.getCurrentUser()?.role ?? '';
+  }
 
   profileForm = this.fb.group({
     name: ['', Validators.required],
@@ -70,7 +71,12 @@ export class Profile implements OnInit {
         Validators.email
       ]
     ],
-    location: [''],
+    // Nested location fields — map to locations.primary.city / locations.primary.state
+    primaryCity:  [''],
+    primaryState: [''],
+    // NGO-only: comma-separated waste types
+    wasteTypes: [''],
+    // Volunteer + NGO: comma-separated skills
     skills: [''],
     bio: ['']
   });
@@ -112,12 +118,23 @@ export class Profile implements OnInit {
       next: (response) => {
         this.loadingProfile = false;
 
+        const user = response.user;
+
         this.profileForm.patchValue({
-          name: response.user.name,
-          email: response.user.email,
-          location: response.user.location || '',
-          skills: response.user.skills?.join(', ') || '',
-          bio: response.user.bio || ''
+          name:         user.name,
+          email:        user.email,
+          // Map nested locations → flat form fields
+          primaryCity:  user.locations?.primary?.city  ?? '',
+          primaryState: user.locations?.primary?.state ?? '',
+          // wasteTypes array → comma-separated string
+          wasteTypes: Array.isArray(user.wasteTypes)
+            ? user.wasteTypes.join(', ')
+            : '',
+          // skills array → comma-separated string
+          skills: Array.isArray(user.skills)
+            ? user.skills.join(', ')
+            : '',
+          bio: user.bio ?? ''
         });
       },
       error: (error) => {
@@ -145,17 +162,40 @@ export class Profile implements OnInit {
     this.loadingProfile = true;
     const formValue = this.profileForm.getRawValue();
 
-    this.profileService.updateProfile({
-      name: formValue.name!,
-      location: formValue.location!,
-      bio: formValue.bio!,
-      skills: formValue.skills
-        ? formValue.skills
-            .split(',')
-            .map(skill => skill.trim())
-            .filter(skill => skill.length > 0)
-        : []
-    }).subscribe({
+    // Build the nested locations object the backend expects
+    const primaryCity  = (formValue.primaryCity  ?? '').trim();
+    const primaryState = (formValue.primaryState ?? '').trim();
+
+    // Build skills array (all roles may have skills)
+    const skills = formValue.skills
+      ? formValue.skills.split(',').map(s => s.trim()).filter(s => s.length > 0)
+      : [];
+
+    // Build wasteTypes array (NGO only — backend ignores it for other roles)
+    const wasteTypes = (this.currentRole === 'ngo' && formValue.wasteTypes)
+      ? formValue.wasteTypes.split(',').map(w => w.trim()).filter(w => w.length > 0)
+      : undefined;
+
+    const payload: Record<string, unknown> = {
+      name: (formValue.name ?? '').trim(),
+      bio:  (formValue.bio  ?? '').trim(),
+      skills,
+      // Always send locations so the backend can set locations.primary.city/state
+      locations: {
+        primary: {
+          city:  primaryCity  || undefined,
+          state: primaryState || undefined,
+        },
+        secondary: [],
+      },
+    };
+
+    // Only include wasteTypes in the payload for NGO users
+    if (wasteTypes !== undefined) {
+      payload['wasteTypes'] = wasteTypes;
+    }
+
+    this.profileService.updateProfile(payload).subscribe({
       next: (response) => {
         this.loadingProfile = false;
 

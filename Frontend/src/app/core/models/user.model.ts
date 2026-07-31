@@ -1,5 +1,16 @@
 export type UserRole = 'volunteer' | 'ngo' | 'admin';
 
+// Nested location structure — mirrors Backend/models/users.model.js
+export interface UserLocation {
+  city?: string;
+  state?: string;
+}
+
+export interface UserLocations {
+  primary?: UserLocation;
+  secondary?: UserLocation[];
+}
+
 export interface User {
 
   id?: string;
@@ -11,7 +22,13 @@ export interface User {
 
   role: UserRole;
 
-  location?: string;
+  // Nested location — maps to locations.primary.city / locations.primary.state on the backend.
+  // Used by the volunteer-opportunity matching engine and pickup module.
+  locations?: UserLocations;
+
+  // NGO-only: accepted waste categories for pickup matching.
+  wasteTypes?: string[];
+
   skills?: string[];
   bio?: string;
 
@@ -23,13 +40,10 @@ export interface User {
 }
 
 export interface AuthResponse {
-
   success: boolean;
   message: string;
-
   token: string;
   user: User;
-
 }
 
 export interface ProfileResponse {
@@ -39,8 +53,6 @@ export interface ProfileResponse {
 }
 
 export interface ApiResponse {
-
   success: boolean;
   message: string;
-
 }

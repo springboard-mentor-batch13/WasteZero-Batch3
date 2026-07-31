@@ -4,13 +4,11 @@ const mongoose = require('mongoose');
 const Message = require('../models/message.model');
 const User = require('../models/users.model');
 const { encrypt, decrypt } = require('../utils/crypto');
+// Import the canonical buildConversationId from sockets/rooms.js.
+// Previously this file had its own copy — having two definitions risks
+// silent divergence if the algorithm ever needs to change.
+const { buildConversationId } = require('../sockets/rooms');
 
-/**
- * @internal
- * Build the deterministic conversation_id for a pair of user ids.
- * Sorting guarantees (A, B) and (B, A) always resolve to the same thread.
- */
-const buildConversationId = (idA, idB) => [String(idA), String(idB)].sort().join('_');
 
 /**
  * Create a new message.

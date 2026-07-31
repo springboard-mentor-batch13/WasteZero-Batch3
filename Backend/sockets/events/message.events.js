@@ -3,7 +3,7 @@
 const mongoose = require('mongoose');
 const messageService = require('../../services/message.service');
 const notificationService = require('../../services/notification.service');
-const { getUserRoom } = require('../rooms');
+const { getUserRoom, buildConversationId } = require('../rooms');
 const { messageLimiter } = require('../rateLimiter');
 
 /**
@@ -74,7 +74,9 @@ module.exports = function registerMessageEvents(io, socket) {
           user_id: receiverId,
           type: 'message',
           message: `New message from ${socket.user.name || 'a user'}`,
-          reference_id: socket.user.id,
+          // Use the conversation ID (not the sender's user ID) so the frontend
+          // can navigate directly to the correct conversation thread.
+          reference_id: buildConversationId(socket.user.id, receiverId),
         });
       } catch (notifyErr) {
         console.error('[Messages] Failed to dispatch message notification:', notifyErr.message);

@@ -29,6 +29,20 @@ function getEncryptionKey() {
   return Buffer.from(hexKey, 'hex');
 }
 
+// ── Startup validation ────────────────────────────────────────────────────────
+// Validate CHAT_ENCRYPTION_KEY the moment this module is first required so
+// the server fails immediately on boot with a clear error rather than
+// starting successfully and then crashing silently on the first encrypt/decrypt
+// call. If the key is absent or malformed, exit with a non-zero code so
+// process managers (pm2, Docker, systemd) know to restart and alert.
+try {
+  getEncryptionKey();
+} catch (err) {
+  console.error('[crypto] FATAL:', err.message);
+  process.exit(1);
+}
+
+
 /**
  * Encrypts a plaintext string using AES-256-GCM.
  *

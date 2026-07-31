@@ -22,7 +22,19 @@ const otpLimiter = rateLimit({
   },
 });
 
+// General limiter — used on mutation endpoints that don't need OTP-level
+// strictness but should still be protected from abuse (e.g. profile updates).
+const generalLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000, // 10 minutes
+  max: 30,
+  message: {
+    success: false,
+    message: "Too many requests. Please try again after 10 minutes.",
+  },
+});
+
 module.exports = {
   loginLimiter,
   otpLimiter,
-};
+  generalLimiter,
+};
