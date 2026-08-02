@@ -1,0 +1,303 @@
+<div class="page-container">
+
+  <!-- ── Page Header ── -->
+  <div class="page-header">
+    <div class="header-text">
+      <h1>Schedule Pickup</h1>
+      <p>Request a waste pickup or track your existing requests.</p>
+    </div>
+  </div>
+
+  <!-- ── Stats Strip ── -->
+  @if(myPickups().length > 0){
+  <div class="stats-strip">
+    <div class="stat-chip pending">
+      <span class="material-icons">hourglass_empty</span>
+      <span class="stat-num">{{ pendingCount() }}</span>
+      <span>Pending</span>
+    </div>
+    <div class="stat-chip assigned">
+      <span class="material-icons">local_shipping</span>
+      <span class="stat-num">{{ assignedCount() }}</span>
+      <span>Assigned</span>
+    </div>
+    <div class="stat-chip completed">
+      <span class="material-icons">check_circle</span>
+      <span class="stat-num">{{ completedCount() }}</span>
+      <span>Completed</span>
+    </div>
+  </div>
+  }
+
+  <!-- ── Tabs ── -->
+  <div class="tab-bar">
+    <button
+      type="button"
+      class="tab-btn"
+      [class.active]="activeTab() === 'schedule'"
+      (click)="setTab('schedule')"
+      id="tab-schedule">
+      <span class="material-icons">add_circle_outline</span>
+      Schedule New
+    </button>
+    <button
+      type="button"
+      class="tab-btn"
+      [class.active]="activeTab() === 'history'"
+      (click)="setTab('history')"
+      id="tab-history">
+      <span class="material-icons">history</span>
+      My Pickups
+    </button>
+  </div>
+
+  <!-- ════════════════════════════════════
+       TAB 1 — Schedule New Pickup Form
+       ════════════════════════════════════ -->
+  @if(activeTab() === 'schedule'){
+  <div class="tab-panel">
+
+    <!-- Success banner -->
+    @if(submitSuccess()){
+    <div class="success-banner" role="status">
+      <span class="material-icons">check_circle</span>
+      Pickup scheduled successfully! Switching to your pickups...
+    </div>
+    }
+
+    <form class="pickup-form" [formGroup]="form" (ngSubmit)="onSubmit()" novalidate>
+
+      <!-- Address Section -->
+      <div class="form-section">
+        <h2 class="section-heading">
+          <span class="material-icons">location_on</span>
+          Pickup Address
+        </h2>
+        <div class="form-grid">
+          <div class="form-field">
+            <label for="city-input">City <span class="required">*</span></label>
+            <input
+              id="city-input"
+              type="text"
+              class="form-input"
+              formControlName="city"
+              placeholder="e.g. Bangalore"
+              autocomplete="address-level2">
+            @if(form.get('city')?.invalid && form.get('city')?.touched){
+            <span class="field-error">City is required.</span>
+            }
+          </div>
+          <div class="form-field">
+            <label for="area-input">Area / Locality</label>
+            <input
+              id="area-input"
+              type="text"
+              class="form-input"
+              formControlName="area"
+              placeholder="e.g. Koramangala (optional)"
+              autocomplete="address-level3">
+          </div>
+        </div>
+      </div>
+
+      <!-- Date & Time Section -->
+      <div class="form-section">
+        <h2 class="section-heading">
+          <span class="material-icons">event</span>
+          Date & Time Preference
+        </h2>
+        <div class="form-grid">
+          <div class="form-field">
+            <label for="date-input">Preferred Date <span class="required">*</span></label>
+            <input
+              id="date-input"
+              type="date"
+              class="form-input"
+              formControlName="date"
+              [min]="minDate">
+            @if(form.get('date')?.invalid && form.get('date')?.touched){
+            <span class="field-error">Please select a date.</span>
+            }
+          </div>
+          <div class="form-field">
+            <label for="time-start-input">Preferred Start Time <span class="required">*</span></label>
+            <input
+              id="time-start-input"
+              type="time"
+              class="form-input"
+              formControlName="timeStart">
+            @if(form.get('timeStart')?.invalid && form.get('timeStart')?.touched){
+            <span class="field-error">Start time is required.</span>
+            }
+          </div>
+          <div class="form-field">
+            <label for="time-end-input">Preferred End Time <span class="required">*</span></label>
+            <input
+              id="time-end-input"
+              type="time"
+              class="form-input"
+              formControlName="timeEnd">
+            @if(form.get('timeEnd')?.invalid && form.get('timeEnd')?.touched){
+            <span class="field-error">End time is required.</span>
+            }
+          </div>
+        </div>
+      </div>
+
+      <!-- Waste Types Section -->
+      <div class="form-section">
+        <h2 class="section-heading">
+          <span class="material-icons">recycling</span>
+          Waste Types <span class="required">*</span>
+        </h2>
+        <div class="waste-type-grid">
+          @for(type of wasteTypes; track type){
+          <button
+            type="button"
+            class="waste-toggle"
+            [class.selected]="isWasteTypeSelected(type)"
+            (click)="toggleWasteType(type)"
+            [attr.aria-pressed]="isWasteTypeSelected(type)">
+            @if(isWasteTypeSelected(type)){
+            <span class="material-icons waste-check">check</span>
+            }
+            {{ type }}
+          </button>
+          }
+        </div>
+      </div>
+
+      <!-- Notes Section -->
+      <div class="form-section">
+        <h2 class="section-heading">
+          <span class="material-icons">notes</span>
+          Additional Notes
+        </h2>
+        <div class="form-field">
+          <textarea
+            id="notes-input"
+            class="form-textarea"
+            formControlName="notes"
+            rows="3"
+            placeholder="Any special instructions for the NGO..."></textarea>
+        </div>
+      </div>
+
+      <!-- Error bar -->
+      @if(submitError()){
+      <div class="submit-error-bar" role="alert">
+        <span class="material-icons">warning_amber</span>
+        {{ submitError() }}
+      </div>
+      }
+
+      <!-- Submit -->
+      <div class="form-actions">
+        <button
+          type="submit"
+          class="btn-submit"
+          id="schedule-pickup-submit"
+          [disabled]="submitting()">
+          @if(submitting()){
+          <span class="material-icons spinning">autorenew</span>
+          Scheduling...
+          } @else {
+          <span class="material-icons">local_shipping</span>
+          Schedule Pickup
+          }
+        </button>
+      </div>
+
+    </form>
+  </div>
+  }
+
+  <!-- ════════════════════════════════════
+       TAB 2 — My Pickups History
+       ════════════════════════════════════ -->
+  @if(activeTab() === 'history'){
+  <div class="tab-panel">
+
+    @if(loadingPickups()){
+    <div class="state-card">
+      <div class="spinner"></div>
+      <p>Loading your pickups...</p>
+    </div>
+    } @else if(pickupsError()){
+    <div class="state-card error-state">
+      <span class="material-icons state-icon">error_outline</span>
+      <p>{{ pickupsError() }}</p>
+      <button type="button" class="btn-retry" (click)="loadMyPickups()">Retry</button>
+    </div>
+    } @else if(myPickups().length === 0){
+    <div class="state-card empty-state">
+      <span class="material-icons state-icon">local_shipping</span>
+      <h3>No pickups yet</h3>
+      <p>Schedule your first pickup using the form above.</p>
+      <button type="button" class="btn-primary" (click)="setTab('schedule')">Schedule Now</button>
+    </div>
+    } @else {
+    <div class="pickup-list">
+      @for(pickup of myPickups(); track pickup._id){
+      <div class="pickup-card" [ngClass]="statusClass(pickup.status)">
+        <div class="pickup-card-top">
+          <div class="pickup-status-badge" [ngClass]="statusClass(pickup.status)">
+            <span class="material-icons">{{ statusIcon(pickup.status) }}</span>
+            {{ pickup.status }}
+          </div>
+          <span class="pickup-date">{{ formatDate(pickup.scheduledDate) }}</span>
+        </div>
+
+        <div class="pickup-card-body">
+          <div class="pickup-detail-row">
+            <span class="material-icons pickup-detail-icon">location_on</span>
+            <span>{{ pickup.address.city }}{{ pickup.address.area ? ', ' + pickup.address.area : '' }}</span>
+          </div>
+          <div class="pickup-detail-row">
+            <span class="material-icons pickup-detail-icon">schedule</span>
+            <span>{{ pickup.preferredTimeSlot.start }} – {{ pickup.preferredTimeSlot.end }}</span>
+          </div>
+          <div class="pickup-detail-row waste-chips-row">
+            <span class="material-icons pickup-detail-icon">recycling</span>
+            <div class="waste-chip-list">
+              @for(type of pickup.wasteTypes; track type){
+              <span class="waste-chip">{{ type }}</span>
+              }
+            </div>
+          </div>
+          @if(pickup.notes){
+          <div class="pickup-detail-row">
+            <span class="material-icons pickup-detail-icon">notes</span>
+            <span class="pickup-notes">{{ pickup.notes }}</span>
+          </div>
+          }
+        </div>
+
+        <!-- Actions: Cancel only if Pending -->
+        @if(pickup.status === 'Pending'){
+        <div class="pickup-card-footer">
+          <button
+            type="button"
+            class="btn-cancel-pickup"
+            id="cancel-{{ pickup._id }}"
+            [disabled]="cancellingId() === pickup._id"
+            (click)="cancelPickup(pickup)">
+            @if(cancellingId() === pickup._id){
+            <span class="material-icons spinning">autorenew</span>
+            Cancelling...
+            } @else {
+            <span class="material-icons">cancel</span>
+            Cancel Request
+            }
+          </button>
+        </div>
+        }
+      </div>
+      }
+    </div>
+    }
+
+  </div>
+  }
+
+</div>

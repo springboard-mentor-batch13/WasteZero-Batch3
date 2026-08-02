@@ -1,0 +1,392 @@
+/* ============================================
+   PROFILE PAGE — WasteZero Design System
+   ============================================ */
+
+.page-container {
+  padding-top: 0;
+}
+
+/* Page Header */
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.page-header h1 {
+  margin: 0 0 0.3rem;
+  font-size: clamp(1.75rem, 4vw, 2.4rem);
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  color: var(--color-text-primary);
+}
+
+.page-header p {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: 0.95rem;
+}
+
+/* Tab Switcher */
+.tabs {
+  display: inline-flex;
+  gap: 0.3rem;
+  padding: 0.3rem;
+  margin-bottom: 1.5rem;
+  border: 1.5px solid var(--color-border-neutral);
+  border-radius: var(--radius-full);
+  background: var(--color-bg);
+}
+
+.tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  border: none;
+  border-radius: var(--radius-full);
+  padding: 0.7rem 1.2rem;
+  background: transparent;
+  font-family: var(--font-base);
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: var(--transition-fast);
+}
+
+.tab-icon {
+  font-size: 1rem;
+}
+
+.tab-btn:hover {
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+}
+
+.tab-btn.active {
+  background: var(--color-primary);
+  color: #ffffff;
+  box-shadow: var(--shadow-btn);
+}
+
+/* Profile Card */
+.profile-card {
+  max-width: 56rem;
+  padding: 2rem;
+  border: 1px solid var(--color-border-neutral);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-md);
+}
+
+/* Card Header */
+.card-header {
+  margin-bottom: 1.75rem;
+  padding-bottom: 1.25rem;
+  border-bottom: 1px solid var(--color-border-neutral);
+}
+
+.card-header h2 {
+  margin: 0 0 0.4rem;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+
+.card-header p {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+/* Form Groups */
+.form-group {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 1.15rem;
+}
+
+.form-label {
+  margin-bottom: 0.4rem;
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--color-text-primary);
+}
+
+/* Input with icon */
+.input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.input-icon {
+  position: absolute;
+  left: 0.9rem;
+  font-size: 1.1rem;
+  color: var(--color-text-muted);
+  pointer-events: none;
+  transition: color 0.18s ease;
+}
+
+.form-input,
+.form-textarea {
+  width: 100%;
+  border: 1.5px solid var(--color-border-neutral);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  font-family: var(--font-base);
+  font-size: 0.95rem;
+  color: var(--color-text-primary);
+  transition: var(--transition-fast);
+}
+
+.form-input {
+  padding: 0.85rem 0.95rem 0.85rem 2.75rem;
+}
+
+.form-textarea {
+  padding: 0.9rem 1rem;
+  min-height: 8rem;
+  resize: vertical;
+}
+
+.form-input::placeholder,
+.form-textarea::placeholder {
+  color: var(--color-text-muted);
+}
+
+.form-input:focus,
+.form-textarea:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-ring);
+}
+
+.input-wrap:focus-within .input-icon {
+  color: var(--color-primary);
+}
+
+.readonly-input {
+  background: #f8fafc;
+  color: var(--color-text-secondary);
+  cursor: not-allowed;
+}
+
+/* OTP style input */
+.otp-input {
+  text-align: center;
+  letter-spacing: 0.45em;
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+
+/* Helpers & Errors */
+.form-helper {
+  margin-top: 0.4rem;
+  color: var(--color-text-muted);
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+.form-error {
+  margin-top: 0.35rem;
+  color: var(--color-danger);
+  font-size: 0.82rem;
+}
+
+/* OTP Banner */
+.otp-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.15rem;
+  margin-bottom: 1.25rem;
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: #f0fdf4;
+}
+
+.otp-banner-text {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.otp-banner-icon {
+  font-size: 1.5rem;
+  color: var(--color-primary);
+  flex-shrink: 0;
+  margin-top: 0.1rem;
+}
+
+.otp-banner strong {
+  display: block;
+  margin-bottom: 0.2rem;
+  font-size: 0.92rem;
+  color: var(--color-text-primary);
+}
+
+.otp-banner p {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+  line-height: 1.45;
+}
+
+/* Form Actions */
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 1.5rem;
+}
+
+.form-actions.align-left {
+  justify-content: flex-start;
+}
+
+/* Buttons */
+.btn-save,
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  border: none;
+  border-radius: var(--radius-md);
+  padding: 0.85rem 1.4rem;
+  font-family: var(--font-base);
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: var(--transition-std);
+}
+
+.btn-save {
+  background: var(--color-primary);
+  color: #ffffff;
+}
+
+.btn-save:hover:not(:disabled) {
+  background: var(--color-primary-dark);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-btn);
+}
+
+.btn-secondary {
+  background: var(--color-primary-light);
+  color: var(--color-primary-dark);
+  white-space: nowrap;
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: #bbf7d0;
+}
+
+.btn-save:disabled,
+.btn-secondary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.btn-icon { font-size: 1.1rem; }
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+.spinning { animation: spin 0.9s linear infinite; }
+
+/* Responsive */
+@media (max-width: 768px) {
+  .tabs {
+    width: 100%;
+  }
+
+  .tab-btn {
+    flex: 1;
+    justify-content: center;
+  }
+
+  .profile-card {
+    padding: 1.25rem;
+  }
+
+  .otp-banner {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .otp-banner .btn-secondary {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .btn-save {
+    width: 100%;
+    justify-content: center;
+  }
+
+    .form-actions,
+  .form-actions.align-left {
+    justify-content: stretch;
+  }
+}
+
+/* ── Waste Type Checkbox Grid (NGO profile) ── */
+.waste-type-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+}
+
+.waste-checkbox-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.45rem 0.85rem;
+  border: 1.5px solid var(--color-border-neutral);
+  border-radius: var(--radius-full);
+  background: var(--color-bg);
+  font-size: 0.83rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  cursor: pointer;
+  transition: var(--transition-fast);
+  user-select: none;
+}
+
+.waste-checkbox-label:hover {
+  border-color: var(--color-primary);
+  background: var(--color-primary-light);
+}
+
+.waste-checkbox {
+  /* visually hidden but accessible */
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+  width: 0;
+  height: 0;
+}
+
+/* Selected state: checked input sibling highlights the label */
+.waste-checkbox:checked + .waste-chip-label::before {
+  content: '✓  ';
+  color: var(--color-primary);
+  font-weight: 700;
+}
+
+.waste-checkbox-label:has(.waste-checkbox:checked) {
+  border-color: var(--color-primary);
+  background: var(--color-primary-light);
+  color: var(--color-primary-dark);
+}
+
+.waste-chip-label {
+  line-height: 1;
+}
