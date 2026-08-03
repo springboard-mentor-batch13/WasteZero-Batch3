@@ -1,0 +1,295 @@
+<div class="page-container">
+
+  <!-- ── Page Header ── -->
+  <div class="page-header">
+    <div class="header-text">
+      <h1>Messages</h1>
+      <p>Chat with volunteers and NGO partners</p>
+    </div>
+  </div>
+
+  <!-- ── Chat Shell ── -->
+  <div class="chat-shell">
+
+    <!-- ════════════════════════════════════
+         LEFT PANEL — Conversation List
+         ════════════════════════════════════ -->
+    <div class="conversation-panel">
+
+      <!-- NEW: Username search (start new conversation) -->
+      <div class="new-conv-search-wrap">
+        <span class="material-icons new-conv-icon">person_search</span>
+        <input
+          type="text"
+          class="new-conv-input"
+          placeholder="Search by username to start chat..."
+          [value]="userSearchQuery()"
+          (input)="onUserSearchInput($any($event.target).value)"
+          autocomplete="off"
+          id="user-search-input">
+        @if(userSearchQuery()){
+        <button class="clear-search-btn" (click)="closeSearchPanel()" aria-label="Clear search">
+          <span class="material-icons">close</span>
+        </button>
+        }
+      </div>
+
+      <!-- NEW: User search results panel -->
+      @if(showSearchPanel()){
+      <div class="search-results-panel">
+        @if(searchLoading()){
+        <div class="search-loading">
+          <div class="spinner small"></div>
+          <span>Searching...</span>
+        </div>
+        } @else if(searchError()){
+        <div class="search-error">
+          <span class="material-icons">error_outline</span>
+          <p>{{ searchError() }}</p>
+        </div>
+        } @else if(userSearchResults().length === 0){
+        <div class="search-empty">
+          <span class="material-icons">search_off</span>
+          <p>No users found</p>
+        </div>
+        } @else {
+        <ul class="search-user-list" role="list">
+          @for(user of userSearchResults(); track user._id){
+          <li
+            class="search-user-item"
+            (click)="startConversationWithSearchResult(user)"
+            role="listitem"
+            [attr.aria-label]="'Start chat with ' + user.name">
+            <div class="search-user-avatar">{{ getAvatarInitial(user.name) }}</div>
+            <div class="search-user-info">
+              <span class="search-user-name">{{ user.name }}</span>
+              <span class="search-user-username">&#64;{{ user.username }}</span>
+            </div>
+            <span class="search-user-role-tag">{{ user.role | titlecase }}</span>
+          </li>
+          }
+        </ul>
+        }
+      </div>
+      }
+
+      <!-- Divider only when not searching -->
+      @if(!showSearchPanel()){
+
+      <!-- Search existing conversations -->
+      <div class="conv-search-wrap">
+        <span class="material-icons conv-search-icon">search</span>
+        <input
+          type="text"
+          class="conv-search-input"
+          placeholder="Filter conversations..."
+          [value]="conversationSearch()"
+          (input)="conversationSearch.set($any($event.target).value)"
+          autocomplete="off"
+          id="conv-search-input">
+      </div>
+
+      <!-- Loading state -->
+      @if(loadingConversations()){
+      <div class="conv-loading">
+        <div class="spinner"></div>
+        <span>Loading conversations...</span>
+      </div>
+      }
+
+      <!-- Error state -->
+      @else if(errorConversations()){
+      <div class="conv-error">
+        <span class="material-icons">error_outline</span>
+        <p>{{ errorConversations() }}</p>
+        <button class="btn-retry" (click)="loadConversations()">Retry</button>
+      </div>
+      }
+
+      <!-- Empty state -->
+      @else if(isEmpty()){
+      <div class="conv-empty">
+        <span class="material-icons conv-empty-icon">forum</span>
+        <p>No conversations yet</p>
+        <small>Search for a username above to start chatting.</small>
+      </div>
+      }
+
+      <!-- Conversation list -->
+      @else {
+      <ul class="conv-list" role="list">
+        @for(conv of filteredConversations(); track conv.conversationId){
+        <li
+          class="conv-item"
+          [class.active]="activeConversation()?.conversationId === conv.conversationId"
+          (click)="selectConversation(conv)"
+          role="listitem"
+          [attr.aria-label]="'Conversation with ' + conv.otherUser.name">
+          <div class="conv-avatar" [attr.aria-hidden]="true">
+            {{ getAvatarInitial(conv.otherUser.name) }}
+          </div>
+          <div class="conv-info">
+            <div class="conv-top-row">
+              <span class="conv-name">{{ conv.otherUser.name }}</span>
+              @if(conv.lastMessage){
+              <span class="conv-date">{{ formatDate(conv.lastMessage.createdAt) }}</span>
+              }
+            </div>
+            <p class="conv-preview">
+              @if(conv.lastMessage){
+                @if(conv.lastMessage.sender_id === (currentUser()?._id ?? currentUser()?.id)){
+                  <span class="preview-you">You: </span>
+                }
+                {{ conv.lastMessage.content }}
+              } @else {
+                <span class="preview-empty">No messages yet</span>
+              }
+            </p>
+          </div>
+        </li>
+        }
+      </ul>
+      }
+
+      } <!-- end @if(!showSearchPanel()) -->
+
+    </div>
+
+    <!-- ════════════════════════════════════
+         RIGHT PANEL — Active Chat Window
+         ════════════════════════════════════ -->
+    <div class="chat-panel">
+
+      @if(!activeConversation()){
+      <!-- No conversation selected — empty prompt -->
+      <div class="chat-no-selection">
+        <span class="material-icons no-selection-icon">chat_bubble_outline</span>
+        <h3>Select a conversation</h3>
+        <p>Choose a conversation or search for a username to start messaging.</p>
+      </div>
+      } @else {
+
+      <!-- Chat header -->
+      <div class="chat-header">
+        <div class="chat-header-avatar">
+          {{ getAvatarInitial(activeConversation()!.otherUser.name) }}
+        </div>
+        <div class="chat-header-info">
+          <span class="chat-header-name">{{ activeConversation()!.otherUser.name }}</span>
+          <span class="chat-header-role">{{ activeConversation()!.otherUser.role | titlecase }}</span>
+        </div>
+      </div>
+
+      <!-- Message history -->
+      <div class="messages-area" id="messages-area" role="log" aria-live="polite" aria-label="Chat messages">
+
+        <!-- Loading messages -->
+        @if(loadingMessages()){
+        <div class="msg-loading">
+          <div class="spinner"></div>
+          <span>Loading messages...</span>
+        </div>
+        }
+
+        <!-- Error loading messages -->
+        @else if(errorMessages()){
+        <div class="msg-error">
+          <span class="material-icons">error_outline</span>
+          <p>{{ errorMessages() }}</p>
+          <button class="btn-retry" (click)="loadMessages(activeConversation()!.otherUser._id)">
+            Retry
+          </button>
+        </div>
+        }
+
+        <!-- Empty message history -->
+        @else if(hasNoMessages()){
+        <div class="msg-empty">
+          <span class="material-icons msg-empty-icon">mark_chat_unread</span>
+          <p>No messages yet</p>
+          <small>Say hello to {{ activeConversation()!.otherUser.name }}!</small>
+        </div>
+        }
+
+        <!-- Messages -->
+        @else {
+        @for(msg of messages(); track msg._id){
+        <div class="msg-row" [class.outgoing]="isMyMessage(msg)" [class.incoming]="!isMyMessage(msg)">
+          @if(!isMyMessage(msg)){
+          <div class="msg-avatar">
+            {{ getAvatarInitial(activeConversation()!.otherUser.name) }}
+          </div>
+          }
+          <div class="msg-bubble-wrap">
+            <div class="msg-bubble">{{ msg.content }}</div>
+            <div class="msg-meta">
+              <span class="msg-time">{{ formatTime(msg.createdAt) }}</span>
+              @if(isMyMessage(msg)){
+              <!-- Seen status: ✓ sent / ✓✓ read -->
+              <span class="msg-status material-icons" [class.msg-status-read]="msg.status === 'read'">
+                {{ msg.status === 'read' ? 'done_all' : 'done' }}
+              </span>
+              }
+            </div>
+          </div>
+        </div>
+        }
+        }
+
+        <!-- Typing indicator -->
+        @if(isOtherUserTyping()){
+        <div class="msg-row incoming">
+          <div class="msg-avatar">
+            {{ getAvatarInitial(activeConversation()!.otherUser.name) }}
+          </div>
+          <div class="typing-indicator" aria-label="Other user is typing">
+            <span></span><span></span><span></span>
+          </div>
+        </div>
+        }
+
+        <!-- Scroll anchor -->
+        <div id="messages-scroll-anchor"></div>
+
+      </div>
+
+      <!-- Send error -->
+      @if(sendError()){
+      <div class="send-error-bar" role="alert">
+        <span class="material-icons">warning_amber</span>
+        {{ sendError() }}
+      </div>
+      }
+
+      <!-- Message input -->
+      <div class="chat-input-row">
+        <input
+          type="text"
+          class="chat-input"
+          id="chat-message-input"
+          [placeholder]="'Message ' + activeConversation()!.otherUser.name + '...'"
+          [value]="messageInput()"
+          (input)="onInputChange($any($event.target).value)"
+          (keydown)="onInputKeydown($event)"
+          [disabled]="sending()"
+          autocomplete="off">
+        <button
+          class="btn-send"
+          id="chat-send-btn"
+          [disabled]="!messageInput().trim() || sending()"
+          (click)="sendMessage()"
+          aria-label="Send message">
+          @if(sending()){
+          <div class="send-spinner"></div>
+          } @else {
+          <span class="material-icons">send</span>
+          }
+        </button>
+      </div>
+
+      }
+    </div>
+
+  </div>
+
+</div>

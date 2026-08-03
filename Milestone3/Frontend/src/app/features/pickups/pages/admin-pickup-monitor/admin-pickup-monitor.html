@@ -1,0 +1,168 @@
+<div class="page-container">
+
+  <!-- ── Page Header ── -->
+  <div class="page-header">
+    <div class="header-text">
+      <h1>Pickup Monitor</h1>
+      <p>Read-only view of all pickup requests across the platform.</p>
+    </div>
+  </div>
+
+  <!-- ── Summary Stats ── -->
+  @if(!loading() && !error() && allPickups().length > 0){
+  <div class="stats-bar">
+    <div class="stat-card">
+      <span class="material-icons stat-icon">list_alt</span>
+      <span class="stat-num">{{ allPickups().length }}</span>
+      <span class="stat-label">Total</span>
+    </div>
+    <div class="stat-card pending">
+      <span class="material-icons stat-icon">hourglass_empty</span>
+      <span class="stat-num">{{ pendingCount() }}</span>
+      <span class="stat-label">Pending</span>
+    </div>
+    <div class="stat-card assigned">
+      <span class="material-icons stat-icon">local_shipping</span>
+      <span class="stat-num">{{ assignedCount() }}</span>
+      <span class="stat-label">Assigned</span>
+    </div>
+    <div class="stat-card completed">
+      <span class="material-icons stat-icon">check_circle</span>
+      <span class="stat-num">{{ completedCount() }}</span>
+      <span class="stat-label">Completed</span>
+    </div>
+    <div class="stat-card cancelled">
+      <span class="material-icons stat-icon">cancel</span>
+      <span class="stat-num">{{ cancelledCount() }}</span>
+      <span class="stat-label">Cancelled</span>
+    </div>
+  </div>
+  }
+
+  <!-- ── Controls ── -->
+  <div class="controls-bar">
+
+    <!-- Status Filter Tabs -->
+    <div class="status-tabs" role="tablist">
+      <button class="status-tab" [class.active]="statusFilter()==='all'" type="button" (click)="onStatusFilter('all')">All</button>
+      <button class="status-tab pending" [class.active]="statusFilter()==='Pending'" type="button" (click)="onStatusFilter('Pending')">
+        <span class="material-icons">hourglass_empty</span> Pending
+      </button>
+      <button class="status-tab assigned" [class.active]="statusFilter()==='Assigned'" type="button" (click)="onStatusFilter('Assigned')">
+        <span class="material-icons">local_shipping</span> Assigned
+      </button>
+      <button class="status-tab completed" [class.active]="statusFilter()==='Completed'" type="button" (click)="onStatusFilter('Completed')">
+        <span class="material-icons">check_circle</span> Completed
+      </button>
+      <button class="status-tab cancelled" [class.active]="statusFilter()==='Cancelled'" type="button" (click)="onStatusFilter('Cancelled')">
+        <span class="material-icons">cancel</span> Cancelled
+      </button>
+    </div>
+
+    <!-- Search -->
+    <div class="search-wrap">
+      <span class="material-icons search-icon">search</span>
+      <input
+        type="text"
+        class="search-input"
+        id="monitor-search"
+        placeholder="Search city, volunteer, NGO..."
+        [value]="searchQuery()"
+        (input)="onSearch($any($event.target).value)"
+        autocomplete="off">
+      @if(searchQuery()){
+      <button class="search-clear" type="button" (click)="onSearch('')" aria-label="Clear">
+        <span class="material-icons">close</span>
+      </button>
+      }
+    </div>
+
+  </div>
+
+  <!-- ── Loading ── -->
+  @if(loading()){
+  <div class="state-card">
+    <div class="spinner"></div>
+    <p>Loading all pickups...</p>
+  </div>
+  }
+
+  <!-- ── Error ── -->
+  @else if(error()){
+  <div class="state-card error-state">
+    <span class="material-icons state-icon">error_outline</span>
+    <h3>Something went wrong</h3>
+    <p>{{ error() }}</p>
+    <button type="button" class="btn-retry" (click)="loadAll()">
+      <span class="material-icons">refresh</span> Retry
+    </button>
+  </div>
+  }
+
+  <!-- ── Empty ── -->
+  @else if(isEmpty()){
+  <div class="state-card empty-state">
+    <span class="material-icons state-icon">local_shipping</span>
+    <h3>No pickups found</h3>
+    @if(statusFilter() !== 'all' || searchQuery()){
+    <p>Try adjusting your filters.</p>
+    <button type="button" class="btn-retry" (click)="clearFilters()">Clear Filters</button>
+    } @else {
+    <p>No pickup requests have been made yet.</p>
+    }
+  </div>
+  }
+
+  <!-- ── Pickup Table ── -->
+  @else {
+  <div class="table-wrap">
+    <table class="pickup-table" aria-label="All pickups">
+      <thead>
+        <tr>
+          <th scope="col">Volunteer</th>
+          <th scope="col">NGO</th>
+          <th scope="col">City</th>
+          <th scope="col">Scheduled Date</th>
+          <th scope="col">Waste Types</th>
+          <th scope="col">Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for(pickup of filtered(); track pickup._id){
+        <tr class="pickup-row">
+          <td class="td-volunteer">
+            <div class="person-cell">
+              <span class="person-avatar">{{ getVolunteerName(pickup).charAt(0).toUpperCase() }}</span>
+              {{ getVolunteerName(pickup) }}
+            </div>
+          </td>
+          <td class="td-ngo">
+            @if(getNgoName(pickup) === 'Unassigned'){
+            <span class="unassigned-label">Unassigned</span>
+            } @else {
+            {{ getNgoName(pickup) }}
+            }
+          </td>
+          <td class="td-city">{{ pickup.address.city }}{{ pickup.address.area ? ', ' + pickup.address.area : '' }}</td>
+          <td class="td-date">{{ formatDate(pickup.scheduledDate) }}</td>
+          <td class="td-waste">
+            <div class="waste-chip-list">
+              @for(type of pickup.wasteTypes; track type){
+              <span class="waste-chip">{{ type }}</span>
+              }
+            </div>
+          </td>
+          <td class="td-status">
+            <span class="status-badge" [ngClass]="statusClass(pickup.status)">
+              <span class="material-icons badge-icon">{{ statusIcon(pickup.status) }}</span>
+              {{ pickup.status }}
+            </span>
+          </td>
+        </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+  }
+
+</div>

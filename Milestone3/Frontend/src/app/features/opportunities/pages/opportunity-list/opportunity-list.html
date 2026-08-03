@@ -1,0 +1,226 @@
+<div class="page-container">
+
+  <!-- Page Header -->
+  <div class="page-header">
+    <div class="header-text">
+      <h1>Volunteer Opportunities</h1>
+      <p>Browse and join recycling and waste management initiatives.</p>
+    </div>
+    <div class="header-actions">
+      @if(isNgoOrAdmin()){
+      <a routerLink="/opportunities/create" class="btn-create">
+        <span class="material-icons">add</span>
+        Create Opportunity
+      </a>
+      }
+    </div>
+  </div>
+
+  <!-- Filter Bar -->
+  <div class="filter-bar">
+
+    <!-- Search -->
+    <div class="search-group">
+      <label class="search-input-wrap" for="opp-search">
+        <span class="material-icons search-input-icon">search</span>
+        <input
+          id="opp-search"
+          type="text"
+          class="search-input"
+          placeholder="Search opportunities..."
+          [value]="searchQuery()"
+          (input)="onSearchInput($any($event.target).value)"
+          (keydown)="onSearchKeydown($event)"
+          autocomplete="off">
+        @if(searchQuery()){
+        <button class="search-clear-btn" type="button" (click)="clearSearch()" aria-label="Clear search">
+          <span class="material-icons">close</span>
+        </button>
+        }
+      </label>
+      <button class="btn-search" type="button" (click)="triggerSearch()" aria-label="Search">
+        <span class="material-icons">search</span>
+        Search
+      </button>
+    </div>
+
+    <!-- Filters Row -->
+    <div class="filters-row">
+
+      <!-- Status filter -->
+      <div class="filter-select-wrap">
+        <span class="material-icons filter-icon">tune</span>
+        <select
+          class="filter-select"
+          id="status-filter"
+          [value]="selectedStatus()"
+          (change)="onStatusChange($any($event.target).value)">
+          <option value="">All Statuses</option>
+          <option value="open">Open</option>
+          <option value="in-progress">In Progress</option>
+          <option value="closed">Closed</option>
+        </select>
+      </div>
+
+      <!-- Location filter -->
+      <div class="filter-input-wrap">
+        <span class="material-icons filter-icon">location_on</span>
+        <input
+          type="text"
+          class="filter-input"
+          placeholder="Filter by location..."
+          [value]="selectedLocation()"
+          (input)="onLocationInput($any($event.target).value)"
+          (keydown)="onFilterKeydown($event)"
+          autocomplete="off">
+        @if(selectedLocation()){
+        <button class="filter-clear-btn" type="button" (click)="onLocationInput(''); applyFilters()" aria-label="Clear location">
+          <span class="material-icons">close</span>
+        </button>
+        }
+      </div>
+
+      <!-- Skill filter -->
+      <div class="filter-input-wrap">
+        <span class="material-icons filter-icon">build</span>
+        <input
+          type="text"
+          class="filter-input"
+          placeholder="Filter by skill..."
+          [value]="selectedSkill()"
+          (input)="onSkillInput($any($event.target).value)"
+          (keydown)="onFilterKeydown($event)"
+          autocomplete="off">
+        @if(selectedSkill()){
+        <button class="filter-clear-btn" type="button" (click)="onSkillInput(''); applyFilters()" aria-label="Clear skill">
+          <span class="material-icons">close</span>
+        </button>
+        }
+      </div>
+
+      <!-- Apply Filters button -->
+      <button class="btn-apply-filter" type="button" (click)="applyFilters()">
+        <span class="material-icons">filter_list</span>
+        Apply
+      </button>
+
+      @if(hasActiveFilters()){
+      <button class="btn-clear-filters" type="button" (click)="clearSearch()">
+        <span class="material-icons">clear_all</span>
+        Clear All
+      </button>
+      }
+
+    </div>
+
+  </div>
+
+  <!-- Loading Skeleton -->
+  @if(loading()){
+  <div class="opp-grid">
+    @for(item of [1,2,3,4,5,6]; track item){
+    <div class="skeleton-card">
+      <div class="skeleton-image"></div>
+      <div class="skeleton-body">
+        <div class="skeleton-line wide"></div>
+        <div class="skeleton-line medium"></div>
+        <div class="skeleton-line short"></div>
+        <div class="skeleton-line medium"></div>
+      </div>
+    </div>
+    }
+  </div>
+  }
+
+  <!-- Error State -->
+  @else if(error()){
+  <div class="state-card error-state">
+    <span class="material-icons state-icon error-icon">error_outline</span>
+    <h2>Something went wrong</h2>
+    <p>{{ error() }}</p>
+    <button class="btn-retry" type="button" (click)="loadOpportunities()">
+      <span class="material-icons">refresh</span>
+      Try Again
+    </button>
+  </div>
+  }
+
+  <!-- Empty State -->
+  @else if(isEmpty()){
+  <div class="state-card empty-state">
+    <span class="material-icons state-icon">volunteer_activism</span>
+    <h2>No opportunities found</h2>
+    <p>No opportunities found matching your criteria.</p>
+    <small>Check back later for new opportunities or try a different search.</small>
+    @if(hasActiveFilters()){
+    <button class="btn-retry" type="button" (click)="clearSearch()">
+      <span class="material-icons">refresh</span>
+      Clear Filters
+    </button>
+    }
+  </div>
+  }
+
+  <!-- Opportunity Grid -->
+  @else {
+  <div class="opp-grid">
+    @for(opp of opportunities(); track opp._id){
+    <app-opportunity-card
+      [opportunity]="opp"
+      [showActions]="canEdit(opp)"
+      (editClicked)="onEditClicked($event)"
+      (deleteClicked)="onDeleteClicked($event)">
+    </app-opportunity-card>
+    }
+  </div>
+
+  <!-- Pagination -->
+  @if(pagination().totalPages > 1){
+  <div class="pagination">
+    <button
+      class="page-btn"
+      type="button"
+      [disabled]="pagination().page === 1"
+      (click)="goToPage(pagination().page - 1)"
+      aria-label="Previous page">
+      <span class="material-icons">chevron_left</span>
+    </button>
+
+    @for(p of pages(); track p){
+    <button
+      class="page-btn"
+      [class.active]="p === pagination().page"
+      type="button"
+      (click)="goToPage(p)">
+      {{ p }}
+    </button>
+    }
+
+    <button
+      class="page-btn"
+      type="button"
+      [disabled]="pagination().page === pagination().totalPages"
+      (click)="goToPage(pagination().page + 1)"
+      aria-label="Next page">
+      <span class="material-icons">chevron_right</span>
+    </button>
+
+    <span class="pagination-info">
+      Page {{ pagination().page }} of {{ pagination().totalPages }}
+      &nbsp;·&nbsp; {{ pagination().total }} total
+    </span>
+  </div>
+  }
+  }
+
+</div>
+
+<!-- Delete Confirm Dialog -->
+@if(showDeleteDialog() && selectedOpportunity()){
+<app-delete-confirm-dialog
+  [opportunityTitle]="selectedOpportunity()!.title"
+  [isDeleting]="isDeleting()"
+  (confirmed)="onDeleteConfirmed()"
+  (cancelled)="onDeleteCancelled()">
+</app-delete-confirm-dialog>
+}
