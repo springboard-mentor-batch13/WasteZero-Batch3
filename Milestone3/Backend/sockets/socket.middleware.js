@@ -1,13 +1,5 @@
 // Backend/sockets/socket.middleware.js
-//
-// JWT authentication for the Socket.IO handshake. Deliberately mirrors
-// auth.middleware.js's `protect` function: verifies the JWT, then
-// re-fetches the user from MongoDB rather than trusting the token
-// payload's role directly. This matters because a user's role can change
-// after a token is issued (e.g. an admin demotes an NGO account) —
-// re-fetching keeps socket-layer authorization consistent with the
-// REST-layer's existing security posture instead of trusting up to
-// 7 stale days of role data from the token.
+
 
 const jwt = require('jsonwebtoken');
 const User = require('../models/users.model');

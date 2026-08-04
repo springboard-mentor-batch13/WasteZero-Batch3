@@ -1,12 +1,4 @@
 // Backend/config/db.js
-//
-// MongoDB connection manager using Mongoose.
-// Supports both MongoDB Atlas and local MongoDB via MONGO_URI.
-//
-// Lifecycle:
-//   - connectDB(): establishes connection on server startup
-//   - Mongoose emits 'disconnected' events which are logged for monitoring
-//   - process SIGINT / SIGTERM: gracefully closes the Mongoose connection
 
 const mongoose = require('mongoose');
 

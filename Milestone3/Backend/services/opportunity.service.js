@@ -35,20 +35,7 @@ const deleteCloudinaryAsset = async (publicId) => {
   }
 };
 
-// ── Create ──────────────────────────────────────────────────────────────
 
-/**
- * Create a new opportunity.
- * Only whitelisted, NGO-editable fields are pulled from opportunityData —
- * mirrors the whitelist used by updatePickupInstance (pickup.service.js) —
- * so unexpected keys in the request body (e.g. a stray `_id`, or a
- * client-supplied `status` trying to skip the default 'open' state) can
- * never reach the document.
- *
- * If a Cloudinary upload had already succeeded but this DB write fails,
- * the controller should call deleteCloudinaryAsset on the public_id to
- * avoid orphaned assets (transaction-safety pattern).
- */
 const createOpportunity = async (ngoId, opportunityData) => {
   const {
     title,
@@ -169,26 +156,7 @@ const updateOpportunityInstance = async (opportunityInstance, updateData) => {
   return updatedOpportunity;
 };
 
-/**
- * Delete opportunity by ID.
- *
- * Cascade deletion (data-integrity fix):
- *   Deleting an Opportunity must also remove every Application document
- *   that references it via `opportunity_id`. Without this, applications
- *   become orphan records once their parent Opportunity is gone — still
- *   present in MongoDB and still returned by application list endpoints,
- *   even though the frontend can no longer resolve the deleted opportunity.
- *
- * Order of operations (no DB transaction — kept consistent with the rest
- * of this file's non-transactional style):
- *   1. Delete all Application documents referencing this opportunity_id.
- *      If this throws, nothing has been removed yet — the opportunity and
- *      its applications remain intact, and the controller's existing
- *      try/catch returns a clean error response.
- *   2. Delete the associated Cloudinary asset (never throws — see
- *      deleteCloudinaryAsset above).
- *   3. Delete the Opportunity document itself.
- */
+
 const deleteOpportunityById = async (id) => {
   const opportunity = await Opportunity.findById(id);
 

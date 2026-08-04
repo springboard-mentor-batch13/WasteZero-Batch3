@@ -1,14 +1,5 @@
 // Backend/models/message.model.js
 //
-// Real-time direct message between two users.
-// Uses sender_id / receiver_id references and a deterministic conversation_id.
-//
-// ENCRYPTION NOTE (Milestone 3 integration):
-// The `content` field stores AES-256-GCM hex-encoded ciphertext — never
-// plaintext. The `iv` and `authTag` fields hold the corresponding crypto
-// components needed to decrypt it. Plaintext is reconstructed in-memory
-// inside message.service.js before being returned to callers/clients.
-
 const mongoose = require('mongoose');
 
 const messageSchema = new mongoose.Schema(
@@ -31,10 +22,7 @@ const messageSchema = new mongoose.Schema(
       required: true,
     },
 
-    // Stores AES-256-GCM hex-encoded ciphertext — NOT plaintext.
-    // Length/format validators are intentionally omitted because ciphertext
-    // length depends on key size, not the original message length, and
-    // the hex encoding would always fail a human-text minlength check.
+  
     content: {
       type: String,
       required: [true, 'Message content is required'],

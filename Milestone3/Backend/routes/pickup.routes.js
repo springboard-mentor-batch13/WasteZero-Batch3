@@ -39,10 +39,7 @@ router.use(protect);
 // Volunteer — their own pickup history
 router.get('/my-pickups', authorize('volunteer'), getMyPickups);
 
-// NGO — pickups matched to their location + wasteTypes (default: Pending feed).
-// NGO-only: admins must never participate in the pickup workflow, and their
-// own pickups are excluded from this feed at the query level regardless
-// (see pickupService.getPickupsForNgo).
+
 router.get('/available', authorize('ngo'), getAvailablePickups);
 
 // NGO — pickups they are currently/previously assigned to. NGO-only for the
@@ -53,11 +50,7 @@ router.get('/assigned-to-me', authorize('ngo'), getAssignedToMe);
 // any status. Deliberately separate from the NGO discovery feed above.
 router.get('/', authorize('admin'), getAllPickups);
 
-// ── NGO status-transition endpoint ──────────────────────────────────────
-// NGO-only. Separate from the volunteer/admin's PUT /:id so the two write
-// paths can never collide: owners edit pickup details, NGOs only ever move
-// status. Admins are intentionally excluded — they never assign, complete,
-// or cancel a pickup, and can never become an agent_id.
+
 router.patch(
   '/:id/status',
   authorize('ngo'),
@@ -107,12 +100,7 @@ router
     deletePickup
   );
 
-// Volunteer — cancel their own Pending pickup. Kept separate from the NGO
-// status-transition endpoint: an unrelated matching NGO must never be able
-// to cancel a pickup it hasn't been assigned to (see checkPickupNgoMatch).
-// Not offered to admin: admin never owns, edits, deletes, or cancels a
-// pickup — it has no CRUD role in the pickup workflow at all, only the
-// read-only views (list all / by ID / status) above.
+
 router.patch(
   '/:id/cancel',
   authorize('volunteer'),

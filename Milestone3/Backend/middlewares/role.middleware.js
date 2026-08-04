@@ -289,14 +289,7 @@ const checkPickupViewAccess = async (req, res, next) => {
 /**
  * @desc Guards the NGO status-transition endpoint (PATCH /:id/status) per
  *       the RBAC matrix:
- *         - Claiming a Pending pickup (Pending -> Assigned): allowed only
- *           if the pickup's location + wasteTypes match the NGO's own
- *           coverage (isNgoEligibleForPickup) — any matching NGO may claim,
- *           first writer wins (enforced atomically in the service layer).
- *         - Any transition on a pickup that already has an agent (Assigned
- *           -> Completed/Cancelled): allowed only for the NGO already on
- *           record as agent_id — a different NGO must never be able to
- *           complete/cancel someone else's claimed job.
+ *       
  *       Attaches req.pickup for the controller's pre-check + service call.
  */
 const checkPickupNgoMatch = async (req, res, next) => {

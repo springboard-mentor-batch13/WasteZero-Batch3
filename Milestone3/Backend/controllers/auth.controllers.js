@@ -11,10 +11,7 @@ const OtpModel = require('../models/otp.model');
 /* ============================================
    Register User (Atomic Flow)
    POST /api/auth/register
-   
-   SECURITY: The User record is NOT created until email is verified.
-   Instead, registration data is stored in the OTP document's payload.
-   This prevents unverified ghost accounts accumulating in the DB.
+  
 ============================================ */
 
 const registerUser = async (req, res) => {
@@ -39,11 +36,7 @@ const registerUser = async (req, res) => {
       });
     }
 
-    // SECURITY: Only one admin account may ever exist. This is an early,
-    // friendly check (avoids sending an OTP email for a request that can
-    // never succeed) — the real, race-safe guarantee is the partial unique
-    // index on { role: 'admin' } in the User model, enforced again below
-    // when the OTP is verified and the User document is actually created.
+
     if (role === 'admin') {
       const adminExists = await User.exists({ role: 'admin' });
       if (adminExists) {
@@ -69,22 +62,8 @@ const registerUser = async (req, res) => {
         message: 'Email or username already exists.',
       });
     }
-
-    // SECURITY: Hash the password now, before it ever gets written to the
-    // Otp collection. Otp documents carrying a registration payload are
-    // deliberately kept around for up to 24h (PENDING_REGISTRATION_TTL_MS,
-    // see models/otp.model.js) so resendOtp keeps working — that's far too
-    // long for a plaintext password to sit unencrypted in MongoDB. Hashing
-    // here means only the bcrypt hash ever touches the Otp collection (and
-    // any resend of it via resendOtp), and if a user re-registers before
-    // verifying, the old plaintext was never stored at all.
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Store registration payload inside the OTP document — no User created yet.
-    // The User record will be atomically created when the OTP is verified.
-    // NOTE: password is already hashed above — the User pre-save hook is
-    // told to skip re-hashing it (see models/users.model.js / $locals.skipHash
-    // usage in verifyUserOtp below).
     const pendingPayload = {
       name: name.trim(),
       username: username.trim().toLowerCase(),
@@ -243,20 +222,9 @@ const verifyUserOtp = async (req, res) => {
     }
 
     // Atomically create the verified User record.
-    //
-    // Race note: the duplicate-username check in registerUser only queries
-    // the User collection, and a pending registration lives only in the
-    // OTP document's payload (not uniqueness-enforced) until this point.
-    // So two people can both start registering with the same username —
-    // neither exists as a User yet, so both pass that check — and whoever
-    // verifies second hits the username unique-index here. That's caught
-    // explicitly below instead of falling through to the generic 500,
-    // since by this point their OTP has already been consumed (deleted by
-    // verifyOtp) and they need a clear signal to register again.
+    
     try {
-      // payload.password is already a bcrypt hash (hashed in registerUser
-      // before it was ever written to the Otp document) — set skipHash so
-      // the pre-save hook doesn't hash it a second time.
+     
       const newUser = new User({
         name: payload.name,
         username: payload.username,
@@ -271,11 +239,7 @@ const verifyUserOtp = async (req, res) => {
       if (createError.code === 11000) {
         const field = Object.keys(createError.keyValue || {})[0] || 'username';
 
-        // Race case: two admin registrations were both verified before
-        // either User document existed, so the early check in registerUser
-        // couldn't catch it. The partial unique index on { role: 'admin' }
-        // rejects the second insert here — surface a clear message instead
-        // of the generic duplicate-field one.
+      
         if (field === 'role' && payload.role === 'admin') {
           return res.status(409).json({
             success: false,

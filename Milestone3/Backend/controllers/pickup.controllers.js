@@ -78,11 +78,7 @@ const updatePickup = async (req, res) => {
     const wasteTypesChanged =
       JSON.stringify(previousWasteTypes) !== JSON.stringify(updatedWasteTypes);
 
-    // Fire-and-forget: only re-run NGO matching when the fields that
-    // determine eligibility (city, wasteTypes) actually changed — an edit
-    // to notes/schedule alone shouldn't re-notify the same NGOs every time.
-    // Matching/notification failures must never fail the update, so errors
-    // are only logged.
+   
     if (cityChanged || wasteTypesChanged) {
       matchingService.notifyMatchedNgos(updated).catch((err) => {
         console.error('[Matching] Failed to notify matched NGOs on update:', err.message);
@@ -299,13 +295,7 @@ const updatePickupStatus = async (req, res) => {
     const { status: nextStatus } = req.body;
     const fromStatus = req.pickup.status;
 
-    // NGO-scoped check (not the general canTransitionTo): a matching-but-
-    // unassigned NGO may only claim a Pending pickup (-> Assigned). It must
-    // never be able to cancel a Pending pickup it hasn't claimed — that
-    // would let any eligible NGO cancel other people's requests. Cancelling
-    // a pickup requires already being the assigned agent (see
-    // checkPickupNgoMatch, which enforces agent_id === req.user.id for any
-    // non-Pending pickup).
+  
     if (!req.pickup.canNgoTransitionTo(nextStatus)) {
       return sendError(
         res,

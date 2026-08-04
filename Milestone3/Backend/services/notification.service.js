@@ -103,20 +103,7 @@ const markRead = async (notificationId, userId) => {
   }
 };
 
-// ── Developer 2 spec — REST-facing function names ──────────────────────
-// Thin, purpose-named wrappers matching the spec's exact signatures, so the
-// REST controller layer doesn't need to know about dispatch/listForUser/
-// markRead directly. dispatch/listForUser/markRead stay as-is since the
-// socket layer (sockets/events/message.events.js) already calls dispatch()
-// directly.
 
-/**
- * Create a notification for userId and (per dispatch's existing behavior)
- * push it live over the socket layer if they're connected — this already
- * fulfils the spec's "save first, then notify the connected client"
- * requirement; there's no separate emitNotification(io, userId, data) to
- * call into, since dispatch() owns that socket push internally.
- */
 const createNotification = (userId, type, message, relatedId = null) =>
   dispatch({ user_id: userId, type, message, reference_id: relatedId });
 

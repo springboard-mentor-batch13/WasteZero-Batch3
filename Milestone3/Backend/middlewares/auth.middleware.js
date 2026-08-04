@@ -1,14 +1,6 @@
 // Backend/middlewares/auth.middleware.js
 //
-// JWT authentication middleware.
-//
-// 'protect'   → Verifies the Bearer token and attaches req.user.
-//               Uses .lean() since the user object is read-only here —
-//               no Mongoose document methods are called on req.user.
-//               Adds a string `id` property for backward compatibility
-//               because Mongoose virtuals are not available on lean objects.
-//
-// 'authorize' → Role-based access control guard.
+
 
 const jwt = require('jsonwebtoken');
 const User = require('../models/users.model');

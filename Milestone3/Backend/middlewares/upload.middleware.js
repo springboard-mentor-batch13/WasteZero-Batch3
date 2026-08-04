@@ -1,21 +1,6 @@
 // Backend/middlewares/upload.middleware.js
 //
-// Two-stage image pipeline:
-//   Stage 1: multer (memoryStorage) — buffers file in RAM, validates type & size
-//   Stage 2: uploadToCloudinary    — streams buffer to Cloudinary CDN,
-//                                    attaches both secure_url AND public_id
-//                                    to req.body for the controller to persist.
-//
-// Cloudinary lifecycle contract:
-//   - secure_url → stored in Opportunity.image (served to the frontend)
-//   - public_id  → stored in Opportunity.imagePublicId (used to delete old assets)
-//
-// Safety rules:
-//   - If no file is uploaded, req.body.image and req.body.imagePublicId are
-//     deleted (prevents the client from injecting arbitrary URLs).
-//   - If the Cloudinary upload fails, the request is rejected with a 500 error.
-//   - If a DB write subsequently fails, the controller is responsible for
-//     calling cloudinary.uploader.destroy(public_id) to clean up.
+
 
 const multer = require('multer');
 const cloudinary = require('cloudinary').v2;

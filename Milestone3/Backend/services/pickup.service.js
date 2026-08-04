@@ -39,15 +39,7 @@ const getUserCities = (user) => {
   return cities;
 };
 
-/**
- * Check whether a given NGO user is eligible to claim a specific pickup —
- * i.e. the pickup's address.city matches the NGO's coverage city
- * (case-insensitive) AND at least one of the pickup's
- * wasteTypes overlaps with the NGO's configured wasteTypes.
- * Shared by getPickupsForNgo (list-level filter) and checkPickupNgoMatch
- * (single-resource claim guard) so the matching rule can't drift between
- * the two call sites.
- */
+
 const isNgoEligibleForPickup = (ngoUser, pickup) => {
   const ngoCities = getUserCities(ngoUser).map((c) => c.trim().toLowerCase());
   const ngoWasteTypes = Array.isArray(ngoUser?.wasteTypes)

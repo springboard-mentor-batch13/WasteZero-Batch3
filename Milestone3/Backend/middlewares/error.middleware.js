@@ -1,13 +1,6 @@
 // Backend/middlewares/error.middleware.js
 //
-// Global Express error-handling middleware (4-argument signature).
-// Must be mounted LAST in server.js — after all routes and the 404 fallback.
-//
-// Security:
-//   - In production, raw error messages and stack traces are NEVER sent to
-//     the client (could expose internal implementation details or DB schema).
-//   - In development, a structured error object with message + stack is
-//     returned so developers can debug efficiently.
+
 
 const errorHandler = (err, req, res, next) => {
   // Log all errors server-side for debugging and monitoring

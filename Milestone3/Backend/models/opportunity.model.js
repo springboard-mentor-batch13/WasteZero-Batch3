@@ -55,10 +55,7 @@ const opportunitySchema = new mongoose.Schema(
       default: null,
     },
 
-    // ── Cloudinary Asset Fields ────────────────────────────────────────
-    // 'image'         → CDN secure URL served to the frontend
-    // 'imagePublicId' → Cloudinary public_id used for asset deletion on
-    //                   update and delete operations (lifecycle management)
+    
     image: {
       type: String,
       default: '',

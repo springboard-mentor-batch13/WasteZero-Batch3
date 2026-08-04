@@ -2,9 +2,7 @@
 
 const mongoose = require('mongoose');
 
-// Single source of truth for valid pickup statuses — used for the schema
-// enum below AND exposed as Pickup.STATUSES so controllers/services never
-// have to hand-type this list themselves (see pickup.controllers.js).
+
 const PICKUP_STATUSES = ['Pending', 'Assigned', 'Completed', 'Cancelled'];
 
 const pickupSchema = new mongoose.Schema(
@@ -99,13 +97,7 @@ pickupSchema.index({ status: 1, 'address.city': 1, scheduledDate: 1 });
 // Multikey index — supports $in matching against a volunteer/NGO's wasteTypes
 pickupSchema.index({ wasteTypes: 1 });
 
-// ── Instance helper: valid forward-only status transitions ─────────────
-// General map (used by canTransitionTo) — every transition that can ever
-// happen to a pickup, regardless of which actor drives it:
-//   Pending   -> Assigned | Cancelled
-//   Assigned  -> Completed | Cancelled
-//   Completed -> (terminal)
-//   Cancelled -> (terminal)
+
 const ALLOWED_TRANSITIONS = {
   Pending: ['Assigned', 'Cancelled'],
   Assigned: ['Completed', 'Cancelled'],
@@ -113,17 +105,7 @@ const ALLOWED_TRANSITIONS = {
   Cancelled: [],
 };
 
-// NGO-specific map (used by canNgoTransitionTo) — the subset of the above
-// an NGO may drive via the status-transition endpoint (PATCH /:id/status).
-//
-// Pending -> Cancelled is deliberately EXCLUDED here even though it's a
-// valid state in the general map above: that transition belongs only to
-// the owning volunteer's dedicated /:id/cancel endpoint
-// (see cancelPendingPickup in pickup.service.js). An NGO merely eligible
-// to claim a Pending pickup (location/wasteType match) has not been
-// assigned to it, and must not be able to cancel it — an NGO that isn't
-// interested simply doesn't claim it ("ignore"), it never actively cancels
-// someone else's still-unclaimed request.
+
 const NGO_ALLOWED_TRANSITIONS = {
   Pending: ['Assigned'],
   Assigned: ['Completed', 'Cancelled'],

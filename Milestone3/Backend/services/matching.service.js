@@ -1,31 +1,10 @@
 // Backend/services/matching.service.js
-//
-// Matches volunteers to newly created Opportunities by Skills + geographic
-// location, and dispatches an 'opportunity_match' notification (in-app +
-// socket push, via notification.service.js) to every match, inviting them
-// to apply.
-//
-// Trigger point: opportunity.controllers.js#createOpportunity calls
-// notifyMatchedVolunteers() after a successful save (fire-and-forget — a
-// matching/notification failure must never fail opportunity creation).
-//
-// Also matches NGOs to newly created Pickups by coverage city + wasteTypes
-// (reusing pickup.service.js#isNgoEligibleForPickup), and dispatches a
-// 'pickup_match' notification to every eligible NGO, inviting them to claim
-// it.
-//
-// Trigger point: pickup.controllers.js#createPickup calls
-// notifyMatchedNgos() after a successful save (fire-and-forget — same
-// never-fail-the-create contract as the opportunity flow above).
+
 
 const User = require('../models/users.model');
 const Opportunity = require('../models/opportunity.model');
 const notificationService = require('./notification.service');
-// Reuse the single source of truth for "is this NGO eligible for this
-// pickup" (city + wasteTypes overlap) — already used by the NGO discovery
-// feed (getPickupsForNgo) and the single-resource claim guard
-// (checkPickupNgoMatch). Matching rules must not drift between that pull
-// flow and this push flow.
+
 const { isNgoEligibleForPickup } = require('./pickup.service');
 
 /**
@@ -170,21 +149,7 @@ const notifyMatchedVolunteers = async (opportunity) => {
 
 /**
  * Get the top-scoring open Opportunities for a given volunteer, ranked by
- * relevance. This is the "pull" counterpart to notifyMatchedVolunteers()
- * above — called when a volunteer wants to see their best current matches
- * (e.g. a "Recommended for you" feed), rather than being pushed a
- * notification when a new opportunity happens to match them.
- *
- * Algorithm:
- *   1. Load the volunteer's skills + location from the User document.
- *   2. Fetch every Opportunity with status === 'open'.
- *   3. Score each: +1 per required_skill the volunteer also has, plus
- *      LOCATION_MATCH_SCORE if the opportunity's location matches the
- *      volunteer's city/state.
- *   4. Require BOTH at least one matching skill AND a location match — same
- *      contract as findMatchingVolunteers/the push-notification path, so a
- *      matching city with zero skill overlap (or vice versa) is not a
- *      "match" — and sort the rest by score, highest first — ties broken by
+ * s broken by
  *      newest first.
  *   5. Return the top N (default 10).
  *

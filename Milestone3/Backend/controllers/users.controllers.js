@@ -143,15 +143,7 @@ const updateUserProfile = async (req, res) => {
       user.bio = bio.trim();
     }
 
-    // SECURITY/DATA-INTEGRITY: location, skills (volunteer), and wasteTypes
-    // (NGO) are not cosmetic — the matching engine (opportunity matching for
-    // volunteers, pickup matching for NGOs) silently returns zero matches
-    // for anyone missing them. Rather than let that fail silently, block
-    // the save here and tell the user exactly what's still needed. This
-    // runs on the merged (existing + incoming) document, so it only fires
-    // when the profile is *still* incomplete after this update — a user
-    // who already completed their profile isn't re-blocked by an unrelated
-    // partial update (e.g. just changing their bio).
+   
     const { complete, missing } = checkProfileCompleteness(user);
     if (!complete) {
       return res.status(400).json({

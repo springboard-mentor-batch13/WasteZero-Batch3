@@ -21,9 +21,7 @@ const createOpportunity = async (req, res) => {
       req.body
     );
 
-    // Fire-and-forget: find volunteers whose skills + location match this
-    // opportunity and notify them to apply. Matching/notification failures
-    // must never fail opportunity creation, so errors are only logged.
+   
     matchingService.notifyMatchedVolunteers(savedOpportunity).catch((err) => {
       console.error('[Matching] Failed to notify matched volunteers:', err.message);
     });
@@ -45,10 +43,7 @@ const createOpportunity = async (req, res) => {
  */
 const getAllOpportunities = async (req, res) => {
   try {
-    // Clamp both values — an unvalidated negative/zero page produces a
-    // negative skip() (Mongoose throws), and an unbounded limit lets a
-    // caller request the entire collection in one response. Mirrors the
-    // clamping already applied in utils/queryBuilder.js for pickups.
+   
     const page  = Math.max(parseInt(req.query.page, 10)  || 1, 1);
     const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 10, 1), 100);
 
