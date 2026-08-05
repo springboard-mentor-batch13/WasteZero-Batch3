@@ -61,6 +61,13 @@ export class Layout implements OnInit, OnDestroy {
       ? this.messageNotifications()
       : this.generalNotifications();
 
+  // ── Per-tab unread dot helpers ────────────────────────────────────────
+  readonly hasUnreadGeneral = () =>
+    this.generalNotifications().some(n => !n.isRead);
+
+  readonly hasUnreadMessages = () =>
+    this.messageNotifications().some(n => !n.isRead);
+
   // ────────────────────────────────────────────────────────────
 
   ngOnInit(): void {
@@ -69,6 +76,10 @@ export class Layout implements OnInit, OnDestroy {
     if (token) {
       this.socketService.connect(token);
     }
+
+    // Seed the unread badge from persisted backend data so the indicator
+    // survives refresh and re-login (fixes the temporary-alert bug).
+    this.notificationService.seedUnreadCount();
 
     // Listen for real-time notifications → increment badge
     this.socketService.notification$
@@ -129,7 +140,18 @@ export class Layout implements OnInit, OnDestroy {
         next: (res) => {
           this.notifications.set(res.data.notifications);
           this.loadingNotifications.set(false);
-          this.notificationService.resetUnread();
+
+          // Recompute the badge from the actual loaded data — keeps the count
+          // truthful without blindly resetting to 0 on panel open.
+          const unread = res.data.notifications.filter(n => !n.isRead).length;
+          this.notificationService.setUnreadCount(unread);
+
+          // Auto-select the tab that has unread items.
+          // Message notifications take priority when both exist.
+          const hasUnreadMsg = res.data.notifications.some(
+            n => !n.isRead && n.type === 'message'
+          );
+          this.notifTab.set(hasUnreadMsg ? 'messages' : 'general');
         },
         error: () => {
           this.loadingNotifications.set(false);
@@ -138,19 +160,56 @@ export class Layout implements OnInit, OnDestroy {
   }
 
   onNotifClick(notif: Notification): void {
-    // Mark as read on backend
+    // Mark as read on backend — only if it is currently unread
     if (!notif.isRead) {
-      this.notificationService.markRead(notif._id)
-        .pipe(takeUntil(this.destroy$))
-        .subscribe({
-          next: () => {
-            this.notifications.update(list =>
-              list.map(n =>
-                n._id === notif._id ? { ...n, isRead: true } : n
-              )
-            );
-          }
-        });
+      if (notif.type === 'message' && notif.reference_id) {
+        // Message notifications: bulk-mark ALL unread notifications from this
+        // conversation as read in a single backend call. reference_id is the
+        // deterministic conversationId (e.g. "abc_def") shared by all message
+        // notifications between these two users.
+        const conversationId = notif.reference_id;
+        this.notificationService.markConversationRead(conversationId)
+          .pipe(takeUntil(this.destroy$))
+          .subscribe({
+            next: () => {
+              // Count how many notifications in this conversation were unread
+              // so the badge can be decremented by the exact right amount.
+              const unreadInConversation = this.notifications().filter(
+                n => n.reference_id === conversationId && n.type === 'message' && !n.isRead
+              ).length;
+
+              // Mark all notifications for this conversation as read locally
+              this.notifications.update(list =>
+                list.map(n =>
+                  n.reference_id === conversationId && n.type === 'message'
+                    ? { ...n, isRead: true }
+                    : n
+                )
+              );
+
+              // Decrement badge by the actual number of notifications cleared
+              for (let i = 0; i < unreadInConversation; i++) {
+                this.notificationService.decrementUnread();
+              }
+            }
+          });
+      } else {
+        // General / pickup notifications: mark the single clicked item
+        this.notificationService.markRead(notif._id)
+          .pipe(takeUntil(this.destroy$))
+          .subscribe({
+            next: () => {
+              // Update local state for that single notification
+              this.notifications.update(list =>
+                list.map(n =>
+                  n._id === notif._id ? { ...n, isRead: true } : n
+                )
+              );
+              // Decrement badge by exactly 1
+              this.notificationService.decrementUnread();
+            }
+          });
+      }
     }
 
     // Navigate based on notification type
@@ -167,6 +226,7 @@ export class Layout implements OnInit, OnDestroy {
       else                       this.router.navigate(['/pickups/monitor']);
     }
   }
+
 
   // ── Notification icon helpers ─────────────────────────────────
 

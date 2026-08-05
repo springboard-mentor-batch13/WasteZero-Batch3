@@ -54,6 +54,17 @@ const listForUser = async (userId, skip = 0, limit = 20) => {
     throw new Error('Invalid user ID format');
   }
 
+  // Lazy 24-hour expiry: delete read notifications where readAt+24h has
+  // elapsed. Uses readAt — NOT createdAt — so a notification read late in
+  // its life still gets the full 24h window before deletion.
+  // Unread notifications (isRead:false) are NEVER touched by this path.
+  const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000);
+  await Notification.deleteMany({
+    user_id: userId,
+    isRead: true,
+    readAt: { $ne: null, $lte: cutoff },
+  });
+
   const notifications = await Notification.find({ user_id: userId })
     .sort({ createdAt: -1 })
     .skip(skip)
@@ -86,7 +97,7 @@ const markRead = async (notificationId, userId) => {
 
   const notification = await Notification.findOneAndUpdate(
     { _id: notificationId, user_id: userId },
-    { $set: { isRead: true } },
+    { $set: { isRead: true, readAt: new Date() } },
     { new: true }
   );
 
@@ -101,6 +112,74 @@ const markRead = async (notificationId, userId) => {
   } catch {
     return { ...rest, message: '[Notification Decryption Failed]' };
   }
+};
+
+/**
+ * Return the count of unread notifications for a user.
+ * Used by the frontend on app start to seed the bell badge from
+ * persisted data, so the indicator survives refresh and re-login.
+ */
+const getUnreadCount = async (userId) => {
+  if (!mongoose.Types.ObjectId.isValid(userId)) {
+    throw new Error('Invalid user ID format');
+  }
+  const count = await Notification.countDocuments({
+    user_id: userId,
+    isRead: false,
+  });
+  return { count };
+};
+
+/**
+ * Mark all unread message-type notifications for a specific conversation
+ * as read, scoped to the recipient (userId). Only affects notifications
+ * where type='message' AND reference_id matches the conversationId AND
+ * the owning user matches — notifications from other conversations or
+ * other users are untouched.
+ *
+ * conversationId is the deterministic sorted pair (e.g. "abc_def") already
+ * stored as reference_id on every message notification, so no new schema
+ * field is required.
+ *
+ * Returns the count of documents updated.
+ */
+const markConversationNotificationsRead = async (conversationId, userId) => {
+  if (!mongoose.Types.ObjectId.isValid(userId)) {
+    throw new Error('Invalid user ID format');
+  }
+  if (!conversationId || typeof conversationId !== 'string') {
+    throw new Error('conversationId is required');
+  }
+
+  const result = await Notification.updateMany(
+    {
+      user_id: userId,
+      type: 'message',
+      reference_id: conversationId,
+      isRead: false,
+    },
+    { $set: { isRead: true, readAt: new Date() } }
+  );
+
+  return { updated: result.modifiedCount };
+};
+
+/**
+ * Delete all read notifications whose readAt timestamp is older than 24 hours.
+ * This is the correct expiry predicate: a notification must be READ first and
+ * then have 24 hours pass before it is eligible for removal.
+ * Unread notifications (isRead:false) are NEVER deleted by this function.
+ *
+ * Called by the hourly cleanup job registered in server.js.
+ * Returns the count of deleted documents for logging.
+ */
+const cleanupExpiredNotifications = async () => {
+  const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000);
+  const result = await Notification.deleteMany({
+    isRead: true,
+    readAt: { $ne: null, $lte: cutoff },
+  });
+  return result.deletedCount;
 };
 
 // ── Developer 2 spec — REST-facing function names ──────────────────────
@@ -139,6 +218,9 @@ module.exports = {
   dispatch,
   listForUser,
   markRead,
+  getUnreadCount,
+  markConversationNotificationsRead,
+  cleanupExpiredNotifications,
   createNotification,
   getNotificationsForUser,
   markNotificationRead,

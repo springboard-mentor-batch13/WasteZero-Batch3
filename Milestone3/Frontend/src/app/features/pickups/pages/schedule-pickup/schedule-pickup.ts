@@ -9,13 +9,24 @@ import {
   signal, computed
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators, AbstractControl, ValidationErrors } from '@angular/forms';
 import { Router } from '@angular/router';
 import { Subject, takeUntil } from 'rxjs';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 
 import { PickupService } from '../../../../core/services/pickup.service';
 import { Pickup, CreatePickupPayload, WASTE_TYPES } from '../../../../core/models/pickup.model';
+
+// ── Cross-field validator: end time must be after start time ──────────────
+// Applied at the FormGroup level so it re-evaluates whenever either field
+// changes. Returns null (valid) when either field is empty — the required
+// validator handles those cases independently.
+function endTimeAfterStart(group: AbstractControl): ValidationErrors | null {
+  const start = group.get('timeStart')?.value as string;
+  const end   = group.get('timeEnd')?.value   as string;
+  if (!start || !end) return null;
+  return end > start ? null : { endTimeBeforeStart: true };
+}
 
 @Component({
   selector: 'app-schedule-pickup',
@@ -57,14 +68,17 @@ export class SchedulePickup implements OnInit, OnDestroy {
   readonly completedCount = computed(() => this.myPickups().filter(p => p.status === 'Completed').length);
 
   constructor() {
-    this.form = this.fb.group({
-      city:      ['', [Validators.required, Validators.minLength(2)]],
-      area:      [''],
-      date:      ['', Validators.required],
-      timeStart: ['', Validators.required],
-      timeEnd:   ['', Validators.required],
-      notes:     [''],
-    });
+    this.form = this.fb.group(
+      {
+        city:      ['', [Validators.required, Validators.minLength(2)]],
+        area:      [''],
+        date:      ['', Validators.required],
+        timeStart: ['', Validators.required],
+        timeEnd:   ['', Validators.required],
+        notes:     [''],
+      },
+      { validators: endTimeAfterStart }
+    );
   }
 
   ngOnInit(): void {

@@ -140,6 +140,9 @@
             @if(form.get('timeEnd')?.invalid && form.get('timeEnd')?.touched){
             <span class="field-error">End time is required.</span>
             }
+            @if(form.errors?.['endTimeBeforeStart'] && form.get('timeEnd')?.touched){
+            <span class="field-error">End time must be after start time.</span>
+            }
           </div>
         </div>
       </div>
