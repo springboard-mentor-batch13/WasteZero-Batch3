@@ -206,12 +206,16 @@ const deleteOpportunityById = async (id) => {
 /**
  * Get opportunities created by a specific NGO.
  * Uses .lean() — read-only list.
+ * Populates ngo_id with the same fields as getAllOpportunities so that
+ * the opportunity-card component can display NGO name and username.
  */
 const getOpportunitiesByNgo = async (ngoId) => {
   return await Opportunity.find({ ngo_id: ngoId })
+    .populate('ngo_id', 'name username role')
     .sort({ createdAt: -1 })
     .lean();
 };
+
 
 /**
  * Search opportunities using regex across multiple fields.
