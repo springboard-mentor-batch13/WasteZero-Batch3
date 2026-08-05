@@ -1,0 +1,159 @@
+.notif-list-container {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-neutral);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  padding: 1.25rem;
+  max-width: 640px;
+  margin: 0 auto;
+}
+
+.notif-list-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.notif-list-header h2 {
+  margin: 0;
+  font-size: 1.25rem;
+  color: var(--color-text-primary);
+}
+
+.btn-mark-all {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  border: none;
+  background: var(--color-primary);
+  color: #fff;
+  padding: 0.5rem 0.9rem;
+  border-radius: var(--radius-full);
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: var(--transition-fast);
+}
+
+.btn-mark-all:hover:not(:disabled) {
+  background: var(--color-primary-dark);
+}
+
+.btn-mark-all:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.notif-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 2.5rem 1rem;
+  color: var(--color-text-secondary);
+  text-align: center;
+}
+
+.notif-state-error {
+  color: var(--color-danger);
+}
+
+.empty-icon {
+  font-size: 2.5rem;
+  color: var(--color-text-muted);
+}
+
+.btn-retry {
+  border: 1px solid var(--color-border-neutral);
+  background: var(--color-surface);
+  padding: 0.4rem 1rem;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.notif-items {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.notif-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.85rem 1rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border-neutral);
+  background: var(--color-surface);
+}
+
+.notif-item.unread {
+  background: var(--color-primary-light);
+  border-color: var(--color-border);
+}
+
+.notif-item-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.notif-title {
+  margin: 0;
+  font-weight: 600;
+  font-size: 0.8rem;
+  color: var(--color-primary-dark);
+}
+
+.notif-message {
+  margin: 0;
+  font-size: 0.92rem;
+  color: var(--color-text-primary);
+  overflow-wrap: anywhere;
+}
+
+.notif-timestamp {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+}
+
+.btn-mark-read {
+  flex-shrink: 0;
+  border: 1px solid var(--color-primary);
+  background: transparent;
+  color: var(--color-primary-dark);
+  padding: 0.4rem 0.75rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.78rem;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: var(--transition-fast);
+}
+
+.btn-mark-read:hover:not(:disabled) {
+  background: var(--color-primary);
+  color: #fff;
+}
+
+.btn-mark-read:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.spinner, .btn-spinner {
+  width: 1.1rem;
+  height: 1.1rem;
+  border: 2px solid var(--color-border-neutral);
+  border-top-color: var(--color-primary);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}

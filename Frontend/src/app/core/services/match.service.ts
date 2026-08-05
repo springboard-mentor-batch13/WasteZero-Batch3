@@ -24,6 +24,11 @@ export interface MatchSuggestion {
   date?: string | null;
   duration?: string;
   status?: string;
+  // The backend spreads the raw Opportunity doc into each match, so ngo_id
+  // rides along too. It is NOT populated (no .populate('ngo_id', ...) in
+  // matching.service.js on the backend), so in practice this is just the
+  // NGO's ObjectId string, not a name — UI code should treat it as such.
+  ngo_id?: string;
 }
 
 export interface MatchSuggestionsData {

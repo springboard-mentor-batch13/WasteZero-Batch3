@@ -1,0 +1,60 @@
+<div class="matches-container">
+
+  <div class="matches-header">
+    <h2>Matched Opportunities</h2>
+    <p>Volunteering opportunities ranked to your skills and location</p>
+  </div>
+
+  <!-- Loading -->
+  <div class="matches-state" *ngIf="loading()">
+    <div class="spinner"></div>
+    <span>Loading matches...</span>
+  </div>
+
+  <!-- Incomplete profile -->
+  <div class="matches-state matches-state-warning" *ngIf="!loading() && missingFields().length > 0">
+    <span class="material-icons">assignment_late</span>
+    <p>Complete your profile to see match suggestions.</p>
+    <p class="missing-fields">Missing: {{ missingFields().join(', ') }}</p>
+  </div>
+
+  <!-- Error -->
+  <div class="matches-state matches-state-error" *ngIf="!loading() && missingFields().length === 0 && error()">
+    <span class="material-icons">error_outline</span>
+    <p>{{ error() }}</p>
+    <button class="btn-retry" (click)="loadMatches()">Retry</button>
+  </div>
+
+  <!-- Empty -->
+  <div class="matches-state" *ngIf="!loading() && !error() && missingFields().length === 0 && matches().length === 0">
+    <span class="material-icons">search_off</span>
+    <p>No matches found right now</p>
+  </div>
+
+  <!-- Cards -->
+  <div class="matches-grid" *ngIf="!loading() && !error() && matches().length > 0">
+    <div class="match-card" *ngFor="let m of matches(); trackBy: trackById">
+
+      <div class="match-card-top">
+        <h3 class="match-title">{{ m.title }}</h3>
+        <span class="match-badge">{{ matchPercent(m) }}% Match</span>
+      </div>
+
+      <div class="match-org">
+        <span class="material-icons meta-icon">apartment</span>
+        <span>{{ organizationLabel(m) }}</span>
+      </div>
+
+      <div class="match-location">
+        <span class="material-icons meta-icon">location_on</span>
+        <span>{{ m.location }}</span>
+      </div>
+
+      <div class="match-skills">
+        <span class="skill-chip" *ngFor="let skill of m.required_skills">{{ skill }}</span>
+      </div>
+
+    </div>
+  </div>
+
+</div>

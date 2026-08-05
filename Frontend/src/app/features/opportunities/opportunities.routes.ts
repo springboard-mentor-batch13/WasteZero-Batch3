@@ -5,11 +5,13 @@
 
 import { Routes } from '@angular/router';
 import { ngoAdminGuard } from '../../core/guards/ngo-admin.guard';
+import { volunteerGuard } from '../../core/guards/volunteer.guard';
 
 import { OpportunityList } from './pages/opportunity-list/opportunity-list';
 import { OpportunityDetail } from './pages/opportunity-detail/opportunity-detail';
 import { OpportunityForm } from './pages/opportunity-form/opportunity-form';
 import { MyOpportunities } from './pages/my-opportunities/my-opportunities';
+import { OpportunityMatchesComponent } from './components/opportunity-matches/opportunity-matches.component';
 
 export const opportunityRoutes: Routes = [
 
@@ -17,6 +19,14 @@ export const opportunityRoutes: Routes = [
   {
     path: '',
     component: OpportunityList
+  },
+
+  // Match Opportunities Cards View (Task 4) — Volunteer only, must come
+  // before ':id' so 'matches' isn't swallowed as an opportunity id.
+  {
+    path: 'matches',
+    component: OpportunityMatchesComponent,
+    canActivate: [volunteerGuard]
   },
 
   // My Opportunities (NGO/Admin) — must come before :id to avoid clash

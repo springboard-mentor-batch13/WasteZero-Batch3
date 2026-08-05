@@ -1,4 +1,3 @@
-
 # WasteZero — Milestone 3
 
 A full-stack volunteer management platform connecting volunteers, NGOs, and administrators for sustainable waste management initiatives.

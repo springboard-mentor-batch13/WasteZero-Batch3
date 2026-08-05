@@ -1,0 +1,61 @@
+<div class="notif-list-container">
+
+  <!-- Header with Mark All as Read -->
+  <div class="notif-list-header">
+    <h2>Notifications</h2>
+    <button
+      type="button"
+      class="btn-mark-all"
+      [disabled]="!hasUnread() || markingAll()"
+      (click)="markAllAsRead()">
+      <span class="material-icons" *ngIf="!markingAll()">done_all</span>
+      <span class="btn-spinner" *ngIf="markingAll()"></span>
+      {{ markingAll() ? 'Marking...' : 'Mark All as Read' }}
+    </button>
+  </div>
+
+  <!-- Loading -->
+  <div class="notif-state" *ngIf="loading()">
+    <div class="spinner"></div>
+    <span>Loading notifications...</span>
+  </div>
+
+  <!-- Error -->
+  <div class="notif-state notif-state-error" *ngIf="!loading() && error()">
+    <span class="material-icons">error_outline</span>
+    <p>{{ error() }}</p>
+    <button class="btn-retry" (click)="loadNotifications()">Retry</button>
+  </div>
+
+  <!-- Empty -->
+  <div class="notif-state" *ngIf="!loading() && !error() && notifications().length === 0">
+    <span class="material-icons empty-icon">notifications_off</span>
+    <p>No notifications yet</p>
+  </div>
+
+  <!-- List -->
+  <ul class="notif-items" *ngIf="!loading() && !error() && notifications().length > 0">
+    <li
+      class="notif-item"
+      *ngFor="let notif of notifications(); trackBy: trackById"
+      [class.unread]="!notif.isRead">
+
+      <div class="notif-item-body">
+        <p class="notif-title">{{ notif.type | titlecase }}</p>
+        <p class="notif-message">{{ notif.message }}</p>
+        <span class="notif-timestamp">{{ formatTime(notif.createdAt) }}</span>
+      </div>
+
+      <button
+        type="button"
+        class="btn-mark-read"
+        *ngIf="!notif.isRead"
+        [disabled]="markingIds().has(notif._id)"
+        (click)="markAsRead(notif)">
+        {{ markingIds().has(notif._id) ? 'Marking...' : 'Mark as Read' }}
+      </button>
+
+    </li>
+  </ul>
+
+</div>
