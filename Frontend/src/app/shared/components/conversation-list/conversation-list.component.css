@@ -1,0 +1,122 @@
+.conv-list-container {
+  display: flex;
+  flex-direction: column;
+  background: var(--color-surface);
+  border-right: 1px solid var(--color-border-neutral);
+  height: 100%;
+  min-width: 280px;
+}
+
+.conv-list-header {
+  padding: 1rem;
+  border-bottom: 1px solid var(--color-border-neutral);
+}
+
+.conv-list-header h3 {
+  margin: 0;
+  font-size: 1.05rem;
+  color: var(--color-text-primary);
+}
+
+.conv-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 2rem 1rem;
+  color: var(--color-text-secondary);
+  text-align: center;
+}
+
+.conv-state-error { color: var(--color-danger); }
+
+.empty-icon { font-size: 2.25rem; color: var(--color-text-muted); }
+
+.btn-retry {
+  border: 1px solid var(--color-border-neutral);
+  background: var(--color-surface);
+  padding: 0.35rem 0.9rem;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.conv-items {
+  list-style: none;
+  margin: 0;
+  padding: 0.4rem;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.conv-item {
+  display: flex;
+  gap: 0.7rem;
+  align-items: center;
+  padding: 0.65rem 0.6rem;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: var(--transition-fast);
+}
+
+.conv-item:hover { background: var(--color-primary-light); }
+
+.conv-item.active {
+  background: var(--color-primary-light);
+  border-left: 3px solid var(--color-primary);
+}
+
+.conv-avatar {
+  flex-shrink: 0;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 50%;
+  background: var(--color-primary);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+}
+
+.conv-info { min-width: 0; flex: 1; }
+
+.conv-top-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.conv-name {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--color-text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.conv-time {
+  font-size: 0.72rem;
+  color: var(--color-text-muted);
+  flex-shrink: 0;
+}
+
+.conv-preview {
+  margin: 0.1rem 0 0;
+  font-size: 0.82rem;
+  color: var(--color-text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.spinner {
+  width: 1.1rem;
+  height: 1.1rem;
+  border: 2px solid var(--color-border-neutral);
+  border-top-color: var(--color-primary);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }

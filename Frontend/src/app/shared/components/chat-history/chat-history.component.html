@@ -1,0 +1,51 @@
+<div class="chat-history-container">
+
+  <!-- No conversation selected -->
+  <div class="chat-state" *ngIf="!conversation">
+    <span class="material-icons">chat_bubble_outline</span>
+    <p>Select a conversation to view messages</p>
+  </div>
+
+  <ng-container *ngIf="conversation">
+
+    <!-- Header -->
+    <div class="chat-history-header">
+      <span class="chat-header-name">{{ conversation.otherUser.name }}</span>
+    </div>
+
+    <!-- Loading -->
+    <div class="chat-state" *ngIf="loading()">
+      <div class="spinner"></div>
+      <span>Loading messages...</span>
+    </div>
+
+    <!-- Error -->
+    <div class="chat-state chat-state-error" *ngIf="!loading() && error()">
+      <span class="material-icons">error_outline</span>
+      <p>{{ error() }}</p>
+      <button class="btn-retry" (click)="loadHistory()">Retry</button>
+    </div>
+
+    <!-- Empty -->
+    <div class="chat-state" *ngIf="!loading() && !error() && messages().length === 0">
+      <span class="material-icons">mark_chat_unread</span>
+      <p>No messages yet</p>
+    </div>
+
+    <!-- Messages, rendered vertically -->
+    <div class="chat-messages" *ngIf="!loading() && !error() && messages().length > 0">
+      <div
+        class="msg-row"
+        *ngFor="let msg of messages(); trackBy: trackById"
+        [class.mine]="isMine(msg)"
+        [class.theirs]="!isMine(msg)">
+        <div class="msg-bubble">
+          <p class="msg-content">{{ msg.content }}</p>
+          <span class="msg-time">{{ formatTime(msg.createdAt) }}</span>
+        </div>
+      </div>
+    </div>
+
+  </ng-container>
+
+</div>

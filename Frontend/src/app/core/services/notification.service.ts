@@ -8,10 +8,12 @@
 
 import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, forkJoin, of } from 'rxjs';
+import { map } from 'rxjs/operators';
 
 import { environment } from '../../../environments/environment';
 import {
+  Notification,
   NotificationListResponse,
   NotificationResponse,
 } from '../models/notification.model';
@@ -52,6 +54,24 @@ export class NotificationService {
       {},
       { headers: this.getHeaders() }
     );
+  }
+
+  // ── "Mark All as Read" ───────────────────────────────────────────────
+  // NOTE: The Backend has no bulk endpoint (no PATCH /api/notifications/read-all
+  // route exists in Backend/routes/notification.routes.js — only the
+  // single-item PUT /api/notifications/:id/read is implemented). Rather than
+  // call a route that doesn't exist, this fans out the existing per-item
+  // endpoint for every currently-unread notification and joins the results.
+  // If a bulk endpoint is added to the backend later, swap this method's
+  // body for a single PATCH call.
+  markAllRead(unreadIds: string[]): Observable<Notification[]> {
+    if (unreadIds.length === 0) {
+      return of([]);
+    }
+    const calls = unreadIds.map(id =>
+      this.markRead(id).pipe(map(res => res.data))
+    );
+    return forkJoin(calls);
   }
 
   // ── Increment unread count (called from layout when notification:new arrives) ──

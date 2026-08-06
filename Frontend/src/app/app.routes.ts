@@ -16,6 +16,8 @@ import { opportunityRoutes } from './features/opportunities/opportunities.routes
 import { applicationRoutes } from './features/applications/applications.routes';
 import { messageRoutes } from './features/messages/messages.routes';
 import { pickupRoutes } from './features/pickups/pickup.routes';
+import { NotificationsPage } from './features/notifications/pages/notifications-page/notifications-page';
+import { InboxPage } from './features/inbox/pages/inbox-page/inbox-page';
 
 export const routes: Routes = [
 
@@ -97,6 +99,20 @@ export const routes: Routes = [
       {
         path: 'pickups',
         children: pickupRoutes
+      },
+
+      // ── Milestone 3, Task 1: Notifications List page ────────────
+      {
+        path: 'notifications',
+        component: NotificationsPage
+      },
+
+      // ── Milestone 3, Tasks 2 & 3: REST-only Inbox (conversation
+      //    list + chat history), separate from the socket-driven
+      //    /messages feature ────────────────────────────────────────
+      {
+        path: 'inbox',
+        component: InboxPage
       }
 
     ]

@@ -1,0 +1,51 @@
+<div class="conv-list-container">
+
+  <div class="conv-list-header">
+    <h3>Conversations</h3>
+  </div>
+
+  <!-- Loading -->
+  <div class="conv-state" *ngIf="loading()">
+    <div class="spinner"></div>
+    <span>Loading conversations...</span>
+  </div>
+
+  <!-- Error -->
+  <div class="conv-state conv-state-error" *ngIf="!loading() && error()">
+    <span class="material-icons">error_outline</span>
+    <p>{{ error() }}</p>
+    <button class="btn-retry" (click)="loadConversations()">Retry</button>
+  </div>
+
+  <!-- Empty -->
+  <div class="conv-state" *ngIf="!loading() && !error() && conversations().length === 0">
+    <span class="material-icons empty-icon">forum</span>
+    <p>No conversations yet</p>
+  </div>
+
+  <!-- List -->
+  <ul class="conv-items" *ngIf="!loading() && !error() && conversations().length > 0">
+    <li
+      class="conv-item"
+      *ngFor="let conv of conversations(); trackBy: trackById"
+      [class.active]="selectedId() === (conv.conversationId || conv.otherUser._id)"
+      (click)="onSelect(conv)">
+
+      <div class="conv-avatar">{{ getAvatarInitial(conv.otherUser.name) }}</div>
+
+      <div class="conv-info">
+        <div class="conv-top-row">
+          <span class="conv-name">{{ conv.otherUser.name }}</span>
+          <span class="conv-time" *ngIf="conv.lastMessage">
+            {{ formatTime(conv.lastMessage.createdAt) }}
+          </span>
+        </div>
+        <p class="conv-preview">
+          {{ conv.lastMessage?.content || 'No messages yet' }}
+        </p>
+      </div>
+
+    </li>
+  </ul>
+
+</div>

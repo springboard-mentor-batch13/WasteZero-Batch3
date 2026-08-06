@@ -1,0 +1,9 @@
+<div class="inbox-shell">
+  <app-conversation-list
+    (conversationSelect)="onConversationSelect($event)">
+  </app-conversation-list>
+
+  <app-chat-history
+    [conversation]="selectedConversation()">
+  </app-chat-history>
+</div>

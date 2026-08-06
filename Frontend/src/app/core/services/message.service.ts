@@ -47,4 +47,16 @@ export class MessageService {
     });
   }
 
+  // ── getChatHistory(conversationId) ────────────────────────────────────
+  // NOTE: The task spec calls for GET /api/messages/:conversationId, but
+  // Backend/routes/message.routes.js has no such route — the real history
+  // endpoint is GET /api/messages?with=:userId (by the OTHER PARTICIPANT's
+  // user id, not a conversation id). This wrapper keeps the method name the
+  // task asked for while delegating to the endpoint that actually exists.
+  // Callers should pass the other participant's user id (e.g.
+  // conversation.otherUser._id) as `otherUserIdOrConversationId`.
+  getChatHistory(otherUserIdOrConversationId: string): Observable<MessageHistoryResponse> {
+    return this.getMessageHistory(otherUserIdOrConversationId);
+  }
+
 }
