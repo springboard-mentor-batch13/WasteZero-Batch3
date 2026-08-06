@@ -2,6 +2,7 @@
 // NOTIFICATION SERVICE — WasteZero Milestone 3
 // REST endpoints + socket subscription bridge.
 // API: GET /api/notifications
+//      GET /api/notifications/unread-count
 //      PUT /api/notifications/:id/read
 // Socket: notification:new (handled via SocketService)
 // ============================================
@@ -16,6 +17,12 @@ import {
   NotificationResponse,
 } from '../models/notification.model';
 
+export interface UnreadCountResponse {
+  success: boolean;
+  message: string;
+  data: { count: number };
+}
+
 @Injectable({ providedIn: 'root' })
 export class NotificationService {
 
@@ -23,6 +30,8 @@ export class NotificationService {
   private readonly baseUrl = `${environment.apiUrl}/notifications`;
 
   // ── Unread count signal (drives the bell badge) ───────────────────────
+  // Starts at 0 and is seeded from the backend on app init via
+  // seedUnreadCount(), so the badge persists across refresh and re-login.
   unreadCount = signal(0);
 
   // ── Auth Headers ─────────────────────────────────────────────────────
@@ -44,6 +53,30 @@ export class NotificationService {
     });
   }
 
+  // ── GET /api/notifications/unread-count ───────────────────────────────
+  // Returns { count: N } — used to seed the badge on app start.
+  getUnreadCount(): Observable<UnreadCountResponse> {
+    return this.http.get<UnreadCountResponse>(
+      `${this.baseUrl}/unread-count`,
+      { headers: this.getHeaders() }
+    );
+  }
+
+  // ── Seed unread count from backend (call on ngOnInit after login) ─────
+  // This makes the badge persistent across refresh and re-login.
+  seedUnreadCount(): void {
+    this.getUnreadCount().subscribe({
+      next: (res) => {
+        if (res.success) {
+          this.unreadCount.set(res.data.count);
+        }
+      },
+      error: () => {
+        // Non-critical: badge stays at 0 if the request fails.
+      }
+    });
+  }
+
   // ── PUT /api/notifications/:id/read ──────────────────────────────────
   // Marks one notification as read. Ownership enforced by backend.
   markRead(id: string): Observable<NotificationResponse> {
@@ -54,14 +87,32 @@ export class NotificationService {
     );
   }
 
+  // ── PUT /api/notifications/conversation/:conversationId/read ──────────
+  // Marks ALL unread message-type notifications for a conversation as read.
+  // Used when the user clicks any message notification — clears the whole
+  // conversation's notification backlog at once.
+  markConversationRead(conversationId: string): Observable<{ success: boolean; data: { updated: number } }> {
+    return this.http.put<{ success: boolean; data: { updated: number } }>(
+      `${this.baseUrl}/conversation/${conversationId}/read`,
+      {},
+      { headers: this.getHeaders() }
+    );
+  }
+
   // ── Increment unread count (called from layout when notification:new arrives) ──
   incrementUnread(): void {
     this.unreadCount.update(n => n + 1);
   }
 
-  // ── Reset unread count (called when panel is opened and list is fetched) ──
-  resetUnread(): void {
-    this.unreadCount.set(0);
+  // ── Decrement unread count by 1 (called when one notification is marked read) ──
+  decrementUnread(): void {
+    this.unreadCount.update(n => Math.max(0, n - 1));
+  }
+
+  // ── Set unread count to exact value (called after loading notifications) ──
+  setUnreadCount(n: number): void {
+    this.unreadCount.set(Math.max(0, n));
   }
 
 }
+

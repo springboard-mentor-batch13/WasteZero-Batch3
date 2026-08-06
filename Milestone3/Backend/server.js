@@ -25,6 +25,9 @@ const notificationRoutes = require('./routes/notification.routes');
 // ===== Socket =====
 const { initSocket } = require('./sockets');
 
+// ===== Notification Cleanup =====
+const { cleanupExpiredNotifications } = require('./services/notification.service');
+
 const errorHandler = require('./middlewares/error.middleware');
 const { verifySmtpConnection } = require('./utils/sendEmail');
 
@@ -128,4 +131,30 @@ httpServer.listen(PORT, () => {
       process.env.NODE_ENV || 'development'
     }]`
   );
+
+  // ── Hourly notification cleanup job ──────────────────────────────────
+  // Deletes read notifications where readAt+24h has elapsed.
+  // Runs immediately on startup and then every hour thereafter.
+  // NEVER deletes unread notifications — the query is hard-scoped to
+  // isRead:true && readAt:{$ne:null, $lte:cutoff}.
+  const CLEANUP_INTERVAL_MS = 60 * 60 * 1000; // 1 hour
+
+  const runCleanup = async () => {
+    try {
+      const deleted = await cleanupExpiredNotifications();
+      if (deleted > 0) {
+        console.log(`[Notification Cleanup] Deleted ${deleted} expired notification(s).`);
+      }
+    } catch (err) {
+      // Log but never crash the server — cleanup is a maintenance task,
+      // not a user-facing operation.
+      console.error('[Notification Cleanup] Error during cleanup:', err.message);
+    }
+  };
+
+  // Immediate run on server start (catches any backlog from downtime)
+  runCleanup();
+
+  // Subsequent runs every hour
+  setInterval(runCleanup, CLEANUP_INTERVAL_MS);
 });

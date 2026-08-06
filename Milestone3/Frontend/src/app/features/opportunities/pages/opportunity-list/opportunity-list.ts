@@ -98,9 +98,15 @@ export class OpportunityList implements OnInit, OnDestroy {
     // Backend login response sets 'id' (not '_id'). Use whichever is populated.
     const userId = user.id ?? user._id;
     if (!userId) return false;
-    const ngoId = typeof opp.ngo_id === 'object'
+    // IMPORTANT: typeof null === 'object' in JavaScript.
+    // When ngo_id references a deleted user, Mongoose populate() returns null.
+    // Without the explicit null guard the object-path branch executes and
+    // null._id throws TypeError: Cannot read properties of null (reading '_id').
+    // A null ngo_id means ownership cannot be verified → deny edit access.
+    const ngoId = opp.ngo_id !== null && typeof opp.ngo_id === 'object'
       ? (opp.ngo_id as NgoRef)._id
-      : opp.ngo_id;
+      : opp.ngo_id as string | undefined;
+    if (!ngoId) return false;
     return ngoId === userId;
   }
 

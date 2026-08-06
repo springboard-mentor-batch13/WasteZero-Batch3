@@ -120,7 +120,7 @@ Real-time events are handled over Socket.IO at the same server port.
 | Browse opportunities | ✅ | ✅ | ✅ |
 | Create opportunities | ❌ | ✅ | ✅ |
 | Apply to opportunities | ✅ | ❌ | ❌ |
-| Review applications | ❌ | ✅ | ❌ |
+| Review applications | ❌ | ✅ | ✅ |
 | Message (Volunteer ↔ NGO) | ✅ | ✅ | ❌ |
 | Schedule pickups | ✅ | ❌ | ❌ |
 | Manage pickups | ❌ | ✅ | ❌ |

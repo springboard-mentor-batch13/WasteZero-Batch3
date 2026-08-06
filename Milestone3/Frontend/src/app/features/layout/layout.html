@@ -186,6 +186,9 @@
                 (click)="notifTab.set('general')">
                 <span class="material-icons notif-tab-icon">notifications</span>
                 General
+                @if(hasUnreadGeneral()){
+                <span class="notif-tab-dot" aria-hidden="true"></span>
+                }
               </button>
               <button
                 type="button"
@@ -196,6 +199,9 @@
                 (click)="notifTab.set('messages')">
                 <span class="material-icons notif-tab-icon">chat_bubble_outline</span>
                 Messages
+                @if(hasUnreadMessages()){
+                <span class="notif-tab-dot" aria-hidden="true"></span>
+                }
               </button>
             </div>
 

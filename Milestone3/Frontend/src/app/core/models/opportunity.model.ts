@@ -9,7 +9,7 @@ export interface NgoRef {
   _id: string;
   name: string;
   username?: string;
-  email: string;
+  email?: string;   // not included in .populate('ngo_id', 'name username role')
 }
 
 export interface Opportunity {

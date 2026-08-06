@@ -874,3 +874,21 @@
   font-size: 0.92rem;
 }
 
+/* Small unread indicator dot inside each tab button */
+.notif-tab-dot {
+  display: inline-block;
+  width: 0.42rem;
+  height: 0.42rem;
+  border-radius: var(--radius-full);
+  background: var(--color-danger);
+  margin-left: 0.3rem;
+  flex-shrink: 0;
+  vertical-align: middle;
+}
+
+/* When the tab is active (green bg), the dot becomes white so it remains visible */
+.notif-tab-active .notif-tab-dot {
+  background: #ffffff;
+}
+
+
