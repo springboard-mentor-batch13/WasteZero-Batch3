@@ -1,0 +1,16 @@
+<!-- conversation-list.component.html -->
+<aside class="conversation-list">
+  <div *ngIf="loading" class="loading">Loading conversations...</div>
+  <ul>
+    <li *ngFor="let conv of conversations" (click)="onSelect(conv)" title="{{conv.title || ''}}">
+      <div class="conv-main">
+        <div class="conv-title">{{ conv.title || ('Conversation ' + conv.conversation_id) }}</div>
+        <div class="conv-last">{{ conv.lastMessage?.content }}</div>
+      </div>
+      <div class="conv-meta">
+        <span class="time">{{ conv.lastMessage?.timestamp | date:'short' }}</span>
+      </div>
+    </li>
+  </ul>
+  <div *ngIf="!loading && conversations.length === 0" class="empty">No conversations found</div>
+</aside>

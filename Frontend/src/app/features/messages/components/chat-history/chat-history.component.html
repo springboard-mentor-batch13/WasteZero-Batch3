@@ -1,0 +1,13 @@
+<!-- chat-history.component.html -->
+<section class="chat-history">
+  <div *ngIf="loading" class="loading">Loading messages...</div>
+  <div class="messages">
+    <div *ngFor="let m of messages" [ngClass]="{'msg': true, 'mine': isMine(m), 'theirs': !isMine(m)}">
+      <div class="bubble">
+        <div class="content">{{ m.content }}</div>
+        <div class="meta"><span class="time">{{ m.timestamp | date:'shortTime' }}</span></div>
+      </div>
+    </div>
+  </div>
+  <div *ngIf="!loading && messages.length === 0" class="empty">No messages in this conversation</div>
+</section>

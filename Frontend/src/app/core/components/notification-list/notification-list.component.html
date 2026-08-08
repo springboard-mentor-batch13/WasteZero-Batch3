@@ -1,0 +1,27 @@
+<!-- notification-list.component.html -->
+<section class="notification-list">
+  <header class="notification-header">
+    <h3>Notifications</h3>
+    <button class="mark-all" (click)="markAllAsRead()" [disabled]="!hasUnread()">Mark All as Read</button>
+  </header>
+
+  <div *ngIf="loading" class="loading">Loading...</div>
+  <div *ngIf="error" class="error">{{ error }}</div>
+
+  <ul>
+    <li *ngFor="let n of notifications" [class.unread]="!n.read">
+      <div class="meta">
+        <strong class="title">{{ n.title }}</strong>
+        <span class="time">{{ n.timestamp | date:'short' }}</span>
+      </div>
+      <p class="body">{{ n.body }}</p>
+
+      <div class="actions">
+        <button *ngIf="!n.read" (click)="markAsRead(n)">Mark as Read</button>
+        <span *ngIf="n.read" class="read-pill">Read</span>
+      </div>
+    </li>
+  </ul>
+
+  <div *ngIf="!loading && notifications.length === 0" class="empty">No notifications</div>
+</section>

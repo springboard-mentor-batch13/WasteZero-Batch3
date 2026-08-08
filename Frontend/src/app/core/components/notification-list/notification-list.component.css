@@ -1,0 +1,13 @@
+/* Basic styles for notification list */
+.notification-list { border: 1px solid #e0e0e0; padding: 12px; border-radius: 6px; background: #fff; }
+.notification-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.notification-header h3 { margin: 0; }
+.notification-list ul { list-style: none; padding: 0; margin: 0; }
+.notification-list li { padding: 8px; border-bottom: 1px solid #f1f1f1; }
+.notification-list li.unread { background: #f9fdfc; }
+.notification-list .meta { display: flex; justify-content: space-between; align-items: baseline; }
+.notification-list .title { font-size: 14px; }
+.notification-list .time { font-size: 12px; color: #666; }
+.notification-list .body { margin: 6px 0; font-size: 13px; }
+.notification-list .actions { display: flex; gap: 8px; }
+.read-pill { background: #eef7ed; color: #177a2a; padding: 2px 8px; border-radius: 12px; font-size: 12px; }
