@@ -33,11 +33,7 @@ const assertValidSendPayload = (payload) => {
 };
 
 module.exports = function registerMessageEvents(io, socket) {
-  // ─── message:send ───────────────────────────────────────────────────
-  // Validates payload, enforces rate limit, delegates to messageService
-  // (which handles Volunteer<->NGO role check and AES-256-GCM encryption),
-  // broadcasts decrypted message to receiver, acks sender, then dispatches
-  // an encrypted notification in the background.
+  
   socket.on('message:send', async (payload, ack) => {
     try {
       await messageLimiter.consume(socket.user.id);
@@ -63,12 +59,7 @@ module.exports = function registerMessageEvents(io, socket) {
         ack({ success: true, data: message });
       }
 
-      // Dispatch persistent notification — isolated in its own try/catch so
-      // a failure here (e.g. a transient DB error creating the Notification
-      // doc) can never fall through to the outer catch below and re-ack
-      // this already-successful send with {success: false}, which would
-      // wrongly tell the sender their message failed after it had already
-      // gone through. notificationService.dispatch() handles encryption internally.
+    
       try {
         await notificationService.dispatch({
           user_id: receiverId,
@@ -82,11 +73,7 @@ module.exports = function registerMessageEvents(io, socket) {
         console.error('[Messages] Failed to dispatch message notification:', notifyErr.message);
       }
     } catch (err) {
-      // rate-limiter-flexible rejects consume() with a RateLimiterRes
-      // instance on limit-exceeded — NOT an Error, so it has no `.name`
-      // property (msBeforeNext/remainingPoints/consumedPoints instead).
-      // Detect it by that shape rather than a `.name` check, which would
-      // never match and always fall through to the generic message below.
+      
       const isRateLimitRejection = !(err instanceof Error) && typeof err?.msBeforeNext === 'number';
 
       const errMessage = isRateLimitRejection
@@ -101,23 +88,14 @@ module.exports = function registerMessageEvents(io, socket) {
     }
   });
 
-  // ─── message:read ───────────────────────────────────────────────────
-  // Marks all unread messages in a conversation as read (scoped to this
-  // user as receiver) and broadcasts a read receipt to the other participant.
+ 
   socket.on('message:read', async ({ conversationId } = {}, ack) => {
     try {
       if (!conversationId) {
         throw new Error('conversationId is required');
       }
 
-      // Verify the caller is actually one of the two participants encoded
-      // in conversationId ("<idA>_<idB>") BEFORE doing anything else.
-      // markConversationRead is already safely scoped by receiver_id (an
-      // arbitrary conversationId just matches zero documents), but without
-      // this check the code below would still broadcast a "message:read"
-      // event to the other id in the string regardless — letting any
-      // authenticated socket spoof a read-receipt for a conversation it was
-      // never part of.
+     
       const participantIds = conversationId.split('_');
       if (participantIds.length !== 2 || !participantIds.includes(socket.user.id)) {
         throw new Error('You are not a participant in this conversation');
@@ -146,11 +124,7 @@ module.exports = function registerMessageEvents(io, socket) {
     }
   });
 
-  // ─── message:typing ─────────────────────────────────────────────────
-  // Relays a typing indicator to the intended recipient's room.
-  // Fire-and-forget — no ack, no DB write, no rate limiting (typing events
-  // are ephemeral UI signals, not persistent data). Invalid receiverId is
-  // silently ignored to avoid spamming error logs on noisy clients.
+  
   socket.on('message:typing', ({ receiverId } = {}) => {
     if (!receiverId || !mongoose.Types.ObjectId.isValid(receiverId)) return;
     io.to(getUserRoom(receiverId)).emit('message:typing', {

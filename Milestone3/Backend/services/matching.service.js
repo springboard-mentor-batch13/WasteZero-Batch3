@@ -36,13 +36,7 @@ const getVolunteerLocationTerms = (volunteer) => {
   return [...terms].filter(Boolean);
 };
 
-/**
- * @internal
- * Opportunity.location is a free-text field (e.g. "Bengaluru, Karnataka"),
- * not structured — so matching is done by checking whether that text
- * contains the volunteer's city or state as a whole-word, case-insensitive
- * match, rather than requiring an exact structured match on both sides.
- */
+
 const locationMatches = (opportunityLocation, volunteer) => {
   if (typeof opportunityLocation !== 'string' || !opportunityLocation.trim()) return false;
 
@@ -67,12 +61,7 @@ const skillsMatch = (requiredSkills, volunteerSkills) => {
   return volunteerSkills.some((s) => required.has(s.trim().toLowerCase()));
 };
 
-/**
- * @internal
- * Number of distinct required_skills that the volunteer also has
- * (case-insensitive, whitespace-trimmed). Used for scoring, as opposed to
- * skillsMatch() above which only needs a single yes/no overlap.
- */
+
 const countMatchingSkills = (requiredSkills, volunteerSkills) => {
   if (!Array.isArray(requiredSkills) || !Array.isArray(volunteerSkills)) return 0;
 
@@ -86,21 +75,12 @@ const countMatchingSkills = (requiredSkills, volunteerSkills) => {
   return count;
 };
 
-// Weight given to a location match in the ranked-scoring algorithm below.
-// Kept as a named constant so the relative importance of "matches your
-// city/state" vs. "matches one more skill" is a single, easy-to-tune knob.
+
 const LOCATION_MATCH_SCORE = 1;
 
-/**
- * Find every volunteer whose skills AND location both match the given
- * opportunity. Both conditions must hold — a skills-only or location-only
- * overlap is not a match.
- */
+
 const findMatchingVolunteers = async (opportunity) => {
-  // Narrow the DB scan to volunteers with at least one skill listed;
-  // location filtering is done in memory since Opportunity.location is
-  // free text and can't be indexed/matched cheaply against structured
-  // city/state fields at the query level.
+ 
   const candidates = await User.find({
     role: 'volunteer',
     skills: { $exists: true, $not: { $size: 0 } },
@@ -113,14 +93,7 @@ const findMatchingVolunteers = async (opportunity) => {
   );
 };
 
-/**
- * Find matching volunteers for an opportunity and dispatch an
- * 'opportunity_match' notification to each of them. Never throws outward —
- * per-recipient failures are logged and skipped so one bad notification
- * can't block the rest; call sites treat this as fire-and-forget.
- *
- * @returns {Promise<number>} the number of volunteers notified
- */
+
 const notifyMatchedVolunteers = async (opportunity) => {
   const matches = await findMatchingVolunteers(opportunity);
 
@@ -147,17 +120,7 @@ const notifyMatchedVolunteers = async (opportunity) => {
   return matches.length - failedCount;
 };
 
-/**
- * Get the top-scoring open Opportunities for a given volunteer, ranked by
- * s broken by
- *      newest first.
- *   5. Return the top N (default 10).
- *
- * @param {string} volunteerId
- * @param {number} [limit=10]
- * @returns {Promise<Array>} opportunities (plain objects) with matchScore,
- *   matchedSkillCount, and locationMatch attached
- */
+
 const getMatchesForVolunteer = async (volunteerId, limit = 10) => {
   const volunteer = await User.findById(volunteerId).lean();
 
@@ -192,15 +155,9 @@ const getMatchesForVolunteer = async (volunteerId, limit = 10) => {
     }));
 };
 
-/**
- * Find every NGO whose coverage city AND wasteTypes both match the given
- * pickup. Both conditions must hold — enforced inside
- * isNgoEligibleForPickup, the same rule used by the NGO discovery feed.
- */
+
 const findMatchingNgos = async (pickup) => {
-  // Narrow the DB scan to NGOs with at least one configured waste type;
-  // isNgoEligibleForPickup still does the authoritative city + wasteTypes
-  // check per-candidate (it also requires at least one coverage city).
+ 
   const candidates = await User.find({
     role: 'ngo',
     wasteTypes: { $exists: true, $not: { $size: 0 } },
@@ -209,14 +166,7 @@ const findMatchingNgos = async (pickup) => {
   return candidates.filter((ngo) => isNgoEligibleForPickup(ngo, pickup));
 };
 
-/**
- * Find matching NGOs for a pickup and dispatch a 'pickup_match'
- * notification to each of them. Never throws outward — per-recipient
- * failures are logged and skipped so one bad notification can't block the
- * rest; call sites treat this as fire-and-forget.
- *
- * @returns {Promise<number>} the number of NGOs notified
- */
+
 const notifyMatchedNgos = async (pickup) => {
   const matches = await findMatchingNgos(pickup);
 

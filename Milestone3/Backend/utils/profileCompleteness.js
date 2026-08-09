@@ -1,21 +1,5 @@
 // Backend/utils/profileCompleteness.js
-//
-// Single source of truth for "does this user have enough profile data to
-// participate in matching?" — used by:
-//   - users.controllers.js#updateUserProfile: blocks saving an incomplete
-//     profile for a role that requires these fields.
-//   - match.controller.js#getMatchSuggestions: blocks a volunteer from
-//     pulling opportunity matches until skills + location are set.
-//   - pickup.controllers.js#getAvailablePickups: blocks an NGO from pulling
-//     the pickup discovery feed until wasteTypes + location are set.
-//
-// Kept in one place so the definition of "complete" can never drift between
-// the write-time gate and the read-time gates.
 
-/**
- * True if the user has at least one usable location signal — either the
- * structured locations.primary.city, or a structured secondary city.
- */
 const hasLocation = (user) =>
   Boolean(user?.locations?.primary?.city?.trim()) ||
   Boolean(

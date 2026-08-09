@@ -1,14 +1,4 @@
 // Backend/utils/sendEmail.js
-//
-// Configures a pooled SMTP transporter using environment variables.
-// Supports any SMTP provider (Gmail, SendGrid, Mailgun, etc.) via
-// SMTP_HOST / SMTP_PORT / SMTP_SECURE environment variables.
-//
-// Connection pooling (pool: true) reuses TCP connections across multiple
-// messages, significantly reducing send latency under load.
-//
-// verifySmtpConnection() is called once on server startup to catch
-// misconfiguration early without crashing the process on failure.
 
 const nodemailer = require('nodemailer');
 
@@ -31,11 +21,7 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-/**
- * Verify the SMTP connection on application startup.
- * Logs a warning if verification fails — never crashes the process,
- * since the email service is non-critical to the API's core function.
- */
+
 const verifySmtpConnection = async () => {
   try {
     await transporter.verify();

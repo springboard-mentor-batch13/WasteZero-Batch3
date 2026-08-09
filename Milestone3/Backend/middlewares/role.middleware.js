@@ -10,11 +10,7 @@ const { sendError } = require('../utils/apiResponse');
 // ObjectId validation guard — prevents CastError process crashes on malformed :id params
 const isValidObjectId = (id) => mongoose.Types.ObjectId.isValid(id);
 
-/**
- * @desc Ensures the logged-in NGO/User is the actual owner of the opportunity resource.
- *       Admins bypass ownership check but still have the document attached.
- *       Attaches req.opportunity for downstream controllers.
- */
+
 const checkOpportunityOwnership = async (req, res, next) => {
   try {
     const opportunityId = req.params.id;
@@ -47,11 +43,7 @@ const checkOpportunityOwnership = async (req, res, next) => {
   }
 };
 
-/**
- * @desc Ensures the logged-in NGO owns the Opportunity linked to this Application.
- *       Admins bypass. Expects req.params.id to be the Application id.
- *       Attaches req.application and req.opportunity for the controller to reuse.
- */
+
 const checkApplicationOwnershipByNGO = async (req, res, next) => {
   try {
     if (!isValidObjectId(req.params.id)) {
@@ -86,11 +78,7 @@ const checkApplicationOwnershipByNGO = async (req, res, next) => {
   }
 };
 
-/**
- * @desc Ensures the logged-in volunteer owns this Application (e.g. to withdraw it).
- *       Expects req.params.id to be the Application id.
- *       Attaches req.application for the controller to reuse.
- */
+
 const checkApplicationOwnershipByVolunteer = async (req, res, next) => {
   try {
     if (!isValidObjectId(req.params.id)) {
@@ -114,12 +102,7 @@ const checkApplicationOwnershipByVolunteer = async (req, res, next) => {
   }
 };
 
-/**
- * @desc Ensures the requester is allowed to view a single Application:
- *       the volunteer who submitted it, the NGO who owns the linked opportunity,
- *       or an admin. Attaches req.application (populated) so the controller
- *       doesn't need to re-fetch.
- */
+
 const checkApplicationViewAccess = async (req, res, next) => {
   try {
     if (!isValidObjectId(req.params.id)) {
@@ -162,23 +145,13 @@ const checkApplicationViewAccess = async (req, res, next) => {
   }
 };
 
-/**
- * @desc Returns the list of Opportunity ids owned by this NGO.
- *       Used to scope list endpoints so an NGO only sees applications
- *       tied to their own opportunities. Uses .lean() — read-only.
- */
+
 const getOwnedOpportunityIds = async (ngoId) => {
   const owned = await Opportunity.find({ ngo_id: ngoId }).select('_id').lean();
   return owned.map((o) => o._id.toString());
 };
 
-/**
- * @desc Ensures the logged-in volunteer owns this Pickup. Used for the
- *       "edit" write path (PUT /:id). Pending-only enforcement happens in
- *       the controller (not here), since that's a state check, not an
- *       access-control check. Attaches req.pickup for downstream use.
- *       Admin is never routed through this middleware (see pickup.routes.js).
- */
+
 const checkPickupOwnershipByVolunteer = async (req, res, next) => {
   try {
     const pickupId = req.params.id;
@@ -204,13 +177,7 @@ const checkPickupOwnershipByVolunteer = async (req, res, next) => {
   }
 };
 
-/**
- * @desc Ensures the logged-in volunteer owns this Pickup, for the delete
- *       write path (DELETE /:id). Kept as a distinct named export (mirrors
- *       checkPickupOwnershipByVolunteer) so delete-specific access rules
- *       can diverge from edit-specific ones later without entangling the
- *       two call sites. Pending-only enforcement stays in the controller.
- */
+
 const checkPickupDeleteAccess = async (req, res, next) => {
   try {
     const pickupId = req.params.id;
@@ -236,13 +203,6 @@ const checkPickupDeleteAccess = async (req, res, next) => {
   }
 };
 
-/**
- * @desc Resolves single-pickup read access for GET /:id per the RBAC matrix:
- *         - Volunteer: only their own pickup (user_id === self)
- *         - NGO:       only if they are the assigned agent (agent_id === self)
- *         - Admin:     any pickup, no restriction
- *       Attaches req.pickup (populated) so the controller doesn't re-fetch.
- */
 const checkPickupViewAccess = async (req, res, next) => {
   try {
     const pickupId = req.params.id;
@@ -272,9 +232,6 @@ const checkPickupViewAccess = async (req, res, next) => {
       return next();
     }
 
-    // NGO role: only the assigned agent may view — an unmatched/unclaimed
-    // pickup is not visible to an NGO via this endpoint (they discover it
-    // through /available instead, until they claim it).
     if (!pickup.agent_id || pickup.agent_id._id.toString() !== req.user.id.toString()) {
       return sendError(res, 'Access denied. You are not the assigned agent for this pickup.', 403);
     }
@@ -286,12 +243,6 @@ const checkPickupViewAccess = async (req, res, next) => {
   }
 };
 
-/**
- * @desc Guards the NGO status-transition endpoint (PATCH /:id/status) per
- *       the RBAC matrix:
- *       
- *       Attaches req.pickup for the controller's pre-check + service call.
- */
 const checkPickupNgoMatch = async (req, res, next) => {
   try {
     const pickupId = req.params.id;
@@ -316,9 +267,7 @@ const checkPickupNgoMatch = async (req, res, next) => {
         );
       }
     } else {
-      // Already assigned (or terminal) — only the NGO on record may act.
-      // (If the transition itself is invalid, e.g. Completed -> anything,
-      // the controller's canTransitionTo check catches that separately.)
+      
       if (!pickup.agent_id || pickup.agent_id.toString() !== req.user.id.toString()) {
         return sendError(
           res,

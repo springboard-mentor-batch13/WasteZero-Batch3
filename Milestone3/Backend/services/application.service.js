@@ -2,20 +2,11 @@
 
 const Application = require('../models/application.model');
 
-/**
- * Apply for an opportunity
- * Creates a new Application document.
- * NOT lean — we need the returned Mongoose document for response.
- */
 const apply = (data) => {
   return Application.create(data);
 };
 
-/**
- * Get applications with pagination, sorting, and population.
- * Uses .lean() — read-only list, no document methods needed.
- * Selective field projections on populate to avoid over-fetching.
- */
+
 const getApplications = (filter, skip, limit, sort) => {
   return Application.find(filter)
     .populate('volunteer_id', 'name email username')   // username added for Contact Volunteer

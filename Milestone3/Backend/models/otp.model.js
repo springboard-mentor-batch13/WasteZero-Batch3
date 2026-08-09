@@ -37,9 +37,7 @@ const OtpSchema = new mongoose.Schema(
       default: Date.now,
     },
 
-    // The 10-minute code-validity deadline, checked in application code
-    // (utils/verifyOtp.js). This is the actual security boundary for the
-    // OTP itself, independent of how long the document sticks around.
+    
     otpExpiresAt: {
       type: Date,
       required: true,
@@ -50,9 +48,6 @@ const OtpSchema = new mongoose.Schema(
       default: 0,
     },
 
-    // TTL index target: MongoDB deletes this document once the current
-    // time passes this value (expireAfterSeconds: 0 below means "expire
-    // exactly at this timestamp", not N seconds after it).
     expireAt: {
       type: Date,
       required: true,
@@ -66,9 +61,7 @@ const OtpSchema = new mongoose.Schema(
   }
 );
 
-// Compound index: ensures only one active OTP per (email, purpose) pair.
-// Replaces any existing OTP for the same purpose when a new one is issued,
-// preventing accumulation of multiple valid OTPs for the same action.
+
 OtpSchema.index({ email: 1, purpose: 1 }, { unique: true });
 
 module.exports = mongoose.model('Otp', OtpSchema);

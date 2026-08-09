@@ -35,12 +35,7 @@ const getUnreadCount = async (req, res) => {
   }
 };
 
-/**
- * @desc    Mark one notification as read. Ownership-scoped — a user can
- *          only mark their own notifications.
- * @route   PUT /api/notifications/:id/read
- * @access  Private (Owner only)
- */
+
 const markNotificationRead = async (req, res) => {
   try {
     const notification = await notificationService.markNotificationRead(req.params.id, req.user.id);
@@ -53,20 +48,11 @@ const markNotificationRead = async (req, res) => {
   }
 };
 
-/**
- * @desc    Mark all unread message notifications for a conversation as read.
- *          Only affects the caller's own notifications for the given conversationId.
- *          Verifies the caller is a participant before updating.
- * @route   PUT /api/notifications/conversation/:conversationId/read
- * @access  Private (participant only)
- */
+
 const markConversationNotificationsRead = async (req, res) => {
   try {
     const { conversationId } = req.params;
 
-    // Validate: caller must be one of the two participants encoded in the
-    // conversationId ("<idA>_<idB>"). This prevents one user from clearing
-    // another user's notifications by guessing a conversation ID.
     const parts = (conversationId || '').split('_');
     if (parts.length !== 2 || !parts.includes(req.user.id)) {
       return sendError(res, 'You are not a participant in this conversation', 403);

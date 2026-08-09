@@ -4,19 +4,11 @@ const mongoose = require('mongoose');
 const Message = require('../models/message.model');
 const User = require('../models/users.model');
 const { encrypt, decrypt } = require('../utils/crypto');
-// Import the canonical buildConversationId from sockets/rooms.js.
-// Previously this file had its own copy — having two definitions risks
-// silent divergence if the algorithm ever needs to change.
+
 const { buildConversationId } = require('../sockets/rooms');
 
 
-/**
- * Create a new message.
- * Enforces strict Volunteer <-> NGO communication role pairing.
- * Encrypts content with AES-256-GCM before persisting to MongoDB.
- * Returns an object with decrypted (plaintext) content so callers and
- * socket events always receive human-readable text — never ciphertext.
- */
+
 const createMessage = async ({ sender_id, sender_role, receiver_id, content }) => {
   // 1. Fetch receiver to check existence and role
   const receiver = await User.findById(receiver_id).select('role').lean();
@@ -108,13 +100,7 @@ const markConversationRead = (conversationId, readerId) => {
   );
 };
 
-/**
- * List the most recent message per conversation the user is part of.
- * Decrypts lastMessage.content before returning.
- * NOTE: aggregate() does not apply Mongoose's automatic string->ObjectId
- * casting the way find() does, so userId must be cast explicitly here —
- * passing the raw string would silently match zero documents.
- */
+
 const listConversationsForUser = async (userId) => {
   const userObjectId = new mongoose.Types.ObjectId(userId);
 
@@ -143,18 +129,7 @@ const listConversationsForUser = async (userId) => {
   });
 };
 
-// ── Developer 2 spec — REST-facing function names ──────────────────────
-// Thin, purpose-named wrappers over the primitives above, so the REST
-// controller layer can depend on the exact names/signatures from the spec
-// without duplicating logic (and without disturbing the existing
-// socket-layer calls to createMessage / markConversationRead above).
 
-/**
- * Save a new message from senderId to receiverId. Looks up the sender's
- * role (required by createMessage's Volunteer<->NGO pairing rule) so REST
- * callers only need to pass plain ids + content, matching the spec's
- * saveMessage(senderId, receiverId, content) signature.
- */
 const saveMessage = async (senderId, receiverId, content) => {
   const sender = await User.findById(senderId).select('role').lean();
 
@@ -170,12 +145,6 @@ const saveMessage = async (senderId, receiverId, content) => {
   });
 };
 
-/**
- * WhatsApp-style conversation list: the latest message with every distinct
- * person the user has messaged, each annotated with the other person's
- * basic profile info. LastMessage content is already decrypted by
- * listConversationsForUser().
- */
 const getConversationsForUser = async (userId) => {
   const conversations = await listConversationsForUser(userId);
 
@@ -200,10 +169,7 @@ const getConversationsForUser = async (userId) => {
   }));
 };
 
-/**
- * Full message history between two specific users, oldest first.
- * Decrypts each message's content before returning.
- */
+
 const getMessagesBetween = async (userId1, userId2) => {
   const conversationId = buildConversationId(userId1, userId2);
   const messages = await Message.find({ conversation_id: conversationId })
@@ -229,11 +195,7 @@ const getMessagesBetween = async (userId1, userId2) => {
   });
 };
 
-/**
- * Mark a single message (by id) as read. Distinct from
- * markConversationRead above, which bulk-marks an entire thread — this is
- * the single-message primitive called out in the spec.
- */
+
 const markAsRead = (messageId) => {
   return Message.findByIdAndUpdate(
     messageId,

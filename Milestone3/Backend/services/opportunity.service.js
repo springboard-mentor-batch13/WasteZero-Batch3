@@ -11,20 +11,10 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-/**
- * @internal
- * Escape regex special characters in user-supplied search/filter input
- * before it is passed into `new RegExp()`. Prevents ReDoS (catastrophic
- * backtracking) from crafted input and prevents unescaped metacharacters
- * (., *, (, etc.) from silently changing search semantics.
- */
+
 const escapeRegex = (str) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-/**
- * @internal
- * Safely delete a Cloudinary asset by its public_id.
- * Never throws — Cloudinary failures must not crash the application.
- */
+
 const deleteCloudinaryAsset = async (publicId) => {
   if (!publicId) return;
   try {
@@ -63,12 +53,7 @@ const createOpportunity = async (ngoId, opportunityData) => {
   return await newOpportunity.save();
 };
 
-// ── Read ────────────────────────────────────────────────────────────────
 
-/**
- * Get all opportunities with pagination, sorted by createdAt desc.
- * Uses .lean() — read-only feed, no Mongoose document methods needed.
- */
 const getAllOpportunities = async (page = 1, limit = 10) => {
   const skip = (page - 1) * limit;
 
@@ -93,26 +78,13 @@ const getAllOpportunities = async (page = 1, limit = 10) => {
   };
 };
 
-/**
- * Find opportunity by ID.
- * Not lean — returned to controllers that may populate or check fields.
- */
+
 const getOpportunityById = async (id) => {
   return await Opportunity.findById(id).populate('ngo_id', 'name username role');
 };
 
 
-/**
- * Update an opportunity instance.
- * Handles Cloudinary lifecycle safely.
- *
- * Strategy:
- * 1. Update the document first.
- * 2. Save it successfully.
- * 3. Only then delete the previous Cloudinary asset.
- *
- * This prevents broken image references if MongoDB save fails.
- */
+
 const updateOpportunityInstance = async (opportunityInstance, updateData) => {
 
   const fieldsToUpdate = [
@@ -171,12 +143,6 @@ const deleteOpportunityById = async (id) => {
   return await opportunity.deleteOne();
 };
 
-/**
- * Get opportunities created by a specific NGO.
- * Uses .lean() — read-only list.
- * Populates ngo_id with the same fields as getAllOpportunities so that
- * the opportunity-card component can display NGO name and username.
- */
 const getOpportunitiesByNgo = async (ngoId) => {
   return await Opportunity.find({ ngo_id: ngoId })
     .populate('ngo_id', 'name username role')
@@ -184,13 +150,6 @@ const getOpportunitiesByNgo = async (ngoId) => {
     .lean();
 };
 
-
-/**
- * Search opportunities using regex across multiple fields.
- * Uses .lean() — read-only search results.
- * User input is regex-escaped before use (see escapeRegex above) to
- * prevent ReDoS and unintended metacharacter behavior.
- */
 const searchOpportunities = async (searchQuery) => {
   const regex = new RegExp(escapeRegex(searchQuery.trim()), 'i');
 
@@ -208,15 +167,7 @@ const searchOpportunities = async (searchQuery) => {
     .lean();
 };
 
-/**
- * Filter opportunities dynamically by status, skill, and location.
- * Supports an additional 'sort' parameter:
- *   - 'newest'   → createdAt DESC (default)
- *   - 'oldest'   → createdAt ASC
- *   - 'upcoming' → date ASC (events soonest first)
- * Uses .lean() — read-only filter results.
- * User-supplied location/skill values are regex-escaped before use.
- */
+
 const filterOpportunities = async ({ status, skill, location, sort }) => {
   const queryFilter = {};
 

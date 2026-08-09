@@ -1,24 +1,11 @@
 // Backend/utils/crypto.js
-//
-// AES-256-GCM symmetric encryption/decryption for messages and notifications.
-// Node.js built-in `crypto` module is used — no extra npm dependency.
-//
-// Key requirement: CHAT_ENCRYPTION_KEY must be a 64-character hex string
-// (i.e. 32 raw bytes) stored in the environment.
-//
-// Generate a new key with:
-//   node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 
 const crypto = require('crypto');
 
 const ALGORITHM = 'aes-256-gcm';
 const IV_LENGTH = 12; // 96 bits — standard recommended IV length for GCM mode
 
-/**
- * Retrieves the 32-byte secret key from process.env.CHAT_ENCRYPTION_KEY.
- * Throws immediately if the key is missing or the wrong length so the
- * server fails fast on startup/first-use rather than silently corrupting data.
- */
+
 function getEncryptionKey() {
   const hexKey = process.env.CHAT_ENCRYPTION_KEY;
   if (!hexKey || hexKey.length !== 64) {
@@ -29,12 +16,7 @@ function getEncryptionKey() {
   return Buffer.from(hexKey, 'hex');
 }
 
-// ── Startup validation ────────────────────────────────────────────────────────
-// Validate CHAT_ENCRYPTION_KEY the moment this module is first required so
-// the server fails immediately on boot with a clear error rather than
-// starting successfully and then crashing silently on the first encrypt/decrypt
-// call. If the key is absent or malformed, exit with a non-zero code so
-// process managers (pm2, Docker, systemd) know to restart and alert.
+
 try {
   getEncryptionKey();
 } catch (err) {

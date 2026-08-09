@@ -1,9 +1,5 @@
 // Backend/sockets/index.js
-//
-// Socket.IO server bootstrap. Exported as initSocket()/getIO() so
-// server.js can create it once at startup, and any service (like
-// notification.service.js) can reach the same instance later without a
-// circular top-level require.
+
 
 const { Server } = require('socket.io');
 const socketAuthMiddleware = require('./socket.middleware');

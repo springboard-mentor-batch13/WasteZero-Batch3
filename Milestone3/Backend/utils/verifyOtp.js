@@ -1,18 +1,5 @@
 // Backend/utils/verifyOtp.js
-//
-// Verifies an OTP by querying the dedicated Otp collection:
-//   1. Find an OTP document matching (email, purpose)
-//   2. If not found → expired or never issued (TTL already deleted it)
-//   3. Reject if the code's own 10-minute window has passed
-//   4. Reject if too many wrong guesses have already been made against
-//      this code (brute-force lockout, independent of IP-based rate
-//      limiting — an attacker who rotates IPs would otherwise get
-//      unlimited guesses against the same code for its whole lifetime)
-//   5. Bcrypt-compare the submitted plaintext OTP against the stored hash
-//   6. On success, delete the document immediately to prevent replay attacks
-//
-// Returns { success: true, payload } on success, or { success: false, message } on failure.
-// 'payload' carries any pending registration data stored during atomic registration.
+
 
 const bcrypt = require('bcryptjs');
 const OtpModel = require('../models/otp.model');
@@ -41,10 +28,7 @@ const verifyOtp = async (email, otp, purpose) => {
     };
   }
 
-  // The document may still exist past the code's own 10-minute validity
-  // window (pending-registration payloads are retained longer — see
-  // models/otp.model.js), so the code's expiry must be checked explicitly
-  // here rather than relying on the document simply being gone.
+ 
   if (otpDoc.otpExpiresAt && otpDoc.otpExpiresAt.getTime() < Date.now()) {
     return {
       success: false,

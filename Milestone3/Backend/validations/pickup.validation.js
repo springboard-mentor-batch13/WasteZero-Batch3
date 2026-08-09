@@ -51,12 +51,7 @@ const pickupValidationRules = () => {
       .notEmpty().withMessage('Preferred time slot start is required')
       .matches(TIME_REGEX).withMessage('Start time must be in HH:mm 24-hour format')
       .custom((value, { req }) => {
-        // Only enforceable on POST: that's the only path where scheduledDate
-        // and preferredTimeSlot are both guaranteed to be the full, current
-        // intended values in the same request. On PUT, scheduledDate may be
-        // omitted (unchanged) while only preferredTimeSlot is sent (or vice
-        // versa), so checking one against a possibly-stale copy of the other
-        // would produce false positives/negatives.
+      
         if (req.method !== 'POST') return true;
 
         const scheduledDate = new Date(req.body.scheduledDate);

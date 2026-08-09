@@ -17,10 +17,7 @@ router.get('/', protect, authorize('volunteer', 'ngo', 'admin'), getNotification
 // treating the literal string "unread-count" as a notification ObjectId.
 router.get('/unread-count', protect, authorize('volunteer', 'ngo', 'admin'), getUnreadCount);
 
-// Bulk-read all unread message notifications for a conversation.
-// Declared BEFORE /:id/read — otherwise Express would capture the literal
-// segment "conversation" as a notification ObjectId param.
-// Ownership (participant check) is validated inside the controller.
+
 router.put(
   '/conversation/:conversationId/read',
   protect,

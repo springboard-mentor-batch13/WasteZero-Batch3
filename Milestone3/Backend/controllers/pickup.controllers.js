@@ -17,9 +17,7 @@ const createPickup = async (req, res) => {
   try {
     const pickup = await pickupService.createPickup(req.user.id, req.body);
 
-    // Fire-and-forget: find NGOs whose coverage city + wasteTypes match
-    // this pickup and notify them to claim it. Matching/notification
-    // failures must never fail pickup creation, so errors are only logged.
+    
     matchingService.notifyMatchedNgos(pickup).catch((err) => {
       console.error('[Matching] Failed to notify matched NGOs:', err.message);
     });
@@ -127,14 +125,7 @@ const deletePickup = async (req, res) => {
   }
 };
 
-/**
- * @desc    Cancel a pending pickup (volunteer, owner only). Distinct from
- *          the NGO status-transition endpoint — an unrelated matching NGO
- *          must never be able to cancel a pickup it hasn't claimed; see
- *          checkPickupNgoMatch.
- * @route   PATCH /api/pickups/:id/cancel
- * @access  Private (Volunteer — owner only, Pending pickups only)
- */
+
 const cancelPickup = async (req, res) => {
   try {
     // req.pickup is pre-fetched and attached by checkPickupOwnershipByVolunteer
@@ -195,26 +186,10 @@ const getMyPickups = async (req, res) => {
   }
 };
 
-/**
- * @desc    Get pickups matched to the logged-in NGO's coverage
- *          (address.city + wasteTypes, taken from the NGO's own User document).
- *          Always Pending only — this is the "available to claim" feed.
- *          Deliberately does NOT accept a ?status= override: matched
- *          Assigned/Completed/Cancelled pickups belonging to *other* NGOs
- *          are not this NGO's to see (that would leak competitors' claimed
- *          jobs, notes, and agent_id). An NGO's own non-Pending pickups are
- *          already covered by /assigned-to-me.
- * @route   GET /api/pickups/available
- * @access  Private (NGO only — admins never participate in the pickup
- *          workflow, and their own pickups are excluded from this feed
- *          regardless)
- */
+
 const getAvailablePickups = async (req, res) => {
   try {
-    // Matching needs wasteTypes + location. pickupService.getPickupsForNgo
-    // already degrades to an empty result when these are missing, but that
-    // looks identical to "no pickups right now" — tell the NGO explicitly
-    // what's missing instead of leaving them guessing.
+    
     const { complete, missing } = checkProfileCompleteness(req.user);
     if (!complete) {
       return res.status(400).json({
@@ -243,11 +218,7 @@ const getAvailablePickups = async (req, res) => {
   }
 };
 
-/**
- * @desc    Get pickups currently assigned to the logged-in NGO
- * @route   GET /api/pickups/assigned-to-me
- * @access  Private (NGO only)
- */
+
 const getAssignedToMe = async (req, res) => {
   try {
     const { skip, limit, page, sort } = buildQuery(req);
@@ -276,17 +247,7 @@ const getAssignedToMe = async (req, res) => {
   }
 };
 
-/**
- * @desc    Transition a pickup's status: Pending -> Assigned (claim), then
- *          Assigned -> Completed or Cancelled (only the assigned agent).
- *          Pending -> Cancelled is NOT reachable here — an eligible-but-
- *          unassigned NGO may only claim a Pending pickup, never cancel
- *          one it hasn't claimed (see canNgoTransitionTo). Coverage-area
- *          matching and assignment ownership are enforced upstream by
- *          checkPickupNgoMatch.
- * @route   PATCH /api/pickups/:id/status
- * @access  Private (NGO only — admins are never part of this workflow)
- */
+
 const updatePickupStatus = async (req, res) => {
   try {
     // req.pickup is pre-fetched and attached by checkPickupNgoMatch — used
@@ -311,9 +272,7 @@ const updatePickupStatus = async (req, res) => {
       ngoId: req.user.id,
     });
 
-    // null means another request changed this pickup's status/agent_id
-    // between our read (checkPickupNgoMatch) and this write — someone else
-    // won the race (e.g. another NGO already claimed it).
+   
     if (!updated) {
       return sendError(
         res,
@@ -328,15 +287,8 @@ const updatePickupStatus = async (req, res) => {
   }
 };
 
-/**
- * @desc    List every pickup in the system, regardless of owner or status
- *          (paginated, optional ?status= filter). This is a pure
- *          system-management view — it is deliberately separate from the
- *          NGO discovery feed (/available) and carries no coverage
- *          matching or assignment semantics.
- * @route   GET /api/pickups
- * @access  Private (Admin only)
- */
+
+ 
 const getAllPickups = async (req, res) => {
   try {
     const { skip, limit, page, sort } = buildQuery(req);
