@@ -1,8 +1,6 @@
 <div class="dashboard-shell">
-
   <!-- ===== SIDEBAR ===== -->
   <aside class="sidebar">
-
     <!-- Logo -->
     <div class="logo">
       <span class="material-icons logo-icon">recycling</span>
@@ -29,53 +27,66 @@
       </li>
 
       <!-- M3: Pickup — role-specific sidebar item -->
-      @if(authService.getCurrentUser()?.role === 'volunteer'){
-      <li routerLink="/pickups/schedule" routerLinkActive="active">
-        <span class="material-icons menu-icon">local_shipping</span>
-        <span>Schedule Pickup</span>
-      </li>
-      }
-      @if(authService.getCurrentUser()?.role === 'ngo'){
-      <li routerLink="/pickups/manage" routerLinkActive="active">
-        <span class="material-icons menu-icon">local_shipping</span>
-        <span>Pickup Management</span>
-      </li>
-      }
-      @if(authService.getCurrentUser()?.role === 'admin'){
-      <li routerLink="/pickups/monitor" routerLinkActive="active">
-        <span class="material-icons menu-icon">local_shipping</span>
-        <span>Pickup Monitor</span>
-      </li>
+      @if (authService.getCurrentUser()?.role === 'volunteer') {
+        <li routerLink="/pickups/schedule" routerLinkActive="active">
+          <span class="material-icons menu-icon">local_shipping</span>
+          <span>Schedule Pickup</span>
+        </li>
       }
 
-      <li routerLink="/opportunities" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+      @if (authService.getCurrentUser()?.role === 'ngo') {
+        <li routerLink="/pickups/manage" routerLinkActive="active">
+          <span class="material-icons menu-icon">local_shipping</span>
+          <span>Pickup Management</span>
+        </li>
+      }
+
+      @if (authService.getCurrentUser()?.role === 'admin') {
+        <li routerLink="/pickups/monitor" routerLinkActive="active">
+          <span class="material-icons menu-icon">local_shipping</span>
+          <span>Pickup Monitor</span>
+        </li>
+      }
+
+      <li
+        routerLink="/opportunities"
+        routerLinkActive="active"
+        [routerLinkActiveOptions]="{ exact: true }"
+      >
         <span class="material-icons menu-icon">volunteer_activism</span>
         <span>Opportunities</span>
       </li>
-      @if(authService.getCurrentUser()?.role === 'volunteer'){
-      <li routerLink="/applications/my-applications" routerLinkActive="active">
-        <span class="material-icons menu-icon">assignment</span>
-        <span>My Applications</span>
-      </li>
+
+      @if (authService.getCurrentUser()?.role === 'volunteer') {
+        <li routerLink="/applications/my-applications" routerLinkActive="active">
+          <span class="material-icons menu-icon">assignment</span>
+          <span>My Applications</span>
+        </li>
       }
-      @if(authService.getCurrentUser()?.role === 'ngo' || authService.getCurrentUser()?.role === 'admin'){
-      <li routerLink="/opportunities/my-opportunities" routerLinkActive="active">
-        <span class="material-icons menu-icon">folder_open</span>
-        <span>My Opportunities</span>
-      </li>
-      <li routerLink="/applications/review" routerLinkActive="active">
-        <span class="material-icons menu-icon">assignment_ind</span>
-        <span>Application Review</span>
-      </li>
+
+      @if (
+        authService.getCurrentUser()?.role === 'ngo' ||
+        authService.getCurrentUser()?.role === 'admin'
+      ) {
+        <li routerLink="/opportunities/my-opportunities" routerLinkActive="active">
+          <span class="material-icons menu-icon">folder_open</span>
+          <span>My Opportunities</span>
+        </li>
+
+        <li routerLink="/applications/review" routerLinkActive="active">
+          <span class="material-icons menu-icon">assignment_ind</span>
+          <span>Application Review</span>
+        </li>
       }
 
       <!-- M3: Messages hidden from Admin -->
-      @if(authService.getCurrentUser()?.role !== 'admin'){
-      <li routerLink="/messages" routerLinkActive="active">
-        <span class="material-icons menu-icon">chat_bubble_outline</span>
-        <span>Messages</span>
-      </li>
+      @if (authService.getCurrentUser()?.role !== 'admin') {
+        <li routerLink="/messages" routerLinkActive="active">
+          <span class="material-icons menu-icon">chat_bubble_outline</span>
+          <span>Messages</span>
+        </li>
       }
+
       <li class="menu-item-disabled">
         <span class="material-icons menu-icon">eco</span>
         <span>My Impact</span>
@@ -83,34 +94,52 @@
       </li>
     </ul>
 
+    <!-- ================= ADMIN MENU ================= -->
+    @if (authService.getCurrentUser()?.role === 'admin') {
+      <p class="menu-title">Admin</p>
+
+      <ul class="menu">
+        <li routerLink="/admin/users" routerLinkActive="active">
+          <span class="material-icons menu-icon">group</span>
+          <span>Users</span>
+        </li>
+
+        <li routerLink="/admin/reports" routerLinkActive="active">
+          <span class="material-icons menu-icon">assessment</span>
+          <span>Reports</span>
+        </li>
+
+        <li routerLink="/admin/logs" routerLinkActive="active">
+          <span class="material-icons menu-icon">history</span>
+          <span>Admin Logs</span>
+        </li>
+      </ul>
+    }
+
     <!-- Settings Menu -->
     <p class="menu-title">Settings</p>
+
     <ul class="menu">
       <li routerLink="/profile" routerLinkActive="active">
         <span class="material-icons menu-icon">person_outline</span>
         <span>My Profile</span>
       </li>
+
       <li routerLink="/change-password" routerLinkActive="active">
         <span class="material-icons menu-icon">lock_outline</span>
         <span>Change Password</span>
       </li>
+
       <li class="menu-item-disabled">
         <span class="material-icons menu-icon">settings</span>
         <span>Settings</span>
         <span class="coming-soon-tag">Soon</span>
       </li>
+
       <li class="menu-item-disabled">
         <span class="material-icons menu-icon">help_outline</span>
         <span>Help &amp; Support</span>
       </li>
-
-      @if(authService.getCurrentUser()?.role === 'admin'){
-      <li class="menu-item-disabled">
-        <span class="material-icons menu-icon">admin_panel_settings</span>
-        <span>Admin Panel</span>
-        <span class="coming-soon-tag">Soon</span>
-      </li>
-      }
     </ul>
 
     <!-- Footer -->
@@ -120,8 +149,9 @@
           <span class="material-icons dm-icon">dark_mode</span>
           <span>Dark Mode</span>
         </div>
+
         <label class="toggle-switch">
-          <input type="checkbox" disabled>
+          <input type="checkbox" disabled />
           <span class="toggle-slider"></span>
         </label>
       </div>
@@ -131,23 +161,18 @@
         Sign Out
       </button>
     </div>
-
   </aside>
 
   <!-- ===== CONTENT SHELL ===== -->
   <div class="content-shell">
-
     <header class="topbar">
       <label class="search-bar" for="global-search">
-        <span class="material-icons search-icon">search</span>
-        <input
-          id="global-search"
-          type="text"
-          placeholder="Search pickups, opportunities...">
+        <span class="material-icons search-icon"> search </span>
+
+        <input id="global-search" type="text" placeholder="Search pickups, opportunities..." />
       </label>
 
       <div class="topbar-actions">
-
         <!-- ── Notification Bell ── -->
         <div class="dropdown-wrapper">
           <button
@@ -157,102 +182,129 @@
             (click)="toggleNotifications($event)"
             aria-label="Notifications"
             aria-haspopup="true"
-            [attr.aria-expanded]="notificationsOpen">
-            <span class="material-icons">notifications_none</span>
-            @if(notificationService.unreadCount() > 0){
-            <span class="notif-badge">{{ notificationService.unreadCount() }}</span>
+            [attr.aria-expanded]="notificationsOpen"
+          >
+            <span class="material-icons"> notifications_none </span>
+
+            @if (notificationService.unreadCount() > 0) {
+              <span class="notif-badge">
+                {{ notificationService.unreadCount() }}
+              </span>
             }
           </button>
 
-          @if(notificationsOpen){
-          <div
-            class="notifications-dropdown"
-            (click)="$event.stopPropagation()"
-            role="dialog"
-            aria-label="Notifications panel">
-            <div class="dropdown-panel-header">
-              <span class="material-icons dropdown-header-icon">notifications</span>
-              <h4>Notifications</h4>
-            </div>
+          @if (notificationsOpen) {
+            <div
+              class="notifications-dropdown"
+              (click)="$event.stopPropagation()"
+              role="dialog"
+              aria-label="Notifications panel"
+            >
+              <div class="dropdown-panel-header">
+                <span class="material-icons dropdown-header-icon"> notifications </span>
 
-            <!-- Notification Category Tabs -->
-            <div class="notif-tabs" role="tablist" aria-label="Notification categories">
-              <button
-                type="button"
-                class="notif-tab"
-                role="tab"
-                [class.notif-tab-active]="notifTab() === 'general'"
-                [attr.aria-selected]="notifTab() === 'general'"
-                (click)="notifTab.set('general')">
-                <span class="material-icons notif-tab-icon">notifications</span>
-                General
-                @if(hasUnreadGeneral()){
-                <span class="notif-tab-dot" aria-hidden="true"></span>
-                }
-              </button>
-              <button
-                type="button"
-                class="notif-tab"
-                role="tab"
-                [class.notif-tab-active]="notifTab() === 'messages'"
-                [attr.aria-selected]="notifTab() === 'messages'"
-                (click)="notifTab.set('messages')">
-                <span class="material-icons notif-tab-icon">chat_bubble_outline</span>
-                Messages
-                @if(hasUnreadMessages()){
-                <span class="notif-tab-dot" aria-hidden="true"></span>
-                }
-              </button>
-            </div>
+                <h4>Notifications</h4>
+              </div>
 
-            @if(loadingNotifications()){
-            <div class="notifications-empty">
-              <div class="notif-spinner"></div>
-              <p>Loading...</p>
-            </div>
-            }
-
-            @else if(activeNotifications().length === 0){
-            <div class="notifications-empty">
-              <span class="material-icons empty-bell-icon">notifications_off</span>
-              <p>No Notifications Yet</p>
-              <small>You'll see updates here when they arrive.</small>
-            </div>
-            }
-
-            @else {
-            <ul class="notif-list" role="list">
-              @for(notif of activeNotifications(); track notif._id){
-              <li
-                class="notif-item"
-                [class.unread]="!notif.isRead"
-                [ngClass]="'notif-type-' + notif.type"
-                role="listitem">
-                <div class="notif-item-top" (click)="onNotifClick(notif)">
-                  <div class="notif-icon-wrap" [ngClass]="getNotifIconClass(notif.type)">
-                    <span class="material-icons">{{ getNotifIcon(notif.type) }}</span>
-                  </div>
-                  <div class="notif-body">
-                    <p class="notif-message">{{ notif.message }}</p>
-                    <span class="notif-time">{{ formatNotifTime(notif.createdAt) }}</span>
-                  </div>
-                </div>
-                <!-- M3: Action buttons based on notification type -->
-                @if(!notif.isRead && getNotifActionLabel(notif.type)){
+              <!-- Notification Category Tabs -->
+              <div class="notif-tabs" role="tablist" aria-label="Notification categories">
                 <button
                   type="button"
-                  class="notif-action-btn"
-                  (click)="navigateFromNotif(notif)">
-                  <span class="material-icons">{{ getNotifActionIcon(notif.type) }}</span>
-                  {{ getNotifActionLabel(notif.type) }}
-                </button>
-                }
-              </li>
-              }
-            </ul>
-            }
+                  class="notif-tab"
+                  role="tab"
+                  [class.notif-tab-active]="notifTab() === 'general'"
+                  [attr.aria-selected]="notifTab() === 'general'"
+                  (click)="notifTab.set('general')"
+                >
+                  <span class="material-icons notif-tab-icon"> notifications </span>
 
-          </div>
+                  General
+
+                  @if (hasUnreadGeneral()) {
+                    <span class="notif-tab-dot" aria-hidden="true"> </span>
+                  }
+                </button>
+
+                <button
+                  type="button"
+                  class="notif-tab"
+                  role="tab"
+                  [class.notif-tab-active]="notifTab() === 'messages'"
+                  [attr.aria-selected]="notifTab() === 'messages'"
+                  (click)="notifTab.set('messages')"
+                >
+                  <span class="material-icons notif-tab-icon"> chat_bubble_outline </span>
+
+                  Messages
+
+                  @if (hasUnreadMessages()) {
+                    <span class="notif-tab-dot" aria-hidden="true"> </span>
+                  }
+                </button>
+              </div>
+
+              @if (loadingNotifications()) {
+                <div class="notifications-empty">
+                  <div class="notif-spinner"></div>
+
+                  <p>Loading...</p>
+                </div>
+
+              } @else if (activeNotifications().length === 0) {
+                <div class="notifications-empty">
+                  <span class="material-icons empty-bell-icon"> notifications_off </span>
+
+                  <p>No Notifications Yet</p>
+
+                  <small> You'll see updates here when they arrive. </small>
+                </div>
+
+              } @else {
+                <ul class="notif-list" role="list">
+                  @for (notif of activeNotifications(); track notif._id) {
+                    <li
+                      class="notif-item"
+                      [class.unread]="!notif.isRead"
+                      [ngClass]="'notif-type-' + notif.type"
+                      role="listitem"
+                    >
+                      <div class="notif-item-top" (click)="onNotifClick(notif)">
+                        <div class="notif-icon-wrap" [ngClass]="getNotifIconClass(notif.type)">
+                          <span class="material-icons">
+                            {{ getNotifIcon(notif.type) }}
+                          </span>
+                        </div>
+
+                        <div class="notif-body">
+                          <p class="notif-message">
+                            {{ notif.message }}
+                          </p>
+
+                          <span class="notif-time">
+                            {{ formatNotifTime(notif.createdAt) }}
+                          </span>
+                        </div>
+                      </div>
+
+                      <!-- M3: Action buttons based on notification type -->
+                      @if (!notif.isRead && getNotifActionLabel(notif.type)) {
+                        <button
+                          type="button"
+                          class="notif-action-btn"
+                          (click)="navigateFromNotif(notif)"
+                        >
+                          <span class="material-icons">
+                            {{ getNotifActionIcon(notif.type) }}
+                          </span>
+
+                          {{ getNotifActionLabel(notif.type) }}
+                        </button>
+                      }
+                    </li>
+                  }
+                </ul>
+              }
+            </div>
           }
         </div>
 
@@ -264,57 +316,61 @@
             [class.active]="profileDropdownOpen"
             (click)="toggleProfileDropdown($event)"
             aria-haspopup="true"
-            [attr.aria-expanded]="profileDropdownOpen">
+            [attr.aria-expanded]="profileDropdownOpen"
+          >
             <span class="profile-pill-avatar">
               {{ authService.getCurrentUser()?.name?.charAt(0) }}
             </span>
-            <span class="material-icons arrow-icon" [class.rotated]="profileDropdownOpen">expand_more</span>
+
+            <span class="material-icons arrow-icon" [class.rotated]="profileDropdownOpen">
+              expand_more
+            </span>
           </button>
 
-          @if(profileDropdownOpen){
-          <div
-            class="profile-dropdown"
-            (click)="$event.stopPropagation()"
-            role="dialog"
-            aria-label="User menu">
+          @if (profileDropdownOpen) {
+            <div
+              class="profile-dropdown"
+              (click)="$event.stopPropagation()"
+              role="dialog"
+              aria-label="User menu"
+            >
+              <div class="profile-dropdown-user">
+                <div class="profile-dropdown-avatar">
+                  {{ authService.getCurrentUser()?.name?.charAt(0) }}
+                </div>
 
-            <div class="profile-dropdown-user">
-              <div class="profile-dropdown-avatar">
-                {{ authService.getCurrentUser()?.name?.charAt(0) }}
+                <div class="profile-dropdown-info">
+                  <span class="profile-dropdown-name">
+                    {{ authService.getCurrentUser()?.name }}
+                  </span>
+
+                  <span class="profile-dropdown-email">
+                    {{ authService.getCurrentUser()?.email }}
+                  </span>
+                </div>
               </div>
-              <div class="profile-dropdown-info">
-                <span class="profile-dropdown-name">
-                  {{ authService.getCurrentUser()?.name }}
-                </span>
-                <span class="profile-dropdown-email">
-                  {{ authService.getCurrentUser()?.email }}
+
+              <div class="profile-dropdown-role-row">
+                <span class="profile-dropdown-role">
+                  {{ authService.getCurrentUser()?.role | titlecase }}
                 </span>
               </div>
+
+              <div class="dropdown-divider"></div>
+
+              <button class="dropdown-signout-btn" (click)="logout()">
+                <span class="material-icons"> logout </span>
+
+                Sign Out
+              </button>
             </div>
-
-            <div class="profile-dropdown-role-row">
-              <span class="profile-dropdown-role">
-                {{ authService.getCurrentUser()?.role | titlecase }}
-              </span>
-            </div>
-
-            <div class="dropdown-divider"></div>
-
-            <button class="dropdown-signout-btn" (click)="logout()">
-              <span class="material-icons">logout</span>
-              Sign Out
-            </button>
-          </div>
           }
         </div>
-
       </div>
     </header>
 
     <main class="main-content">
       <router-outlet></router-outlet>
     </main>
-
   </div>
-
 </div>

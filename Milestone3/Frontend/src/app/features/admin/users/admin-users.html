@@ -1,0 +1,289 @@
+<section class="admin-page">
+  <div class="page-heading">
+    <div>
+      <p class="eyebrow">Administration</p>
+      <h1>Users</h1>
+      <p>Manage registered volunteers, NGOs and administrators.</p>
+    </div>
+
+    <button class="outline-btn" (click)="loadUsers()" [disabled]="loading()">
+      <span class="material-icons">refresh</span>
+      Refresh
+    </button>
+  </div>
+
+  <div class="filters-card">
+    <label class="search-field">
+      <span class="material-icons">search</span>
+
+      <input
+        [(ngModel)]="search"
+        (ngModelChange)="onFilterChange()"
+        placeholder="Search name, username or email"
+      />
+    </label>
+
+    <select [(ngModel)]="role" (ngModelChange)="onFilterChange()">
+      <option value="all">All roles</option>
+
+      <option value="volunteer">Volunteer</option>
+
+      <option value="ngo">NGO</option>
+
+      <option value="admin">Admin</option>
+    </select>
+
+    <select [(ngModel)]="status" (ngModelChange)="onFilterChange()">
+      <option value="all">All statuses</option>
+
+      <option value="active">Active</option>
+
+      <option value="suspended">Suspended</option>
+    </select>
+
+    <button class="text-btn" (click)="clearFilters()">Clear</button>
+  </div>
+
+  @if (loading()) {
+    <div class="state-card">
+      <div class="spinner"></div>
+
+      <h3>Loading users</h3>
+
+      <p>Please wait while the user list is loaded.</p>
+    </div>
+  } @else if (error()) {
+    <div class="state-card error-state">
+      <span class="material-icons"> error_outline </span>
+
+      <h3>Something went wrong</h3>
+
+      <p>
+        {{ error() }}
+      </p>
+
+      <button class="primary-btn" (click)="loadUsers()">Try again</button>
+    </div>
+  } @else if (filteredUsers.length === 0) {
+    <div class="state-card">
+      <span class="material-icons"> group_off </span>
+
+      <h3>No users found</h3>
+
+      <p>Try changing the search or filters.</p>
+    </div>
+  } @else {
+    <div class="table-card">
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>User</th>
+              <th>Email</th>
+              <th>Role</th>
+              <th>Status</th>
+              <th>Joined</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            @for (user of visibleUsers; track user.id) {
+              <tr>
+                <td>
+                  <div class="user-cell">
+                    <span class="avatar">
+                      {{ initials(user.name) }}
+                    </span>
+
+                    <div>
+                      <strong>
+                        {{ user.name }}
+                      </strong>
+
+                      <small> @{{ user.username }} </small>
+                    </div>
+                  </div>
+                </td>
+
+                <td>
+                  {{ user.email }}
+                </td>
+
+                <td>
+                  <span class="role-pill">
+                    {{ roleLabel(user.role) }}
+                  </span>
+                </td>
+
+                <td>
+                  <span class="status-pill" [class.suspended]="user.status === 'suspended'">
+                    {{ user.status | titlecase }}
+                  </span>
+                </td>
+
+                <td>
+                  {{ user.joinedAt | date: 'dd MMM yyyy' }}
+                </td>
+
+                <td>
+                  <div class="actions">
+                    <button class="icon-action" (click)="viewUser(user)">
+                      <span class="material-icons"> visibility </span>
+                    </button>
+
+                    <button
+                      class="status-action"
+                      [class.activate]="user.status === 'suspended'"
+                      [disabled]="user.role === 'admin'"
+                      (click)="requestStatusChange(user)"
+                    >
+                      {{ user.status === 'active' ? 'Suspend' : 'Activate' }}
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <div class="pagination">
+        <span> Showing {{ visibleUsers.length }} of {{ filteredUsers.length }} users </span>
+
+        <div>
+          <button class="page-btn" (click)="previousPage()" [disabled]="page === 1">‹</button>
+
+          <span> Page {{ page }} of {{ totalPages }} </span>
+
+          <button class="page-btn" (click)="nextPage()" [disabled]="page === totalPages">›</button>
+        </div>
+      </div>
+    </div>
+  }
+
+  @if (selectedUser(); as user) {
+    <div class="modal-backdrop" (click)="closeDetails()">
+      <div class="modal details-modal" (click)="$event.stopPropagation()">
+        <button class="modal-close" (click)="closeDetails()">×</button>
+
+        <div class="details-header">
+          <span class="large-avatar">
+            {{ initials(user.name) }}
+          </span>
+
+          <div>
+            <h2>
+              {{ user.name }}
+            </h2>
+
+            <p>@{{ user.username }}</p>
+          </div>
+        </div>
+
+        <div class="details-grid">
+          <div>
+            <span>Email</span>
+            <strong>{{ user.email }}</strong>
+          </div>
+
+          <div>
+            <span>Role</span>
+            <strong>
+              {{ roleLabel(user.role) }}
+            </strong>
+          </div>
+
+          <div>
+            <span>Status</span>
+            <strong>
+              {{ user.status | titlecase }}
+            </strong>
+          </div>
+
+          <div>
+            <span>Verified</span>
+            <strong>
+              {{ user.verified ? 'Yes' : 'No' }}
+            </strong>
+          </div>
+
+          <div>
+            <span>Location</span>
+            <strong>
+              {{ user.location }}
+            </strong>
+          </div>
+
+          <div>
+            <span>Joined</span>
+            <strong>
+              {{ user.joinedAt | date: 'dd MMM yyyy, hh:mm a' }}
+            </strong>
+          </div>
+
+          <div>
+            <span>Last active</span>
+            <strong>
+              {{ user.lastActiveAt | date: 'dd MMM yyyy, hh:mm a' }}
+            </strong>
+          </div>
+
+          <div>
+            <span>Phone</span>
+            <strong>
+              {{ user.phone || '—' }}
+            </strong>
+          </div>
+        </div>
+      </div>
+    </div>
+  }
+
+  @if (confirmUser(); as user) {
+    <div class="modal-backdrop">
+      <div class="modal confirm-modal">
+        <span class="confirm-icon material-icons">
+          {{ user.status === 'active' ? 'block' : 'check_circle' }}
+        </span>
+
+        <h2>
+          {{ user.status === 'active' ? 'Suspend user?' : 'Activate user?' }}
+        </h2>
+
+        <p>
+          {{
+            user.status === 'active'
+              ? 'This will prevent the user from using the platform until activated again.'
+              : 'This will restore the user’s platform access.'
+          }}
+        </p>
+
+        <strong>
+          {{ user.name }}
+        </strong>
+
+        <div class="modal-actions">
+          <button class="outline-btn" (click)="cancelStatusChange()" [disabled]="actionLoading()">
+            Cancel
+          </button>
+
+          <button
+            class="danger-btn"
+            [class.activate-btn]="user.status === 'suspended'"
+            (click)="confirmStatusChange()"
+            [disabled]="actionLoading()"
+          >
+            {{
+              actionLoading()
+                ? 'Saving...'
+                : user.status === 'active'
+                  ? 'Suspend User'
+                  : 'Activate User'
+            }}
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+</section>
