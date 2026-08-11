@@ -1,3 +1,4 @@
+import { adminRoutes } from './features/admin/admin.routes';
 import { Routes } from '@angular/router';
 
 import { Login } from './features/auth/login/login';
@@ -18,38 +19,37 @@ import { messageRoutes } from './features/messages/messages.routes';
 import { pickupRoutes } from './features/pickups/pickup.routes';
 
 export const routes: Routes = [
-
   // Redirect to Login
   {
     path: '',
     redirectTo: 'login',
-    pathMatch: 'full'
+    pathMatch: 'full',
   },
 
   // Authentication Routes
   {
     path: 'login',
-    component: Login
+    component: Login,
   },
 
   {
     path: 'register',
-    component: Register
+    component: Register,
   },
 
   {
     path: 'verify-otp',
-    component: VerifyOtp
+    component: VerifyOtp,
   },
 
   {
     path: 'forgot-password',
-    component: ForgotPassword
+    component: ForgotPassword,
   },
 
   {
     path: 'reset-password',
-    component: ResetPassword
+    component: ResetPassword,
   },
 
   // Protected Routes — all children share the Layout shell
@@ -58,54 +58,56 @@ export const routes: Routes = [
     component: Layout,
     canActivate: [authGuard],
     children: [
-
       // ── Milestone 1 routes ──────────────────────────────────────
       {
         path: 'dashboard',
-        component: Dashboard
+        component: Dashboard,
       },
 
       {
         path: 'profile',
-        component: Profile
+        component: Profile,
       },
 
       {
         path: 'change-password',
-        component: ChangePassword
+        component: ChangePassword,
       },
 
       // ── Milestone 2: Opportunities feature ──────────────────────
       {
         path: 'opportunities',
-        children: opportunityRoutes
+        children: opportunityRoutes,
       },
 
       // ── Milestone 2: Applications feature ───────────────────────
       {
         path: 'applications',
-        children: applicationRoutes
+        children: applicationRoutes,
       },
 
       // ── Milestone 3: Messages feature ───────────────────────────
       {
         path: 'messages',
-        children: messageRoutes
+        children: messageRoutes,
       },
 
       // ── Milestone 3: Pickup feature ─────────────────────────────
       {
         path: 'pickups',
-        children: pickupRoutes
-      }
+        children: pickupRoutes,
+      },
 
-    ]
+      {
+        path: 'admin',
+        children: adminRoutes,
+      },
+    ],
   },
 
   // Wildcard Route
   {
     path: '**',
-    redirectTo: 'login'
-  }
-
+    redirectTo: 'login',
+  },
 ];

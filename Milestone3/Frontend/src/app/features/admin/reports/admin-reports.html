@@ -1,0 +1,421 @@
+<section class="reports-page">
+  <!-- HEADER -->
+  <div class="page-header">
+    <div class="header-content">
+      <div class="header-icon">
+        <span class="material-icons">analytics</span>
+      </div>
+
+      <div>
+        <p class="eyebrow">Administration</p>
+
+        <h1>Reports & Analytics</h1>
+
+        <p class="header-description">Generate, preview and download detailed WasteZero reports.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- REPORT TYPE -->
+  <section class="section">
+    <div class="section-heading">
+      <div>
+        <h2>Choose a report</h2>
+        <p>Select the type of information you want to analyse.</p>
+      </div>
+    </div>
+
+    <div class="report-types">
+      <!-- USER REPORT -->
+      <button
+        type="button"
+        class="report-type-card"
+        [class.selected]="reportType === 'user'"
+        (click)="reportType = 'user'"
+      >
+        <div class="report-type-icon users-icon">
+          <span class="material-icons">group</span>
+        </div>
+
+        <div class="report-type-content">
+          <h3>User Report</h3>
+
+          <p>User registrations, active accounts, suspended accounts and verification data.</p>
+        </div>
+
+        <span class="selected-check material-icons">
+          {{ reportType === 'user' ? 'check_circle' : 'radio_button_unchecked' }}
+        </span>
+      </button>
+
+      <!-- PICKUP REPORT -->
+      <button
+        type="button"
+        class="report-type-card"
+        [class.selected]="reportType === 'pickup'"
+        (click)="reportType = 'pickup'"
+      >
+        <div class="report-type-icon pickup-icon">
+          <span class="material-icons">local_shipping</span>
+        </div>
+
+        <div class="report-type-content">
+          <h3>Pickup Report</h3>
+
+          <p>Pickup requests, scheduled pickups, completed collections and cancellations.</p>
+        </div>
+
+        <span class="selected-check material-icons">
+          {{ reportType === 'pickup' ? 'check_circle' : 'radio_button_unchecked' }}
+        </span>
+      </button>
+
+      <!-- OPPORTUNITY REPORT -->
+      <button
+        type="button"
+        class="report-type-card"
+        [class.selected]="reportType === 'opportunity'"
+        (click)="reportType = 'opportunity'"
+      >
+        <div class="report-type-icon opportunity-icon">
+          <span class="material-icons">volunteer_activism</span>
+        </div>
+
+        <div class="report-type-content">
+          <h3>Opportunity Report</h3>
+
+          <p>Opportunities posted, applications, active listings and filled positions.</p>
+        </div>
+
+        <span class="selected-check material-icons">
+          {{ reportType === 'opportunity' ? 'check_circle' : 'radio_button_unchecked' }}
+        </span>
+      </button>
+
+      <!-- ACTIVITY REPORT -->
+      <button
+        type="button"
+        class="report-type-card"
+        [class.selected]="reportType === 'activity'"
+        (click)="reportType = 'activity'"
+      >
+        <div class="report-type-icon activity-icon">
+          <span class="material-icons">timeline</span>
+        </div>
+
+        <div class="report-type-content">
+          <h3>Full Activity</h3>
+
+          <p>A complete overview of administrative and platform activity.</p>
+        </div>
+
+        <span class="selected-check material-icons">
+          {{ reportType === 'activity' ? 'check_circle' : 'radio_button_unchecked' }}
+        </span>
+      </button>
+    </div>
+  </section>
+
+  <!-- FILTER PANEL -->
+  <section class="configuration-card">
+    <div class="configuration-header">
+      <div class="configuration-title">
+        <div class="small-icon">
+          <span class="material-icons">tune</span>
+        </div>
+
+        <div>
+          <h2>Report settings</h2>
+          <p>Choose the date range and output format.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="configuration-body">
+      <!-- DATE RANGE -->
+      <div class="setting-group">
+        <label> Date range </label>
+
+        <div class="date-fields">
+          <div class="input-wrapper">
+            <span class="material-icons"> calendar_today </span>
+
+            <div>
+              <small>From</small>
+
+              <input type="date" [(ngModel)]="startDate" />
+            </div>
+          </div>
+
+          <span class="date-arrow material-icons"> arrow_forward </span>
+
+          <div class="input-wrapper">
+            <span class="material-icons"> event </span>
+
+            <div>
+              <small>To</small>
+
+              <input type="date" [(ngModel)]="endDate" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- FORMAT -->
+      <div class="setting-group format-group">
+        <label> Download format </label>
+
+        <div class="format-options">
+          <button
+            type="button"
+            class="format-option"
+            [class.selected]="format === 'csv'"
+            (click)="format = 'csv'"
+          >
+            <span class="material-icons"> table_view </span>
+
+            <span>
+              <strong>CSV</strong>
+              <small>Data file</small>
+            </span>
+          </button>
+
+          <button
+            type="button"
+            class="format-option"
+            [class.selected]="format === 'excel'"
+            (click)="format = 'excel'"
+          >
+            <span class="material-icons"> grid_on </span>
+
+            <span>
+              <strong>Excel</strong>
+              <small>Spreadsheet</small>
+            </span>
+          </button>
+
+          <button
+            type="button"
+            class="format-option"
+            [class.selected]="format === 'pdf'"
+            (click)="format = 'pdf'"
+          >
+            <span class="material-icons"> picture_as_pdf </span>
+
+            <span>
+              <strong>PDF</strong>
+              <small>Document</small>
+            </span>
+          </button>
+        </div>
+      </div>
+
+      <!-- GENERATE -->
+      <div class="generate-area">
+        <button type="button" class="generate-btn" (click)="loadReport()" [disabled]="loading()">
+          @if (loading()) {
+            <span class="button-spinner"></span>
+
+            Generating...
+          } @else {
+            <span class="material-icons"> auto_graph </span>
+
+            Generate Report
+          }
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- REPORT PREVIEW -->
+  <section class="preview-card">
+    <div class="preview-header">
+      <div class="preview-title">
+        <div class="preview-icon">
+          <span class="material-icons"> description </span>
+        </div>
+
+        <div>
+          <p class="preview-label">REPORT PREVIEW</p>
+
+          <h2>
+            {{ report()?.title || 'Your report will appear here' }}
+          </h2>
+
+          @if (report()) {
+            <p class="preview-date">
+              {{ startDate }}
+              <span>→</span>
+              {{ endDate }}
+            </p>
+          }
+        </div>
+      </div>
+
+      @if (report()) {
+        <div class="download-section">
+          <div class="selected-format">
+            <span class="material-icons">
+              {{
+                format === 'csv' ? 'table_view' : format === 'excel' ? 'grid_on' : 'picture_as_pdf'
+              }}
+            </span>
+
+            {{ format | uppercase }}
+          </div>
+
+          <button
+            type="button"
+            class="download-btn"
+            (click)="download()"
+            [disabled]="downloading()"
+          >
+            @if (downloading()) {
+              <span class="button-spinner"></span>
+
+              Preparing...
+            } @else {
+              <span class="material-icons"> download </span>
+
+              Download
+            }
+          </button>
+        </div>
+      }
+    </div>
+
+    <!-- LOADING -->
+    @if (loading()) {
+      <div class="state-container">
+        <div class="loading-animation">
+          <span></span>
+          <span></span>
+          <span></span>
+        </div>
+
+        <h3>Generating your report</h3>
+
+        <p>We're preparing the latest data for your selected period.</p>
+      </div>
+    }
+
+    <!-- ERROR -->
+    @else if (error()) {
+      <div class="state-container error-state">
+        <div class="state-icon error-icon">
+          <span class="material-icons"> error_outline </span>
+        </div>
+
+        <h3>Unable to generate report</h3>
+
+        <p>
+          {{ error() }}
+        </p>
+
+        <button type="button" class="retry-btn" (click)="loadReport()">
+          <span class="material-icons"> refresh </span>
+
+          Try Again
+        </button>
+      </div>
+    }
+
+    <!-- EMPTY -->
+    @else if (!report()) {
+      <div class="state-container empty-state">
+        <div class="state-icon empty-icon">
+          <span class="material-icons"> insert_chart_outlined </span>
+        </div>
+
+        <h3>No report generated yet</h3>
+
+        <p>Select your report type and date range, then click <strong>Generate Report</strong>.</p>
+      </div>
+    }
+
+    <!-- REPORT -->
+    @else {
+      <!-- SUMMARY -->
+      <div class="summary-row">
+        <div class="summary-card">
+          <div class="summary-icon">
+            <span class="material-icons"> category </span>
+          </div>
+
+          <div>
+            <span>Report type</span>
+            <strong>
+              {{ reportType | titlecase }}
+            </strong>
+          </div>
+        </div>
+
+        <div class="summary-card">
+          <div class="summary-icon">
+            <span class="material-icons"> calendar_month </span>
+          </div>
+
+          <div>
+            <span>Date range</span>
+            <strong> {{ startDate }} → {{ endDate }} </strong>
+          </div>
+        </div>
+
+        <div class="summary-card">
+          <div class="summary-icon">
+            <span class="material-icons"> view_list </span>
+          </div>
+
+          <div>
+            <span>Records</span>
+            <strong>
+              {{ report()!.rows.length }}
+            </strong>
+          </div>
+        </div>
+      </div>
+
+      <!-- TABLE -->
+      <div class="table-section">
+        <div class="table-header">
+          <div>
+            <h3>Report data</h3>
+
+            <p>Preview of the generated report.</p>
+          </div>
+
+          <span class="record-count">
+            {{ report()!.rows.length }}
+            records
+          </span>
+        </div>
+
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                @for (column of report()!.columns; track column) {
+                  <th>
+                    {{ column }}
+                  </th>
+                }
+              </tr>
+            </thead>
+
+            <tbody>
+              @for (row of report()!.rows; track $index) {
+                <tr>
+                  @for (column of report()!.columns; track column) {
+                    <td>
+                      {{ row[column] }}
+                    </td>
+                  }
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    }
+  </section>
+</section>

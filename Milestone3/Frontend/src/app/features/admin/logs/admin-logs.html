@@ -1,0 +1,137 @@
+<section class="admin-page">
+  <div class="page-heading">
+    <div>
+      <p class="eyebrow">Administration</p>
+
+      <h1>Admin Logs</h1>
+
+      <p>Review important administrative activity and account actions.</p>
+    </div>
+
+    <button class="outline-btn" (click)="loadLogs()" [disabled]="loading()">
+      <span class="material-icons"> refresh </span>
+
+      Refresh
+    </button>
+  </div>
+
+  <div class="filters-card">
+    <select [(ngModel)]="action">
+      <option value="">All actions</option>
+
+      <option value="LOGIN">Login</option>
+
+      <option value="LOGOUT">Logout</option>
+
+      <option value="USER_SUSPENDED">User suspended</option>
+
+      <option value="USER_ACTIVATED">User activated</option>
+
+      <option value="USER_UPDATED">User updated</option>
+
+      <option value="REPORT_DOWNLOADED">Report downloaded</option>
+    </select>
+
+    <input type="date" [(ngModel)]="date" />
+
+    <button class="primary-btn" (click)="applyFilters()">Apply</button>
+
+    <button class="text-btn" (click)="clearFilters()">Clear</button>
+  </div>
+
+  @if (loading()) {
+    <div class="state-card">
+      <div class="spinner"></div>
+
+      <h3>Loading logs</h3>
+
+      <p>Fetching recent administrative activity.</p>
+    </div>
+  } @else if (error()) {
+    <div class="state-card error-state">
+      <span class="material-icons"> error_outline </span>
+
+      <h3>Something went wrong</h3>
+
+      <p>
+        {{ error() }}
+      </p>
+
+      <button class="primary-btn" (click)="loadLogs()">Try again</button>
+    </div>
+  } @else if (logs().length === 0) {
+    <div class="state-card">
+      <span class="material-icons"> history_toggle_off </span>
+
+      <h3>No logs found</h3>
+
+      <p>No activity matches the selected filters.</p>
+    </div>
+  } @else {
+    <div class="table-card">
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>Action</th>
+              <th>Description</th>
+              <th>Actor</th>
+              <th>Target</th>
+              <th>Date & Time</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            @for (log of visibleLogs; track log.id) {
+              <tr>
+                <td>
+                  <span class="action-pill">
+                    {{ actionLabel(log.action) }}
+                  </span>
+                </td>
+
+                <td>
+                  {{ log.description }}
+                </td>
+
+                <td>
+                  <strong>
+                    {{ log.actorName }}
+                  </strong>
+
+                  <small class="sub">
+                    {{ log.actorRole | titlecase }}
+                  </small>
+                </td>
+
+                <td>
+                  {{ log.targetName || '—' }}
+                </td>
+
+                <td>
+                  {{ log.createdAt | date: 'dd MMM yyyy, hh:mm a' }}
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <div class="pagination">
+        <span>
+          {{ logs().length }}
+          log{{ logs().length === 1 ? '' : 's' }}
+          found
+        </span>
+
+        <div>
+          <button class="page-btn" (click)="previousPage()" [disabled]="page === 1">‹</button>
+
+          <span> Page {{ page }} of {{ totalPages }} </span>
+
+          <button class="page-btn" (click)="nextPage()" [disabled]="page === totalPages">›</button>
+        </div>
+      </div>
+    </div>
+  }
+</section>
