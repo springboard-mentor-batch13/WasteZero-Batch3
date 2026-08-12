@@ -1,9 +1,9 @@
 // Backend/middlewares/role.middleware.js
 
-const mongoose  = require('mongoose');
+const mongoose    = require('mongoose');
 const Opportunity = require('../models/opportunity.model');
 const Application = require('../models/application.model');
-const Pickup = require('../models/pickup.model');
+const Pickup      = require('../models/pickup.model');
 const pickupService = require('../services/pickup.service');
 const { sendError } = require('../utils/apiResponse');
 
@@ -284,6 +284,100 @@ const checkPickupNgoMatch = async (req, res, next) => {
   }
 };
 
+// ── Pickup: Reschedule access ──────────────────────────────────────────────
+
+/**
+ * Guard for PATCH /:id/reschedule (volunteer).
+ *
+ * Pre-checks (for a clear, early error message):
+ *   1. Valid ObjectId
+ *   2. Pickup exists
+ *   3. Caller is the owner
+ *   4. Status is 'Missed'
+ *   5. rescheduleCount < RESCHEDULE_CAP
+ *
+ * The reschedule cap is ALSO enforced atomically inside the service
+ * (rescheduleCount: { $lt: cap } in the update filter) — this pre-check is
+ * for a friendly, specific error message only, not the actual gate.
+ */
+const checkPickupRescheduleAccess = async (req, res, next) => {
+  try {
+    const pickupId = req.params.id;
+
+    if (!isValidObjectId(pickupId)) {
+      return sendError(res, 'Invalid pickup ID', 400);
+    }
+
+    const pickup = await Pickup.findById(pickupId);
+
+    if (!pickup) {
+      return sendError(res, 'Pickup not found', 404);
+    }
+
+    if (pickup.user_id.toString() !== req.user.id.toString()) {
+      return sendError(res, 'Access denied. You do not own this pickup.', 403);
+    }
+
+    if (pickup.status !== 'Missed') {
+      return sendError(
+        res,
+        `Only Missed pickups can be rescheduled. This pickup is currently ${pickup.status}.`,
+        400
+      );
+    }
+
+    if (pickup.rescheduleCount >= Pickup.RESCHEDULE_CAP) {
+      return sendError(
+        res,
+        `This pickup has already been rescheduled ${Pickup.RESCHEDULE_CAP} time(s) (the maximum). Please create a new pickup request instead.`,
+        409
+      );
+    }
+
+    req.pickup = pickup;
+    next();
+  } catch (error) {
+    return sendError(res, 'Error verifying reschedule access', 500, error.message);
+  }
+};
+
+// ── Pickup: Admin access ───────────────────────────────────────────────────
+
+/**
+ * Guard for admin pickup routes (PUT /admin/:id, DELETE /admin/:id,
+ * PATCH /admin/:id/status).
+ *
+ * Validates the ID, fetches and attaches the pickup, then continues.
+ * Admin is NEVER subject to ownership or status restrictions here —
+ * those are enforced in the service layer per the spec's admin permission
+ * matrix (§3 / §6).
+ *
+ * Kept structurally separate from checkPickupOwnershipByVolunteer so that
+ * an admin bypass cannot accidentally loosen volunteer checks or vice versa.
+ */
+const checkPickupAdminAccess = async (req, res, next) => {
+  try {
+    const pickupId = req.params.id;
+
+    if (!isValidObjectId(pickupId)) {
+      return sendError(res, 'Invalid pickup ID', 400);
+    }
+
+    const pickup = await Pickup.findById(pickupId)
+      .populate('user_id',  'name email')
+      .populate('agent_id', 'name email');
+
+    if (!pickup) {
+      return sendError(res, 'Pickup not found', 404);
+    }
+
+    req.pickup = pickup;
+    next();
+  } catch (error) {
+    return sendError(res, 'Error fetching pickup for admin action', 500, error.message);
+  }
+};
+
 module.exports = {
   checkOpportunityOwnership,
   checkApplicationOwnershipByNGO,
@@ -294,4 +388,6 @@ module.exports = {
   checkPickupDeleteAccess,
   checkPickupViewAccess,
   checkPickupNgoMatch,
+  checkPickupRescheduleAccess,
+  checkPickupAdminAccess,
 };

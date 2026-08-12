@@ -14,7 +14,7 @@ const notificationSchema = new mongoose.Schema(
     type: {
       type: String,
       enum: {
-        values: ['message', 'opportunity_match', 'pickup_match'],
+        values: ['message', 'opportunity_match', 'pickup_match', 'pickup_missed', 'pickup_cancelled'],
         message: '{VALUE} is not a valid notification type',
       },
       required: true,

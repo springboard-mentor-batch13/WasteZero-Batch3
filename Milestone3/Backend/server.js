@@ -42,6 +42,10 @@ const { initSocket } = require('./sockets');
 // ===== Notification Cleanup =====
 const { cleanupExpiredNotifications } = require('./services/notification.service');
 
+// ===== Pickup Missed-Detection Sweep =====
+const { startMissedPickupSweep } = require('./services/pickup.sweep');
+
+
 const errorHandler = require('./middlewares/error.middleware');
 const { verifySmtpConnection } = require('./utils/sendEmail');
 
@@ -177,4 +181,14 @@ httpServer.listen(PORT, () => {
 
   // Subsequent runs every hour
   setInterval(runCleanup, CLEANUP_INTERVAL_MS);
+
+  // ── Missed-pickup sweep ───────────────────────────────────────────────────
+  // Detects Pending/Assigned pickups whose preferredTimeSlot.end has passed
+  // and flips them to Missed, then notifies affected parties.
+  // Runs immediately on startup (catches anything missed during downtime)
+  // and then every 15 minutes.
+  //
+  // KNOWN LIMITATION: single-process only — needs a distributed lock or a
+  // proper scheduler (agenda/bullmq) before horizontal scaling.
+  startMissedPickupSweep();
 });

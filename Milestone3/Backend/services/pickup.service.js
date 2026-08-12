@@ -1,11 +1,28 @@
 // Backend/services/pickup.service.js
+//
+// ── Pickup business-logic layer ───────────────────────────────────────────────
+//
+// ARCHITECTURE CONTRACT:
+//   Route → Middleware → Validation → Controller → THIS FILE → Model
+//   No business logic lives in routes, middleware, or controllers.
+//
+// CONCURRENCY INVARIANT:
+//   Every status-changing write is an atomic conditional update.
+//   The update filter always re-asserts the expected current state
+//   (status, and ownership/agent_id where relevant) so that two concurrent
+//   requests cannot both "succeed" and leave the document contradictory.
+//   When findOneAndUpdate returns null, the caller emits HTTP 409 — not 500.
 
 const Pickup = require('../models/pickup.model');
-const User = require('../models/users.model');
+const User   = require('../models/users.model');
+const { computeMissedCutoff, addTimeDisplayFields } = require('../utils/pickup.timeUtils');
+const { canTransition, ADMIN_OPEN_STATUSES }        = require('../utils/pickup.transitions');
 
+// ---------------------------------------------------------------------------
+// Internal helpers
+// ---------------------------------------------------------------------------
 
 const escapeRegex = (str) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-
 
 const cityRegexList = (cities = []) =>
   cities
@@ -13,9 +30,11 @@ const cityRegexList = (cities = []) =>
     .map((city) => new RegExp(`^${escapeRegex(city.trim())}$`, 'i'));
 
 /**
- * @internal
- * Derive the list of cities a user (volunteer or NGO) is associated with,
- * from User.locations.primary.city AND every User.locations.secondary[].city.
+ * Collect every city a user is associated with (primary + all secondary
+ * locations). Used for NGO coverage matching.
+ *
+ * @param {object} user
+ * @returns {string[]}
  */
 const getUserCities = (user) => {
   const cities = [];
@@ -28,53 +47,111 @@ const getUserCities = (user) => {
   return cities;
 };
 
-
+/**
+ * True if the given NGO user is eligible for the given pickup:
+ *   • at least one city matches (case-insensitive)
+ *   • at least one wasteType overlaps
+ *   • NGO has non-empty cities AND non-empty wasteTypes (empty = "no match",
+ *     not "match everything")
+ *
+ * @param {object} ngoUser
+ * @param {object} pickup  - plain Pickup document (lean or Mongoose doc)
+ * @returns {boolean}
+ */
 const isNgoEligibleForPickup = (ngoUser, pickup) => {
-  const ngoCities = getUserCities(ngoUser).map((c) => c.trim().toLowerCase());
+  const ngoCities     = getUserCities(ngoUser).map((c) => c.trim().toLowerCase());
   const ngoWasteTypes = Array.isArray(ngoUser?.wasteTypes)
     ? ngoUser.wasteTypes.map((w) => w.trim().toLowerCase())
     : [];
 
+  // Empty profile → never eligible (data-completeness bug in NGO profile, not a match)
   if (ngoCities.length === 0 || ngoWasteTypes.length === 0) return false;
 
-  const pickupCity = pickup?.address?.city?.trim().toLowerCase();
+  const pickupCity       = pickup?.address?.city?.trim().toLowerCase();
   const pickupWasteTypes = Array.isArray(pickup?.wasteTypes)
     ? pickup.wasteTypes.map((w) => w.trim().toLowerCase())
     : [];
 
-  const cityMatches = Boolean(pickupCity) && ngoCities.includes(pickupCity);
+  const cityMatches      = Boolean(pickupCity) && ngoCities.includes(pickupCity);
   const wasteTypeMatches = pickupWasteTypes.some((w) => ngoWasteTypes.includes(w));
 
   return cityMatches && wasteTypeMatches;
 };
 
+/**
+ * Apply the 12-hour display transform to a single lean pickup or an array.
+ * This is the single boundary where pickups leave the service layer for a
+ * response — every read function runs through here.
+ *
+ * @param {object|object[]|null} pickupOrList
+ * @returns {object|object[]|null}
+ */
+const formatPickupResponse = (pickupOrList) => {
+  if (Array.isArray(pickupOrList)) return pickupOrList.map(addTimeDisplayFields);
+  return addTimeDisplayFields(pickupOrList);
+};
 
+// ---------------------------------------------------------------------------
+// Create
+// ---------------------------------------------------------------------------
+
+/**
+ * Create a new pickup for a volunteer.
+ * Status is forced to 'Pending' server-side — never accepted from input.
+ * Computes and stores missedCutoffAt for sweep efficiency.
+ *
+ * @param {string} volunteerId
+ * @param {object} pickupData
+ * @returns {Promise<object>}  formatted pickup doc
+ */
 const createPickup = async (volunteerId, pickupData) => {
   const { address, scheduledDate, preferredTimeSlot, wasteTypes, notes } = pickupData;
+
+  const missedCutoffAt = computeMissedCutoff(scheduledDate, preferredTimeSlot);
 
   const newPickup = new Pickup({
     address,
     scheduledDate,
     preferredTimeSlot,
+    missedCutoffAt,
     wasteTypes,
     notes,
-    user_id: volunteerId,
-    agent_id: null,
-    status: 'Pending',
-    completedAt: null,
+    user_id:         volunteerId,
+    agent_id:        null,
+    status:          'Pending',
+    completedAt:     null,
+    missedAt:        null,
+    rescheduleCount: 0,
   });
-  return await newPickup.save();
+
+  const saved = await newPickup.save();
+  return formatPickupResponse(saved.toObject());
 };
 
-// ── Read ────────────────────────────────────────────────────────────────
+// ---------------------------------------------------------------------------
+// Read
+// ---------------------------------------------------------------------------
 
+/**
+ * Fetch a single pickup by ID.
+ * Returns null if not found.
+ * Does NOT populate — caller's middleware should populate if needed.
+ *
+ * @param {string} id
+ * @returns {Promise<object|null>}
+ */
 const getPickupById = async (id) => {
-  return await Pickup.findById(id);
+  const pickup = await Pickup.findById(id).lean();
+  return formatPickupResponse(pickup);
 };
 
 /**
- * Get pickups created by a specific volunteer (their own history), with
- * pagination and optional status filter.
+ * Get pickups created by a specific volunteer (owner history), paginated,
+ * with optional status filter.
+ *
+ * @param {string} volunteerId
+ * @param {{ status?, skip, limit, sort }} opts
+ * @returns {Promise<{ pickups, total }>}
  */
 const getPickupsByVolunteer = async (volunteerId, { status, skip, limit, sort }) => {
   const filter = { user_id: volunteerId };
@@ -90,29 +167,38 @@ const getPickupsByVolunteer = async (volunteerId, { status, skip, limit, sort })
     Pickup.countDocuments(filter),
   ]);
 
-  return { pickups, total };
+  return { pickups: formatPickupResponse(pickups), total };
 };
 
-
-const getPickupsForNgo = async (ngoUser, { status, skip, limit, sort }) => {
-  const cities = getUserCities(ngoUser);
+/**
+ * Get Pending pickups visible to a specific NGO — matched by city + wasteType
+ * overlap, excluding pickups whose owner is an admin.
+ *
+ * Returns { pickups: [], total: 0 } if the NGO has no cities or no
+ * wasteTypes — do NOT silently show everything.
+ *
+ * @param {object} ngoUser  - full user document (needs wasteTypes + locations)
+ * @param {{ skip, limit, sort }} opts
+ * @returns {Promise<{ pickups, total }>}
+ */
+const getPickupsForNgo = async (ngoUser, { skip, limit, sort }) => {
+  const cities     = getUserCities(ngoUser);
   const wasteTypes = Array.isArray(ngoUser.wasteTypes) ? ngoUser.wasteTypes : [];
 
- 
   if (cities.length === 0 || wasteTypes.length === 0) {
     return { pickups: [], total: 0 };
   }
 
-  
+  // Exclude pickups created by admins (admin-created pickups are not in the
+  // matching pool per spec §5)
   const adminIds = await User.find({ role: 'admin' }).distinct('_id');
 
   const filter = {
-    'address.city': { $in: cityRegexList(cities) },
-    wasteTypes: { $in: wasteTypes.map((w) => new RegExp(`^${escapeRegex(w.trim())}$`, 'i')) },
-    user_id: { $nin: adminIds },
+    status:          'Pending',
+    'address.city':  { $in: cityRegexList(cities) },
+    wasteTypes:      { $in: wasteTypes.map((w) => new RegExp(`^${escapeRegex(w.trim())}$`, 'i')) },
+    user_id:         { $nin: adminIds },
   };
-
-  if (status) filter.status = status;
 
   const [pickups, total] = await Promise.all([
     Pickup.find(filter)
@@ -124,12 +210,16 @@ const getPickupsForNgo = async (ngoUser, { status, skip, limit, sort }) => {
     Pickup.countDocuments(filter),
   ]);
 
-  return { pickups, total };
+  return { pickups: formatPickupResponse(pickups), total };
 };
 
 /**
- * Get pickups currently assigned to a specific NGO (agent_id === ngoId),
- * with pagination and optional status filter.
+ * Get all pickups currently/previously assigned to a specific NGO
+ * (agent_id === ngoId), paginated, optional status filter.
+ *
+ * @param {string} ngoId
+ * @param {{ status?, skip, limit, sort }} opts
+ * @returns {Promise<{ pickups, total }>}
  */
 const getPickupsAssignedToNgo = async (ngoId, { status, skip, limit, sort }) => {
   const filter = { agent_id: ngoId };
@@ -145,13 +235,14 @@ const getPickupsAssignedToNgo = async (ngoId, { status, skip, limit, sort }) => 
     Pickup.countDocuments(filter),
   ]);
 
-  return { pickups, total };
+  return { pickups: formatPickupResponse(pickups), total };
 };
 
 /**
- * Get every pickup in the system, regardless of owner or status — admin-only
- * system-management view (not an NGO-workflow query, so no coverage
- * matching or agent_id filtering here).
+ * Get every pickup in the system — admin-only oversight view.
+ *
+ * @param {{ status?, skip, limit, sort }} opts
+ * @returns {Promise<{ pickups, total }>}
  */
 const getAllPickups = async ({ status, skip, limit, sort }) => {
   const filter = {};
@@ -159,7 +250,7 @@ const getAllPickups = async ({ status, skip, limit, sort }) => {
 
   const [pickups, total] = await Promise.all([
     Pickup.find(filter)
-      .populate('user_id', 'name email role')
+      .populate('user_id',  'name email role')
       .populate('agent_id', 'name email')
       .sort(sort)
       .skip(skip)
@@ -168,89 +259,378 @@ const getAllPickups = async ({ status, skip, limit, sort }) => {
     Pickup.countDocuments(filter),
   ]);
 
-  return { pickups, total };
+  return { pickups: formatPickupResponse(pickups), total };
 };
 
-const transitionPickupStatus = async ({ pickupId, fromStatus, nextStatus, ngoId }) => {
-  const filter = { _id: pickupId, status: fromStatus };
+// ---------------------------------------------------------------------------
+// Volunteer writes
+// ---------------------------------------------------------------------------
 
-  
+/**
+ * Update a Pending pickup's editable fields (address, date, slot, types,
+ * notes). Also recomputes missedCutoffAt if scheduledDate or
+ * preferredTimeSlot changes.
+ *
+ * ATOMIC: a single conditional findOneAndUpdate that re-asserts
+ * status === 'Pending' and ownership at write time — not a fetch-then-.save().
+ * If the pickup was claimed by an NGO (or otherwise moved out of Pending)
+ * between the caller's earlier fetch and this write, the filter won't match
+ * and this returns null; the caller must treat that as a 409, same as every
+ * other write in this file. `pickup` (the caller's earlier-fetched doc) is
+ * used only as an id/owner reference and as a merge source for recomputing
+ * missedCutoffAt when a partial update only supplies one of
+ * scheduledDate/preferredTimeSlot — it is never written back, so its own
+ * staleness is harmless.
+ *
+ * @param {object} pickup      - the volunteer's pickup as fetched by earlier middleware (id/user/merge source only)
+ * @param {object} updateData
+ * @returns {Promise<object|null>}  formatted updated doc, or null on a status/ownership race
+ */
+const updatePickupInstance = async (pickup, updateData) => {
+  const $set = {};
+  const flatFields = ['scheduledDate', 'wasteTypes', 'notes'];
+
+  flatFields.forEach((field) => {
+    if (updateData[field] !== undefined) $set[field] = updateData[field];
+  });
+
+  if (updateData.address !== undefined) {
+    if (updateData.address.city !== undefined) $set['address.city'] = updateData.address.city;
+    if (updateData.address.area !== undefined) $set['address.area'] = updateData.address.area;
+  }
+
+  if (updateData.preferredTimeSlot !== undefined) {
+    if (updateData.preferredTimeSlot.start !== undefined) {
+      $set['preferredTimeSlot.start'] = updateData.preferredTimeSlot.start;
+    }
+    if (updateData.preferredTimeSlot.end !== undefined) {
+      $set['preferredTimeSlot.end'] = updateData.preferredTimeSlot.end;
+    }
+  }
+
+  // Recompute the sweep anchor whenever date or slot changes. A partial
+  // update may only touch one of the two, so merge against the caller's
+  // already-fetched pickup for whichever half wasn't provided.
+  if (updateData.scheduledDate !== undefined || updateData.preferredTimeSlot !== undefined) {
+    const mergedDate = updateData.scheduledDate !== undefined
+      ? updateData.scheduledDate
+      : pickup.scheduledDate;
+    const mergedSlot = {
+      start: updateData.preferredTimeSlot?.start !== undefined
+        ? updateData.preferredTimeSlot.start
+        : pickup.preferredTimeSlot?.start,
+      end: updateData.preferredTimeSlot?.end !== undefined
+        ? updateData.preferredTimeSlot.end
+        : pickup.preferredTimeSlot?.end,
+    };
+    $set.missedCutoffAt = computeMissedCutoff(mergedDate, mergedSlot);
+  }
+
+  const updated = await Pickup.findOneAndUpdate(
+    { _id: pickup._id, status: 'Pending', user_id: pickup.user_id },
+    { $set },
+    { new: true, runValidators: true }
+  ).lean();
+
+  return formatPickupResponse(updated);
+};
+
+/**
+ * Atomically cancel a volunteer's own Pending pickup.
+ * Returns null if the pickup was already moved out of Pending (race → 409).
+ *
+ * @param {string} pickupId
+ * @param {string} volunteerId
+ * @returns {Promise<object|null>}
+ */
+const cancelPendingPickup = async (pickupId, volunteerId) => {
+  const updated = await Pickup.findOneAndUpdate(
+    { _id: pickupId, status: 'Pending', user_id: volunteerId },
+    { $set: { status: 'Cancelled' } },
+    { new: true }
+  ).lean();
+
+  return formatPickupResponse(updated);
+};
+
+/**
+ * Atomically reschedule a Missed pickup — Volunteer (owner) only.
+ *
+ * Enforces the reschedule cap INSIDE the update filter (`rescheduleCount: { $lt: cap }`)
+ * so concurrent reschedule attempts cannot both slip through a pre-check that
+ * passes for both but only one of them should win.
+ *
+ * On success:
+ *   status          → Pending
+ *   scheduledDate   → new value (required — old values are stale by definition)
+ *   preferredTimeSlot → new value (required)
+ *   missedCutoffAt  → recomputed from new date + slot
+ *   agent_id        → null (pickup re-enters the open pool; old NGO not auto-reassigned)
+ *   missedAt        → null
+ *   completedAt     → null
+ *   rescheduleCount → incremented by 1
+ *
+ * Returns null if:
+ *   - pickup not found in Missed state owned by this volunteer, OR
+ *   - rescheduleCount is already at cap (race condition or legitimate cap hit)
+ *
+ * @param {string} pickupId
+ * @param {string} volunteerId
+ * @param {{ scheduledDate, preferredTimeSlot }} newData
+ * @returns {Promise<object|null>}
+ */
+const reschedulePickup = async (pickupId, volunteerId, newData) => {
+  const { scheduledDate, preferredTimeSlot } = newData;
+  const missedCutoffAt = computeMissedCutoff(scheduledDate, preferredTimeSlot);
+
+  const updated = await Pickup.findOneAndUpdate(
+    {
+      _id:             pickupId,
+      status:          'Missed',
+      user_id:         volunteerId,
+      rescheduleCount: { $lt: Pickup.RESCHEDULE_CAP },
+    },
+    {
+      $set: {
+        status:            'Pending',
+        scheduledDate,
+        preferredTimeSlot,
+        missedCutoffAt,
+        agent_id:          null,
+        missedAt:          null,
+        completedAt:       null,
+      },
+      $inc: { rescheduleCount: 1 },
+    },
+    { new: true }
+  ).lean();
+
+  return formatPickupResponse(updated);
+};
+
+// ---------------------------------------------------------------------------
+// NGO writes
+// ---------------------------------------------------------------------------
+
+/**
+ * Atomically transition a pickup's status — used by the NGO status endpoint
+ * and the reschedule-triggered re-claim path.
+ *
+ * The update filter re-asserts:
+ *   - current status === fromStatus
+ *   - if fromStatus is 'Assigned': agent_id === ngoId (only the holding NGO acts)
+ *
+ * Handles side effects:
+ *   - Pending → Assigned:  sets agent_id
+ *   - Assigned → Completed: sets completedAt
+ *   - Assigned → Cancelled:  clears agent_id (stale agent_id on non-Assigned = data bug)
+ *
+ * Returns null if the atomic filter didn't match (race → 409).
+ *
+ * @param {{ pickupId, fromStatus, nextStatus, ngoId }} opts
+ * @returns {Promise<object|null>}
+ */
+const transitionPickupStatus = async ({ pickupId, fromStatus, nextStatus, ngoId }) => {
+  // Verify transition is legal for the NGO role before touching the DB
+  if (!canTransition('ngo', fromStatus, nextStatus)) {
+    const err = new Error(`NGO cannot transition pickup from ${fromStatus} to ${nextStatus}`);
+    err.statusCode = 400;
+    throw err;
+  }
+
+  const filter = { _id: pickupId, status: fromStatus };
+  // When acting on an Assigned pickup, the filter also asserts agent ownership
   if (fromStatus === 'Assigned') {
     filter.agent_id = ngoId;
   }
 
-  const update = { status: nextStatus };
-  if (nextStatus === 'Assigned') update.agent_id = ngoId;
-  if (nextStatus === 'Completed') update.completedAt = new Date();
+  const $set = { status: nextStatus };
 
-  // Returns null if another request already changed the document's status
-  // (or agent_id) since it was read — i.e. someone else won the race.
-  return await Pickup.findOneAndUpdate(filter, update, { new: true });
+  if (nextStatus === 'Assigned')   $set.agent_id    = ngoId;
+  if (nextStatus === 'Completed')  $set.completedAt  = new Date();
+  // Cancelling an Assigned pickup — clear agent_id so it's not stale
+  if (nextStatus === 'Cancelled' && fromStatus === 'Assigned') $set.agent_id = null;
+
+  const updated = await Pickup.findOneAndUpdate(filter, { $set }, { new: true }).lean();
+  return formatPickupResponse(updated);
 };
 
+// ---------------------------------------------------------------------------
+// Admin writes
+// ---------------------------------------------------------------------------
 
-const cancelPendingPickup = async (pickupId, volunteerId) => {
-  return await Pickup.findOneAndUpdate(
-    { _id: pickupId, status: 'Pending', user_id: volunteerId },
-    { status: 'Cancelled' },
-    { new: true }
-  );
-};
-
-
-const updatePickupInstance = async (pickupInstance, updateData) => {
-  // Flat (top-level) fields are safe to overwrite wholesale — the client is
-  // always sending the field's full intended value.
-  const flatFieldsToUpdate = ['scheduledDate', 'wasteTypes', 'notes'];
-
-  flatFieldsToUpdate.forEach((field) => {
-    if (updateData[field] !== undefined) {
-      pickupInstance[field] = updateData[field];
-    }
+/**
+ * Admin: edit a pickup's detail fields (address, date, slot, types, notes).
+ * Admin can do this on ANY pickup, ANY status — no status restriction.
+ * Also recomputes missedCutoffAt if scheduling fields change.
+ *
+ * ATOMIC: uses $set with dot-notation paths via findByIdAndUpdate rather
+ * than fetch-then-.save(), so a concurrent edit to a sibling field (e.g.
+ * another admin editing notes while this call edits address) can't be lost
+ * by one write clobbering the other's in-memory copy of the document.
+ *
+ * @param {string} pickupId
+ * @param {object} updateData
+ * @returns {Promise<object|null>}  null if pickup not found
+ */
+const adminEditPickupFields = async (pickupId, updateData) => {
+  const $set = {};
+  const flatFields = ['scheduledDate', 'wasteTypes', 'notes'];
+  flatFields.forEach((field) => {
+    if (updateData[field] !== undefined) $set[field] = updateData[field];
   });
 
-  
   if (updateData.address !== undefined) {
-    if (updateData.address.city !== undefined) {
-      pickupInstance.address.city = updateData.address.city;
-    }
-    if (updateData.address.area !== undefined) {
-      pickupInstance.address.area = updateData.address.area;
-    }
+    if (updateData.address.city !== undefined) $set['address.city'] = updateData.address.city;
+    if (updateData.address.area !== undefined) $set['address.area'] = updateData.address.area;
   }
 
- 
   if (updateData.preferredTimeSlot !== undefined) {
     if (updateData.preferredTimeSlot.start !== undefined) {
-      pickupInstance.preferredTimeSlot.start = updateData.preferredTimeSlot.start;
+      $set['preferredTimeSlot.start'] = updateData.preferredTimeSlot.start;
     }
     if (updateData.preferredTimeSlot.end !== undefined) {
-      pickupInstance.preferredTimeSlot.end = updateData.preferredTimeSlot.end;
+      $set['preferredTimeSlot.end'] = updateData.preferredTimeSlot.end;
     }
   }
 
-  return await pickupInstance.save();
+  if (updateData.scheduledDate !== undefined || updateData.preferredTimeSlot !== undefined) {
+    // Need the current values to merge against for whichever half of
+    // date/slot wasn't included in this partial update.
+    const current = await Pickup.findById(pickupId)
+      .select('scheduledDate preferredTimeSlot')
+      .lean();
+    if (!current) return null;
+
+    const mergedDate = updateData.scheduledDate !== undefined
+      ? updateData.scheduledDate
+      : current.scheduledDate;
+    const mergedSlot = {
+      start: updateData.preferredTimeSlot?.start !== undefined
+        ? updateData.preferredTimeSlot.start
+        : current.preferredTimeSlot?.start,
+      end: updateData.preferredTimeSlot?.end !== undefined
+        ? updateData.preferredTimeSlot.end
+        : current.preferredTimeSlot?.end,
+    };
+    $set.missedCutoffAt = computeMissedCutoff(mergedDate, mergedSlot);
+  }
+
+  const updated = await Pickup.findByIdAndUpdate(
+    pickupId,
+    { $set },
+    { new: true, runValidators: true }
+  ).lean();
+
+  return formatPickupResponse(updated);
 };
 
+/**
+ * Admin: force-close a pickup to Completed or Cancelled.
+ *
+ * TWO independent enforcement layers (per spec §6):
+ *   Layer 1 — input validation (validation middleware): ensures `status` ∈ {Completed, Cancelled}
+ *   Layer 2 — service guard (HERE): ensures current status ∈ {Pending, Assigned}
+ *
+ * Both layers must pass. Relying on only one means a direct service-layer
+ * call (from another internal module, a script, a future endpoint) bypasses
+ * input validation.
+ *
+ * Returns null if the pickup doesn't exist or is not in an open state.
+ * Throws a typed error (statusCode: 409) if the pickup exists but is in a
+ * non-open state, so the controller can distinguish "not found" from
+ * "wrong state".
+ *
+ * @param {string} pickupId
+ * @param {'Completed'|'Cancelled'} nextStatus
+ * @returns {Promise<object|null>}
+ */
+const adminForceStatus = async (pickupId, nextStatus) => {
+  // Layer 2: transition table guard
+  // We check against the admin role in canTransition, which only allows
+  // open states → {Completed, Cancelled}.
+  // If the pickup is already Completed, Cancelled, or Missed this will return
+  // null from findOneAndUpdate because $in won't match the current status.
 
-const deletePickupById = async (id, volunteerId) => {
-  return await Pickup.findOneAndDelete({
-    _id: id,
-    status: 'Pending',
+  const $set = { status: nextStatus };
+  if (nextStatus === 'Completed') $set.completedAt = new Date();
+  // If forcing Cancelled on an Assigned pickup, clear agent_id
+  if (nextStatus === 'Cancelled') $set.agent_id = null;
+
+  const updated = await Pickup.findOneAndUpdate(
+    {
+      _id:    pickupId,
+      status: { $in: ADMIN_OPEN_STATUSES }, // ['Pending', 'Assigned']
+    },
+    { $set },
+    { new: true }
+  ).lean();
+
+  return formatPickupResponse(updated);
+};
+
+/**
+ * Admin: hard-delete a pickup regardless of status or owner.
+ * Returns the deleted document or null if not found.
+ *
+ * @param {string} pickupId
+ * @returns {Promise<object|null>}
+ */
+const adminDeletePickup = async (pickupId) => {
+  const deleted = await Pickup.findByIdAndDelete(pickupId).lean();
+  return formatPickupResponse(deleted);
+};
+
+// ---------------------------------------------------------------------------
+// Delete (volunteer)
+// ---------------------------------------------------------------------------
+
+/**
+ * Volunteer: delete their own Pending pickup.
+ * Atomic: filter re-asserts status + ownership.
+ * Returns null if the pickup was already moved out of Pending (race → 409).
+ *
+ * @param {string} pickupId
+ * @param {string} volunteerId
+ * @returns {Promise<object|null>}
+ */
+const deletePickupById = async (pickupId, volunteerId) => {
+  const deleted = await Pickup.findOneAndDelete({
+    _id:     pickupId,
+    status:  'Pending',
     user_id: volunteerId,
-  });
+  }).lean();
+  return formatPickupResponse(deleted);
 };
 
+// ---------------------------------------------------------------------------
+// Exports
+// ---------------------------------------------------------------------------
 module.exports = {
-  createPickup,
+  // helpers (used by matching.service.js)
+  isNgoEligibleForPickup,
+  getUserCities,
+  formatPickupResponse,
+
+  // read
   getPickupById,
   getPickupsByVolunteer,
   getPickupsForNgo,
   getPickupsAssignedToNgo,
   getAllPickups,
+
+  // volunteer writes
+  createPickup,
   updatePickupInstance,
-  transitionPickupStatus,
   cancelPendingPickup,
+  reschedulePickup,
   deletePickupById,
-  isNgoEligibleForPickup,
+
+  // ngo writes
+  transitionPickupStatus,
+
+  // admin writes
+  adminEditPickupFields,
+  adminForceStatus,
+  adminDeletePickup,
 };
