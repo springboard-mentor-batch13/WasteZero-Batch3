@@ -21,6 +21,10 @@ const { sendSuccess, sendError } = require('../utils/apiResponse');
 const { checkProfileCompleteness } = require('../utils/profileCompleteness');
 const { canTransition } = require('../utils/pickup.transitions');
 
+// ── M4 Developer B: Audit + WasteStats ──────────────────────────────────────
+const auditService   = require('../services/audit.service');
+const { recordWasteStatsForPickup } = require('../services/pickup.service');
+
 // ---------------------------------------------------------------------------
 // Volunteer — Create
 // ---------------------------------------------------------------------------
@@ -415,6 +419,14 @@ const updatePickupStatus = async (req, res) => {
       );
     }
 
+    // ── M4: Record WasteStats when NGO marks pickup Completed ────────────
+    // Fire-and-forget — WasteStats recording must not block the response.
+    if (nextStatus === 'Completed') {
+      pickupService.recordWasteStatsForPickup(updated).catch((err) => {
+        console.error('[updatePickupStatus] WasteStats recording failed (non-fatal):', err.message);
+      });
+    }
+
     return sendSuccess(res, updated, `Pickup marked as ${nextStatus}`);
   } catch (error) {
     // transitionPickupStatus throws a typed error for invalid transitions
@@ -456,12 +468,18 @@ const adminUpdatePickup = async (req, res) => {
  *              (rejects any status outside {Completed, Cancelled})
  *   Layer 2 — adminForceStatus() in service
  *              (rejects if current status is not in {Pending, Assigned})
+ *
+ * M4 Developer B integration:
+ *   - Logs PICKUP_STATUS_OVERRIDE via Developer A's auditService
+ *   - Records WasteStats if admin force-completes a pickup
  */
 const adminForcePickupStatus = async (req, res) => {
   try {
-    const { status: nextStatus } = req.body;
+    const { status: nextStatus, agent_id } = req.body;
+    const previousStatus = req.pickup.status;
 
-    const updated = await pickupService.adminForceStatus(req.pickup._id, nextStatus);
+    // If agent_id provided, optionally assign before force-close
+    let updated = await pickupService.adminForceStatus(req.pickup._id, nextStatus);
 
     // null means the pickup exists but is not in an open state (already
     // Completed, Cancelled, or Missed) — the service's atomic filter didn't match
@@ -471,6 +489,29 @@ const adminForcePickupStatus = async (req, res) => {
         `Cannot force status to "${nextStatus}". Only Pending or Assigned pickups can be force-closed by an admin. Check the pickup's current status and try again.`,
         409
       );
+    }
+
+    // ── M4: Audit log (PICKUP_STATUS_OVERRIDE) ───────────────────────────
+    // Developer B calls Developer A's audit infrastructure — non-throwing.
+    auditService.logAction({
+      adminId:    req.user.id,
+      action:     'PICKUP_STATUS_OVERRIDE',
+      targetType: 'Pickup',
+      targetId:   String(req.pickup._id),
+      details:    `Admin forced pickup status from "${previousStatus}" to "${nextStatus}". Pickup ID: ${req.pickup._id}`.slice(0, 500),
+      before:     { status: previousStatus },
+      after:      { status: nextStatus },
+      req,
+    }).catch((err) => {
+      console.error('[adminForcePickupStatus] Audit log failed (non-fatal):', err.message);
+    });
+
+    // ── M4: Record WasteStats if force-completed ─────────────────────────
+    // Fire-and-forget — failure must never affect the pickup response.
+    if (nextStatus === 'Completed') {
+      pickupService.recordWasteStatsForPickup(updated).catch((err) => {
+        console.error('[adminForcePickupStatus] WasteStats recording failed (non-fatal):', err.message);
+      });
     }
 
     return sendSuccess(res, updated, `Pickup force-closed to ${nextStatus}`);

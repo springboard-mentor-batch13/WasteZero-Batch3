@@ -35,6 +35,8 @@ const notificationRoutes = require('./routes/notification.routes');
 
 // ===== Milestone 4 Routes =====
 const adminRoutes = require('./routes/admin.routes');
+const dashboardRoutes = require('./routes/dashboard.routes'); // Developer B — dashboard/analytics/stats
+const reportRoutes = require('./routes/report.routes');       // Developer B — report downloads
 
 // ===== Socket =====
 const { initSocket } = require('./sockets');
@@ -109,6 +111,12 @@ app.use('/api/notifications', notificationRoutes);
 // Developer A: Platform Governance & Admin Controls
 // All endpoints require Admin role (enforced inside the router via protect + requireAdmin)
 app.use('/api/v1/admin', adminRoutes);
+
+// Developer B: Analytics, Dashboard Aggregations & Report Downloads
+// dashboardRoutes internally resolves to /api/v1/admin/dashboard/stats,
+// /api/v1/dashboard/metrics, and /api/v1/stats/* (see routes/dashboard.routes.js header)
+app.use('/api/v1', dashboardRoutes);
+app.use('/api/v1/admin/reports', reportRoutes);
 
 // ======================================================
 // Health Check
