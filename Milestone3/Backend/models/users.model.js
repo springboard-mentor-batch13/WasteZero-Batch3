@@ -80,6 +80,34 @@ const UserSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+
+    // ── P0-01: Suspension Foundation ──────────────────────────────────────
+    // Required by M4 admin suspension feature, protect middleware, and login.
+    // All M4 suspension-gate checks depend on this field existing in the DB.
+
+    isSuspended: {
+      type: Boolean,
+      default: false,
+      index: true,            // Fast lookup in protect middleware on every request
+    },
+
+    suspensionReason: {
+      type: String,
+      default: null,
+      maxlength: [255, 'Suspension reason cannot exceed 255 characters'],
+      trim: true,
+    },
+
+    suspendedAt: {
+      type: Date,
+      default: null,
+    },
+
+    suspendedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: null,
+    },
   },
 
   {
@@ -107,9 +135,17 @@ UserSchema.methods.matchPassword = async function (enteredPassword) {
 };
 
 
+// ── MongoDB Indexes ────────────────────────────────────────────────────────
+
+// Enforce single-admin constraint at the database layer.
+// partialFilterExpression scopes uniqueness only to admin documents.
 UserSchema.index(
   { role: 1 },
   { unique: true, partialFilterExpression: { role: 'admin' } }
 );
+
+// P0-01 Compound index: supports admin dashboard queries that filter by role + suspension status.
+// e.g. User.find({ role: 'volunteer', isSuspended: false }) — used in M4 analytics $facet.
+UserSchema.index({ role: 1, isSuspended: 1 });
 
 module.exports = mongoose.model('User', UserSchema);

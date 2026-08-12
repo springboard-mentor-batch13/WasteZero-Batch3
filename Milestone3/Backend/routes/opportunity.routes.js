@@ -14,7 +14,6 @@ const {
     filterOpportunities
 } = require('../controllers/opportunity.controllers');
 
-// Destructured existing authentication and role middleware from auth.middleware.js
 const { protect, authorize } = require('../middlewares/auth.middleware');
 
 // Feature specific ownership layer logic
@@ -24,13 +23,17 @@ const { opportunityValidationRules, validate } = require('../validations/opportu
 // NEWLY ADDED IMAGE UPLOAD MIDDLEWARES
 const { upload, uploadToCloudinary } = require('../middlewares/upload.middleware');
 
+// P1-04: generalLimiter applied to search and filter — these are the two most
+// expensive read endpoints (regex scans + text index) and have no prior rate limit.
+const { generalLimiter } = require('../middlewares/rateLimiter.middleware');
+
 // Guard all sub-routes with the primary authentication shield
 router.use(protect);
 
 // Specialized Query/Listing Endpoints
 router.get('/my-opportunities', authorize('ngo', 'admin'), getMyOpportunities);
-router.get('/search', searchOpportunities);
-router.get('/filter', filterOpportunities);
+router.get('/search', generalLimiter, searchOpportunities);   // P1-04: rate limited
+router.get('/filter', generalLimiter, filterOpportunities);   // P1-04: rate limited
 
 // Core Base CRUD Endpoint Maps
 router.route('/')

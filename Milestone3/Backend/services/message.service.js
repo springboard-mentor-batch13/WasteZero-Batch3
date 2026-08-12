@@ -109,6 +109,10 @@ const listConversationsForUser = async (userId) => {
     { $sort: { createdAt: -1 } },
     { $group: { _id: '$conversation_id', lastMessage: { $first: '$$ROOT' } } },
     { $sort: { 'lastMessage.createdAt': -1 } },
+    // P1-02: Limit to 50 most recent conversations.
+    // Prevents unbounded aggregation memory usage for high-volume users.
+    // The sort above ensures we keep the 50 LATEST, not arbitrary 50.
+    { $limit: 50 },
   ]);
 
   return conversations.map((item) => {

@@ -1,6 +1,7 @@
 // Backend/models/pickup.model.js
 
 const mongoose = require('mongoose');
+const { ALLOWED_WASTE_TYPES } = require('../constants/wasteTypes');
 
 
 const PICKUP_STATUSES = ['Pending', 'Assigned', 'Completed', 'Cancelled'];
@@ -51,10 +52,16 @@ const pickupSchema = new mongoose.Schema(
       },
     },
 
+    // P1-06: Enum-constrained to ALLOWED_WASTE_TYPES — prevents arbitrary strings
+    // from polluting the M4 analytics recycling breakdown aggregations.
     wasteTypes: [
       {
         type: String,
         trim: true,
+        enum: {
+          values: ALLOWED_WASTE_TYPES,
+          message: '{VALUE} is not a valid waste type. Allowed: ' + ALLOWED_WASTE_TYPES.join(', '),
+        },
       },
     ],
 

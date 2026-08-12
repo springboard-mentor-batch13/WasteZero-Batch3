@@ -14,6 +14,12 @@ cloudinary.config({
 
 const escapeRegex = (str) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
+// ── Soft-delete filter ──────────────────────────────────────────────────────
+// All PUBLIC read queries must include this filter so that admin-removed
+// opportunities are never visible to normal users.
+// Admin paths (e.g. future GET /api/v1/admin/opportunities) MUST NOT use this.
+const ACTIVE_FILTER = { isRemovedByAdmin: { $ne: true } };
+
 
 const deleteCloudinaryAsset = async (publicId) => {
   if (!publicId) return;
@@ -49,22 +55,24 @@ const createOpportunity = async (ngoId, opportunityData) => {
     imagePublicId,
     ngo_id: ngoId,
     status: 'open',
+    // soft-delete fields default to false/null in schema — no need to set them here
   });
   return await newOpportunity.save();
 };
 
 
+// P0-05: getAllOpportunities now excludes admin-removed opportunities via ACTIVE_FILTER.
 const getAllOpportunities = async (page = 1, limit = 10) => {
   const skip = (page - 1) * limit;
 
   const [opportunities, total] = await Promise.all([
-    Opportunity.find()
+    Opportunity.find(ACTIVE_FILTER)
       .populate('ngo_id', 'name username role')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
       .lean(),
-    Opportunity.countDocuments(),
+    Opportunity.countDocuments(ACTIVE_FILTER),
   ]);
 
   return {
@@ -79,8 +87,11 @@ const getAllOpportunities = async (page = 1, limit = 10) => {
 };
 
 
+// P0-05: getOpportunityById now returns null for admin-removed opportunities
+// when accessed via normal/public paths. Admin paths can bypass by querying directly.
 const getOpportunityById = async (id) => {
-  return await Opportunity.findById(id).populate('ngo_id', 'name username role');
+  return await Opportunity.findOne({ _id: id, ...ACTIVE_FILTER })
+    .populate('ngo_id', 'name username role');
 };
 
 
@@ -129,31 +140,50 @@ const updateOpportunityInstance = async (opportunityInstance, updateData) => {
 };
 
 
-const deleteOpportunityById = async (id) => {
+// P0-05 / P1-07: softDeleteOpportunityById replaces the former deleteOpportunityById.
+//
+// What changed:
+//   BEFORE: Application.deleteMany(cascade) + cloudinary.uploader.destroy + opportunity.deleteOne()
+//   AFTER:  Sets isRemovedByAdmin=true + stores reason, timestamp, admin reference.
+//           Applications are PRESERVED — they remain for history.
+//           Cloudinary image is NOT deleted — opportunity may be restored in future.
+//
+// Called by: opportunity.controllers.js deleteOpportunity (admin path)
+// AdminLog entry is written by the controller AFTER this service call succeeds.
+const softDeleteOpportunityById = async (id, adminId, reason) => {
   const opportunity = await Opportunity.findById(id);
 
   if (!opportunity) return null;
 
-  // Cascade delete: remove all applications tied to this opportunity first
-  await Application.deleteMany({ opportunity_id: id });
+  // If already removed, return it as-is (idempotent)
+  if (opportunity.isRemovedByAdmin) {
+    return opportunity;
+  }
 
-  // Clean up Cloudinary asset
-  await deleteCloudinaryAsset(opportunity.imagePublicId);
+  opportunity.isRemovedByAdmin = true;
+  opportunity.removalReason = reason || null;
+  opportunity.removedAt = new Date();
+  opportunity.removedBy = adminId;   // set server-side — NEVER from req.body
 
-  return await opportunity.deleteOne();
+  return await opportunity.save();
 };
 
+
+// P0-05: getOpportunitiesByNgo (NGO's own opportunities) excludes removed ones.
+// An NGO should not be able to see their own removed opportunities in their feed.
 const getOpportunitiesByNgo = async (ngoId) => {
-  return await Opportunity.find({ ngo_id: ngoId })
+  return await Opportunity.find({ ngo_id: ngoId, ...ACTIVE_FILTER })
     .populate('ngo_id', 'name username role')
     .sort({ createdAt: -1 })
     .lean();
 };
 
+// P0-05 + P1-01: searchOpportunities excludes removed opportunities AND limits to 50.
 const searchOpportunities = async (searchQuery) => {
   const regex = new RegExp(escapeRegex(searchQuery.trim()), 'i');
 
   return await Opportunity.find({
+    ...ACTIVE_FILTER,
     $or: [
       { title:           regex },
       { description:     regex },
@@ -164,12 +194,14 @@ const searchOpportunities = async (searchQuery) => {
     ],
   })
     .sort({ createdAt: -1 })
+    .limit(50)          // P1-01: hard cap — prevents unbounded memory load
     .lean();
 };
 
 
+// P0-05 + P1-01: filterOpportunities excludes removed opportunities AND limits to 100.
 const filterOpportunities = async ({ status, skill, location, sort }) => {
-  const queryFilter = {};
+  const queryFilter = { ...ACTIVE_FILTER };
 
   if (status   && typeof status   === 'string') queryFilter.status = status;
   if (location && typeof location === 'string') queryFilter.location = new RegExp(escapeRegex(location.trim()), 'i');
@@ -180,7 +212,10 @@ const filterOpportunities = async ({ status, skill, location, sort }) => {
   if (sort === 'oldest')   sortObj = { createdAt: 1 };
   if (sort === 'upcoming') sortObj = { date: 1, createdAt: -1 };
 
-  return await Opportunity.find(queryFilter).sort(sortObj).lean();
+  return await Opportunity.find(queryFilter)
+    .sort(sortObj)
+    .limit(100)         // P1-01: hard cap — prevents unbounded memory load
+    .lean();
 };
 
 module.exports = {
@@ -188,9 +223,9 @@ module.exports = {
   getAllOpportunities,
   getOpportunityById,
   updateOpportunityInstance,
-  deleteOpportunityById,
+  softDeleteOpportunityById,    // P0-05: new soft-delete (replaces deleteOpportunityById)
   getOpportunitiesByNgo,
   searchOpportunities,
   filterOpportunities,
-  deleteCloudinaryAsset,      // exported so controllers can call it on DB-write failures
+  deleteCloudinaryAsset,        // exported so controllers can call it on DB-write failures
 };

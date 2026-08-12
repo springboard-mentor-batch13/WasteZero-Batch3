@@ -74,13 +74,45 @@ const opportunitySchema = new mongoose.Schema(
       },
       default: 'open',
     },
+
+    // ── P0-05: Admin Soft-Delete Foundation ───────────────────────────
+    // Replaces the former hard-delete. Admin moderation sets isRemovedByAdmin=true
+    // rather than calling deleteOne(). Applications are preserved for history.
+    //
+    // All public read queries MUST filter { isRemovedByAdmin: { $ne: true } }.
+    // Admin inspection paths may omit this filter to see removed opportunities.
+
+    isRemovedByAdmin: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
+
+    removalReason: {
+      type: String,
+      default: null,
+      maxlength: [255, 'Removal reason cannot exceed 255 characters'],
+      trim: true,
+    },
+
+    removedAt: {
+      type: Date,
+      default: null,
+    },
+
+    // Admin who performed the removal — set server-side, NEVER from req.body
+    removedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: null,
+    },
   },
   {
     timestamps: true,
   }
 );
 
-// ── MongoDB Indexes ────────────────────────────────────────────────────
+// ── MongoDB Indexes ────────────────────────────────────────────────────────
 
 // Text index for full-text search across title and description
 opportunitySchema.index({ title: 'text', description: 'text' });
@@ -91,6 +123,10 @@ opportunitySchema.index({ status: 1, createdAt: -1 });
 
 // Compound index for upcoming sort: date ascending (nulls sort last by default)
 opportunitySchema.index({ date: 1, createdAt: -1 });
+
+// P0-05 Compound index: supports admin moderation view and filtered public feed.
+// e.g. Opportunity.find({ status: 'open', isRemovedByAdmin: false })
+opportunitySchema.index({ status: 1, isRemovedByAdmin: 1 });
 
 const Opportunity = mongoose.model('Opportunity', opportunitySchema);
 

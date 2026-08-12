@@ -70,25 +70,42 @@ const opportunityValidationRules = () => {
  * Middleware to halt the request and return structured validation errors.
  * Errors are formatted as an array of { field: message } objects,
  * matching the apiResponse.sendError convention used throughout the app.
+ *
+ * IMPORTANT: req.body may be undefined on requests that carry no body
+ * (e.g. DELETE without Content-Type, or any request where the body-parser
+ * did not run).  Always guard before accessing nested properties so a
+ * malformed client request can never throw a TypeError inside this
+ * middleware and produce an unhandled-rejection 500.
  */
 const validate = async (req, res, next) => {
-  const errors = validationResult(req);
-  if (errors.isEmpty()) {
-    return next();
-  }
+  try {
+    const errors = validationResult(req);
+    if (errors.isEmpty()) {
+      return next();
+    }
 
-  // If a file was uploaded to Cloudinary earlier in this request's middleware
-  // chain (upload.single -> uploadToCloudinary) but body validation now fails,
-  // the request will never reach the controller's catch block, so the
-  // just-created asset would otherwise be orphaned in Cloudinary forever.
-  // Clean it up here, since this is the last point that still has access to
-  // req.body.imagePublicId before the request is rejected.
-  if (req.body.imagePublicId) {
-    await opportunityService.deleteCloudinaryAsset(req.body.imagePublicId);
-  }
+    // If a file was uploaded to Cloudinary earlier in this request's
+    // middleware chain (upload.single -> uploadToCloudinary) but body
+    // validation now fails, the request will never reach the controller's
+    // catch block, so the just-created asset would otherwise be orphaned
+    // in Cloudinary forever.  Clean it up here before rejecting.
+    //
+    // Guard: req.body may be undefined on bodyless requests (DELETE, etc.)
+    // — accessing req.body.imagePublicId without a guard would throw a
+    // TypeError and expose an internal stack trace as a 500 to the client.
+    if (req.body && req.body.imagePublicId) {
+      await opportunityService.deleteCloudinaryAsset(req.body.imagePublicId);
+    }
 
-  const extractedErrors = errors.array().map((err) => ({ [err.path]: err.msg }));
-  return sendError(res, 'Validation failed', 400, extractedErrors);
+    const extractedErrors = errors.array().map((err) => ({ [err.path]: err.msg }));
+    return sendError(res, 'Validation failed', 400, extractedErrors);
+  } catch (err) {
+    // Safety net: if something unexpected throws inside the validation
+    // middleware itself, return a clean 500 rather than an unhandled
+    // rejection.  Never expose internal details to the client.
+    console.error('[validate middleware] Unexpected error:', err.message);
+    return sendError(res, 'An unexpected validation error occurred.', 500);
+  }
 };
 
 module.exports = {

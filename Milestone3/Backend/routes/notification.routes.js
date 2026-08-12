@@ -10,8 +10,12 @@ const {
   validate,
 } = require('../validations/notification.validation');
 
+// P1-04: generalLimiter applied to notification feed endpoint.
+// Notification listing is a read-heavy endpoint with decryption and had no rate limit.
+const { generalLimiter } = require('../middlewares/rateLimiter.middleware');
+
 // Any logged-in user — their own notification feed.
-router.get('/', protect, authorize('volunteer', 'ngo', 'admin'), getNotifications);
+router.get('/', protect, authorize('volunteer', 'ngo', 'admin'), generalLimiter, getNotifications);
 
 // Unread count — must be declared BEFORE /:id/read to avoid Express
 // treating the literal string "unread-count" as a notification ObjectId.

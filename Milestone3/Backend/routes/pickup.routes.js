@@ -5,6 +5,10 @@ const router = express.Router();
 
 const { protect, authorize } = require('../middlewares/auth.middleware');
 
+// P1-04: generalLimiter for the NGO available-pickups discovery feed.
+// This endpoint triggers regex matching against city/wasteTypes and had no rate limit.
+const { generalLimiter } = require('../middlewares/rateLimiter.middleware');
+
 const {
   checkPickupOwnershipByVolunteer,
   checkPickupDeleteAccess,
@@ -40,7 +44,7 @@ router.use(protect);
 router.get('/my-pickups', authorize('volunteer'), getMyPickups);
 
 
-router.get('/available', authorize('ngo'), getAvailablePickups);
+router.get('/available', authorize('ngo'), generalLimiter, getAvailablePickups); // P1-04: rate limited
 
 // NGO — pickups they are currently/previously assigned to. NGO-only for the
 // same reason as above — an admin can never hold an agent_id.

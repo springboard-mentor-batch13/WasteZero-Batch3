@@ -11,19 +11,23 @@ const OtpModel = require('../models/otp.model');
 /* ============================================
    Register User (Atomic Flow)
    POST /api/auth/register
-  
+
+   P0-04: 'admin' is intentionally REMOVED from allowedRoles.
+   Admin accounts can only be created via POST /api/auth/admin/setup
+   using ADMIN_INIT_SECRET from the environment.
 ============================================ */
 
 const registerUser = async (req, res) => {
   try {
     const { name, username, email, password, role } = req.body;
 
-    // Allow only valid roles
-    const allowedRoles = ['volunteer', 'ngo', 'admin'];
+    // P0-04: 'admin' removed from public registration.
+    // Any attempt to register with role=admin via this endpoint is rejected.
+    const allowedRoles = ['volunteer', 'ngo'];
     if (!allowedRoles.includes(role)) {
       return res.status(400).json({
         success: false,
-        message: 'Invalid role. Allowed roles are volunteer, ngo and admin.',
+        message: 'Invalid role. Allowed roles are volunteer and ngo.',
       });
     }
 
@@ -34,17 +38,6 @@ const registerUser = async (req, res) => {
         message:
           'Password must contain uppercase, lowercase, number, special character and be at least 8 characters long.',
       });
-    }
-
-
-    if (role === 'admin') {
-      const adminExists = await User.exists({ role: 'admin' });
-      if (adminExists) {
-        return res.status(403).json({
-          success: false,
-          message: 'An admin account already exists. Only one admin is allowed.',
-        });
-      }
     }
 
     // Check for existing verified users only
@@ -98,6 +91,123 @@ const registerUser = async (req, res) => {
 };
 
 /* ============================================
+   Admin Setup (First-Admin Initialization)
+   POST /api/auth/admin/setup
+
+   P0-04: Replaces the former public admin registration path.
+
+   Security requirements:
+   - Requires ADMIN_INIT_SECRET from the request body.
+   - Validates against process.env.ADMIN_INIT_SECRET.
+   - Refuses if any admin already exists.
+   - Never logs or returns the secret value.
+   - Uses existing password hashing + OTP email-verification flow.
+   - Rate limited by otpLimiter in auth.routes.js.
+============================================ */
+
+const setupAdmin = async (req, res) => {
+  try {
+    const { name, username, email, password, adminInitSecret } = req.body;
+
+    // 1. Validate the initialization secret
+    const envSecret = process.env.ADMIN_INIT_SECRET;
+
+    if (!envSecret) {
+      return res.status(503).json({
+        success: false,
+        message: 'Admin initialization is not configured on this server.',
+      });
+    }
+
+    if (!adminInitSecret || adminInitSecret !== envSecret) {
+      // Use a generic message — do not hint that the secret exists or its length
+      return res.status(403).json({
+        success: false,
+        message: 'Admin initialization failed. Invalid secret.',
+      });
+    }
+
+    // 2. Ensure no admin already exists — prevent re-initialization
+    const adminExists = await User.exists({ role: 'admin' });
+    if (adminExists) {
+      return res.status(409).json({
+        success: false,
+        message: 'An admin account already exists. Setup cannot be repeated.',
+      });
+    }
+
+    // 3. Validate required fields
+    if (!name || !username || !email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: 'name, username, email, and password are required.',
+      });
+    }
+
+    // 4. Validate password strength (same rules as normal registration)
+    if (!passwordValidator(password)) {
+      return res.status(400).json({
+        success: false,
+        message:
+          'Password must contain uppercase, lowercase, number, special character and be at least 8 characters long.',
+      });
+    }
+
+    // 5. Check for duplicate email/username
+    const existingUser = await User.findOne({
+      $or: [
+        { email: email.trim().toLowerCase() },
+        { username: username.trim().toLowerCase() },
+      ],
+    }).lean();
+
+    if (existingUser) {
+      return res.status(409).json({
+        success: false,
+        message: 'Email or username already exists.',
+      });
+    }
+
+    // 6. Hash password using existing mechanism (bcrypt, same as registerUser)
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const pendingPayload = {
+      name: name.trim(),
+      username: username.trim().toLowerCase(),
+      email: email.trim().toLowerCase(),
+      password: hashedPassword,
+      role: 'admin',
+    };
+
+    // 7. Issue OTP for email verification — admin must verify email before
+    //    their account is created, same as any other user.
+    try {
+      await issueOtp(email.trim().toLowerCase(), 'verify', pendingPayload);
+    } catch (otpError) {
+      console.error('OTP Send Error during admin setup:', otpError);
+      return res.status(500).json({
+        success: false,
+        message:
+          'Admin setup failed while sending the verification email. Please try again.',
+      });
+    }
+
+    return res.status(201).json({
+      success: true,
+      message:
+        'Admin setup initiated. Please verify the email address using the OTP sent to it.',
+    });
+  } catch (error) {
+    // Never expose error.message — it could reference internal state
+    console.error('Admin Setup Error:', error.message);
+    return res.status(500).json({
+      success: false,
+      message: 'Admin setup failed.',
+    });
+  }
+};
+
+/* ============================================
    Login User
    POST /api/auth/login
 ============================================ */
@@ -144,6 +254,21 @@ const loginUser = async (req, res) => {
         success: false,
         message:
           'Your email is not verified. Please verify your account before logging in.',
+      });
+    }
+
+    // P0-03: Suspension check BEFORE token generation.
+    // A suspended user must not receive a new JWT — even if they have valid credentials.
+    // This works in conjunction with the protect middleware (P0-02) which blocks
+    // re-use of any previously issued tokens.
+    if (user.isSuspended) {
+      const reason = user.suspensionReason
+        ? `Account suspended: ${user.suspensionReason}`
+        : 'Account suspended. Please contact support.';
+
+      return res.status(403).json({
+        success: false,
+        message: reason,
       });
     }
 
@@ -438,6 +563,7 @@ const resetPassword = async (req, res) => {
 
 module.exports = {
   registerUser,
+  setupAdmin,
   loginUser,
   verifyUserOtp,
   resendOtp,

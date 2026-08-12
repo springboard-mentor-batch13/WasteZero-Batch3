@@ -98,9 +98,15 @@ const updateOpportunity = async (req, res) => {
 };
 
 /**
- * Delete an opportunity
+ * Delete (soft) an opportunity
  * DELETE /api/opportunities/:id
  * Private (NGO/Admin — Owner Only)
+ *
+ * P0-05 / P1-07: This is now a SOFT DELETE.
+ * The Opportunity document is NOT physically removed.
+ * Applications are NOT cascade-deleted.
+ * The Cloudinary image is NOT removed (opportunity could be restored).
+ * Admin will receive an AdminLog entry in M4 — prepared here as a comment.
  */
 const deleteOpportunity = async (req, res) => {
   try {
@@ -108,11 +114,37 @@ const deleteOpportunity = async (req, res) => {
       return sendError(res, 'Invalid opportunity ID', 400);
     }
 
-    // deleteOpportunityById handles Cloudinary asset cleanup internally
-    await opportunityService.deleteOpportunityById(req.params.id);
-    return sendSuccess(res, null, 'Opportunity deleted successfully');
+    const reason = req.body.reason && typeof req.body.reason === 'string'
+      ? req.body.reason.trim().slice(0, 255)
+      : null;
+
+    // softDeleteOpportunityById sets isRemovedByAdmin=true + meta fields.
+    // admin_id is always taken from req.user.id (server-side) — never from req.body.
+    const result = await opportunityService.softDeleteOpportunityById(
+      req.params.id,
+      req.user.id,
+      reason
+    );
+
+    if (!result) {
+      return sendError(res, 'Opportunity not found', 404);
+    }
+
+    // TODO (M4): Write AdminLog entry here once audit.service.js is implemented.
+    // Example:
+    // await auditService.logAction({
+    //   adminId: req.user.id,
+    //   action: 'OPPORTUNITY_REMOVED',
+    //   targetType: 'Opportunity',
+    //   targetId: req.params.id,
+    //   details: `Opportunity removed. Reason: ${reason || 'none'}`,
+    //   ip: req.ip,
+    //   userAgent: req.headers['user-agent'],
+    // });
+
+    return sendSuccess(res, null, 'Opportunity removed successfully');
   } catch (error) {
-    return sendError(res, 'Failed to delete opportunity', 500, error.message);
+    return sendError(res, 'Failed to remove opportunity', 500, error.message);
   }
 };
 

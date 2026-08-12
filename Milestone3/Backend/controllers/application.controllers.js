@@ -28,6 +28,13 @@ const applyForOpportunity = async (req, res) => {
             return sendError(res, "Opportunity not found", 404);
         }
 
+        // P0-05: Reject applications to admin-removed opportunities.
+        // isRemovedByAdmin=true means the opportunity is hidden from the public
+        // feed, so it can never be legitimately discovered by a volunteer.
+        if (opportunity.isRemovedByAdmin) {
+            return sendError(res, "Opportunity not found", 404);
+        }
+
         // Opportunity must be open
         if (opportunity.status !== "open") {
             return sendError(res, "This opportunity is closed", 400);
@@ -276,15 +283,32 @@ const getMyApplications = async (req, res) => {
 
     try {
 
-        const applications = await Application.find({
-            volunteer_id: req.user.id
-        })
-            .populate('opportunity_id')
-            .lean();  // Read-only list — no Mongoose document methods needed
+        // P1-03: Paginated using the project's existing buildQuery utility.
+        // Supports: ?page=1&limit=10&sort=createdAt&order=desc
+        // Max limit is capped at 100 by buildQuery — prevents unbounded loads.
+        const { page, limit, skip, sort } = buildQuery(req);
+
+        const filter = { volunteer_id: req.user.id };
+
+        const [applications, total] = await Promise.all([
+            Application.find(filter)
+                .populate('opportunity_id')
+                .sort(sort)
+                .skip(skip)
+                .limit(limit)
+                .lean(),
+            Application.countDocuments(filter),
+        ]);
 
         return sendSuccess(
             res,
-            applications,
+            {
+                page,
+                limit,
+                total,
+                totalPages: Math.ceil(total / limit),
+                applications,
+            },
             "My applications fetched successfully"
         );
 

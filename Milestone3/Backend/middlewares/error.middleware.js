@@ -49,7 +49,7 @@ const errorHandler = (err, req, res, next) => {
     message    = err.message || 'File upload error.';
   }
 
-  // ── Production shield ──────────────────────────────────────────────────
+  // ── Production shield ──────────────────────────────────────────────────────
   // In production, replace generic 500 messages with a safe fallback.
   // Do not expose stack traces or raw system error messages to clients.
   const isProduction = process.env.NODE_ENV === 'production';
@@ -63,12 +63,14 @@ const errorHandler = (err, req, res, next) => {
     message,
   };
 
-  // In development, include error details for easier debugging
+  // In development, include the error *name* (e.g. "TypeError", "CastError")
+  // to aid debugging without exposing filesystem paths or internal stack frames.
+  // Stack traces are NEVER sent to the client — they are printed server-side
+  // above via console.error() and are available in server logs.
   if (!isProduction) {
-    responseBody.error = err.name;
-    if (err.stack) {
-      responseBody.stack = err.stack.split('\n').slice(0, 6).join('\n');
-    }
+    responseBody.error = err.name || 'Error';
+    // NOTE: responseBody.stack is intentionally omitted.
+    // The full stack is always available via console.error (server-side only).
   }
 
   return res.status(statusCode).json(responseBody);

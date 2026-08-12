@@ -43,6 +43,20 @@ const protect = async (req, res, next) => {
       });
     }
 
+    // P0-02: Suspension check — enforced against CURRENT DB state, not JWT claims.
+    // A user may hold a previously issued valid JWT that pre-dates suspension.
+    // This check runs on every protected request to ensure immediate enforcement.
+    if (user.isSuspended) {
+      const reason = user.suspensionReason
+        ? `Account suspended: ${user.suspensionReason}`
+        : 'Account suspended. Please contact support.';
+
+      return res.status(403).json({
+        success: false,
+        message: reason,
+      });
+    }
+
     // Add `id` back for backward compatibility
     req.user = {
       ...user,

@@ -3,6 +3,17 @@
 const dotenv = require('dotenv');
 dotenv.config();
 
+// P1-05: Validate all required environment variables before anything else starts.
+// Fails fast with a descriptive error instead of silent undefined behaviour.
+// CHAT_ENCRYPTION_KEY is validated separately by utils/crypto.js on import.
+const { validateEnv } = require('./config/env');
+try {
+  validateEnv();
+} catch (err) {
+  console.error('[FATAL] Environment validation failed:', err.message);
+  process.exit(1);
+}
+
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
@@ -21,6 +32,9 @@ const pickupRoutes = require('./routes/pickup.routes');
 const matchRoutes = require('./routes/match.routes');
 const messageRoutes = require('./routes/message.routes');
 const notificationRoutes = require('./routes/notification.routes');
+
+// ===== Milestone 4 Routes =====
+const adminRoutes = require('./routes/admin.routes');
 
 // ===== Socket =====
 const { initSocket } = require('./sockets');
@@ -85,6 +99,12 @@ app.use('/api/matches', matchRoutes);
 app.use('/api/messages', messageRoutes);
 
 app.use('/api/notifications', notificationRoutes);
+
+// ================= Milestone 4 =================
+
+// Developer A: Platform Governance & Admin Controls
+// All endpoints require Admin role (enforced inside the router via protect + requireAdmin)
+app.use('/api/v1/admin', adminRoutes);
 
 // ======================================================
 // Health Check

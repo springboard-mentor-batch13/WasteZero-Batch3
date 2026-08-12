@@ -2,6 +2,7 @@
 
 const { body, validationResult } = require('express-validator');
 const { sendError } = require('../utils/apiResponse');
+const { ALLOWED_WASTE_TYPES } = require('../constants/wasteTypes');
 
 const TIME_REGEX = /^([01]\d|2[0-3]):([0-5]\d)$/; // HH:mm, 24-hour
 
@@ -89,8 +90,12 @@ const pickupValidationRules = () => {
       .isArray({ min: 1 }).withMessage('Waste types must be an array with at least one entry'),
 
     body('wasteTypes.*')
+      // P1-06: Enforce canonical waste type values.
+      // Prevents arbitrary strings from reaching the DB and corrupting analytics.
       .isString().withMessage('Each waste type must be a string')
-      .trim(),
+      .trim()
+      .isIn(ALLOWED_WASTE_TYPES)
+      .withMessage(`Each waste type must be one of: ${ALLOWED_WASTE_TYPES.join(', ')}`),
 
     body('notes')
       .optional({ nullable: true })
