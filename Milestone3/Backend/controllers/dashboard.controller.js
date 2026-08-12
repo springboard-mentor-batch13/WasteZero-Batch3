@@ -57,7 +57,7 @@ const getAdminDashboardStats = async (req, res) => {
  */
 const getUserDashboardMetrics = async (req, res) => {
   try {
-    const metrics = await analyticsService.getUserDashboardMetrics(req.user.id);
+    const metrics = await analyticsService.getUserDashboardMetrics(req.user.id, req.user.role);
     return res.status(200).json({
       success: true,
       status:  'success',

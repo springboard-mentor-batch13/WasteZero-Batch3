@@ -14,11 +14,58 @@
 const User        = require('../models/users.model');
 const Pickup      = require('../models/pickup.model');
 const Opportunity = require('../models/opportunity.model');
+const Application = require('../models/application.model');
 const AdminLog    = require('../models/admin-log.model');
 
 const { streamCSV  } = require('../utils/csvExporter');
 const { streamXLSX } = require('../utils/excelExporter');
 const { streamPDF  } = require('../utils/pdfExporter');
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ReportError — lets the controller return an accurate status code
+// (400/404) instead of always falling back to 500 for user-caused errors
+// like "no NGO with that username" or "unknown report type".
+// ─────────────────────────────────────────────────────────────────────────────
+
+class ReportError extends Error {
+  constructor(message, statusCode = 400) {
+    super(message);
+    this.name = 'ReportError';
+    this.statusCode = statusCode;
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Username → ID resolution
+//
+// Admins identify NGOs and volunteers by USERNAME everywhere in the report/
+// browse endpoints — never by raw Mongo ObjectId. This is the single place
+// that resolves a username to the ID actually used in queries.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Resolve a username to that user's ObjectId, optionally enforcing role.
+ *
+ * @param {string} username
+ * @param {string} [expectedRole]  'ngo' | 'volunteer' — throws if the found
+ *                                 user doesn't match (e.g. a volunteer's
+ *                                 username used where an NGO is expected)
+ * @returns {Promise<import('mongoose').Types.ObjectId>}
+ * @throws {ReportError} 404 if no user has that username, 400 on role mismatch
+ */
+const resolveUserIdByUsername = async (username, expectedRole) => {
+  const user = await User.findOne({ username: username.trim().toLowerCase() })
+    .select('_id role')
+    .lean();
+
+  if (!user) {
+    throw new ReportError(`No ${expectedRole || 'user'} found with username "${username}".`, 404);
+  }
+  if (expectedRole && user.role !== expectedRole) {
+    throw new ReportError(`"${username}" is a ${user.role}, not a ${expectedRole}.`, 400);
+  }
+  return user._id;
+};
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Report column definitions (shared across CSV / XLSX / PDF)
@@ -64,6 +111,15 @@ const REPORT_COLUMNS = {
     { header: 'Removal Reason', key: 'removalReason',  width: 25, pdfWidth: 120 },
     { header: 'Event Date',   key: 'date',             width: 18, pdfWidth: 85, format: 'date' },
     { header: 'Created',      key: 'createdAt',        width: 18, pdfWidth: 85, format: 'date' },
+  ],
+
+  applications: [
+    { header: 'ID',              key: '_id',              width: 28, pdfWidth: 130 },
+    { header: 'Opportunity ID',  key: 'opportunity_id',   width: 28, pdfWidth: 130 },
+    { header: 'Volunteer ID',    key: 'volunteer_id',     width: 28, pdfWidth: 130 },
+    { header: 'Status',          key: 'status',           width: 14, pdfWidth: 70  },
+    { header: 'Applied On',      key: 'createdAt',        width: 20, pdfWidth: 95, format: 'date' },
+    { header: 'Last Updated',    key: 'updatedAt',        width: 20, pdfWidth: 95, format: 'date' },
   ],
 
   'full-activity': [
@@ -116,7 +172,7 @@ const buildDateFilter = (startDate, endDate, dateField = 'createdAt') => {
 const transformDoc = (doc) => {
   const clone = { ...doc };
   // Stringify ObjectId fields
-  ['_id', 'user_id', 'agent_id', 'ngo_id', 'admin_id', 'target_id', 'removedBy'].forEach((f) => {
+  ['_id', 'user_id', 'agent_id', 'ngo_id', 'admin_id', 'target_id', 'removedBy', 'opportunity_id', 'volunteer_id'].forEach((f) => {
     if (clone[f]) clone[f] = clone[f].toString();
   });
   return clone;
@@ -129,7 +185,21 @@ const transformDoc = (doc) => {
  * @param {{ startDate, endDate }} opts
  * @returns {import('mongoose').QueryCursor}
  */
-const getCursorForReport = (reportType, { startDate, endDate }) => {
+/**
+ * Get a typed MongoDB cursor for the given report type, date range, and
+ * optional scoping filters.
+ *
+ * Scoping filters (all optional, only relevant to certain types):
+ *   - ngoId          — 'opportunities': only that NGO's opportunities
+ *                       'applications': all applications across that NGO's opportunities
+ *   - opportunityId  — 'applications': only applications for that one opportunity
+ *   - volunteerId    — 'pickups': only that volunteer's pickup requests
+ *
+ * @param {string} reportType
+ * @param {{ startDate, endDate, ngoId, opportunityId, volunteerId }} opts
+ * @returns {Promise<import('mongoose').QueryCursor>}
+ */
+const getCursorForReport = async (reportType, { startDate, endDate, ngoId, opportunityId, volunteerId }) => {
   switch (reportType) {
     case 'users': {
       const filter = buildDateFilter(startDate, endDate, 'createdAt');
@@ -141,6 +211,9 @@ const getCursorForReport = (reportType, { startDate, endDate }) => {
     }
     case 'pickups': {
       const filter = buildDateFilter(startDate, endDate, 'scheduledDate');
+      // Scope to a single volunteer's pickup requests, if given. Pickup.user_id
+      // is always the volunteer who created the request (never the NGO agent).
+      if (volunteerId) filter.user_id = volunteerId;
       return Pickup.find(filter)
         .sort({ scheduledDate: -1 })
         .lean()
@@ -148,7 +221,28 @@ const getCursorForReport = (reportType, { startDate, endDate }) => {
     }
     case 'opportunities': {
       const filter = buildDateFilter(startDate, endDate, 'createdAt');
+      // Scope to a single NGO's own opportunities, if given.
+      if (ngoId) filter.ngo_id = ngoId;
       return Opportunity.find(filter)
+        .sort({ createdAt: -1 })
+        .lean()
+        .cursor();
+    }
+    case 'applications': {
+      const filter = buildDateFilter(startDate, endDate, 'createdAt');
+      if (opportunityId) {
+        // All applications for one specific opportunity.
+        filter.opportunity_id = opportunityId;
+      } else if (ngoId) {
+        // All applications across every opportunity that NGO has created.
+        const opportunityIds = await Opportunity.find({ ngo_id: ngoId }).distinct('_id');
+        filter.opportunity_id = { $in: opportunityIds };
+      } else {
+        // Guarded in validations/report.validation.js, but double-check here
+        // too — an unscoped applications dump is never the intended report.
+        throw new ReportError('applications report requires opportunityId or ngoUsername.', 400);
+      }
+      return Application.find(filter)
         .sort({ createdAt: -1 })
         .lean()
         .cursor();
@@ -161,7 +255,7 @@ const getCursorForReport = (reportType, { startDate, endDate }) => {
         .cursor();
     }
     default:
-      throw new Error(`Unknown report type: ${reportType}`);
+      throw new ReportError(`Unknown report type: ${reportType}`, 400);
   }
 };
 
@@ -183,19 +277,31 @@ const generateFilename = (reportType, format) => {
  * Generate and stream a report to the HTTP response.
  *
  * @param {object} opts
- * @param {string}                         opts.reportType  - 'users' | 'pickups' | 'opportunities' | 'full-activity'
+ * @param {string}                         opts.reportType  - 'users' | 'pickups' | 'opportunities' | 'applications' | 'full-activity'
  * @param {string}                         opts.format      - 'csv' | 'xlsx' | 'pdf'
  * @param {string}                         [opts.startDate]
  * @param {string}                         [opts.endDate]
+ * @param {string}                         [opts.ngoUsername]       - scope 'opportunities' or 'applications' to one NGO
+ * @param {string}                         [opts.opportunityId]     - scope 'applications' to one opportunity
+ * @param {string}                         [opts.volunteerUsername] - scope 'pickups' to one volunteer
  * @param {import('express').Response}     opts.res
  * @param {string}                         [opts.generatedBy]  - Admin name/email for PDF header
  * @returns {Promise<void>}
  */
-const generateReport = async ({ reportType, format, startDate, endDate, res, generatedBy }) => {
+const generateReport = async ({
+  reportType, format, startDate, endDate,
+  ngoUsername, opportunityId, volunteerUsername,
+  res, generatedBy,
+}) => {
   const columns    = REPORT_COLUMNS[reportType];
-  if (!columns) throw new Error(`No column definition for report type: ${reportType}`);
+  if (!columns) throw new ReportError(`No column definition for report type: ${reportType}`, 400);
 
-  const cursor   = getCursorForReport(reportType, { startDate, endDate });
+  // Resolve usernames → IDs once, up front. Everything downstream (the
+  // cursor builder) works with real IDs same as before.
+  const ngoId       = ngoUsername       ? await resolveUserIdByUsername(ngoUsername, 'ngo')             : null;
+  const volunteerId = volunteerUsername ? await resolveUserIdByUsername(volunteerUsername, 'volunteer')  : null;
+
+  const cursor   = await getCursorForReport(reportType, { startDate, endDate, ngoId, opportunityId, volunteerId });
   const filename = generateFilename(reportType, format);
 
   const dateRange = startDate || endDate
@@ -206,6 +312,7 @@ const generateReport = async ({ reportType, format, startDate, endDate, res, gen
     users:            'Users Report',
     pickups:          'Pickups Report',
     opportunities:    'Opportunities Report',
+    applications:     'Applications Report',
     'full-activity':  'Full Platform Activity Report',
   }[reportType];
 
@@ -248,7 +355,256 @@ const generateReport = async ({ reportType, format, startDate, endDate, res, gen
       });
 
     default:
-      throw new Error(`Unsupported format: ${format}`);
+      throw new ReportError(`Unsupported format: ${format}`, 400);
+  }
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// "Browse before download" — powers the admin UI flow:
+//   type NGO username → dropdown of their opportunities → click one →
+//   paginated applications preview → download
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * List every opportunity created by one NGO (identified by username), for
+ * the admin's opportunity-picker dropdown. Lightweight — not the full
+ * report shape, just enough to populate a dropdown and show context.
+ *
+ * @param {string} ngoUsername
+ * @returns {Promise<{ ngo: object, opportunities: object[] }>}
+ * @throws {ReportError} 404 if no NGO has that username
+ */
+const getOpportunitiesByNgoUsername = async (ngoUsername) => {
+  const ngo = await User.findOne({ username: ngoUsername.trim().toLowerCase(), role: 'ngo' })
+    .select('_id name username')
+    .lean();
+
+  if (!ngo) {
+    throw new ReportError(`No NGO found with username "${ngoUsername}".`, 404);
+  }
+
+  const opportunities = await Opportunity.aggregate([
+    { $match: { ngo_id: ngo._id } },
+    {
+      $lookup: {
+        from: 'applications',
+        localField: '_id',
+        foreignField: 'opportunity_id',
+        as: 'applications',
+      },
+    },
+    {
+      $project: {
+        title: 1,
+        status: 1,
+        location: 1,
+        date: 1,
+        isRemovedByAdmin: 1,
+        createdAt: 1,
+        applicationsCount: { $size: '$applications' },
+      },
+    },
+    { $sort: { createdAt: -1 } },
+  ]);
+
+  return { ngo, opportunities };
+};
+
+/**
+ * Paginated applications for one specific opportunity, with basic volunteer
+ * info populated — for the admin's on-screen preview before downloading.
+ *
+ * @param {string} opportunityId
+ * @param {{ page?: number, limit?: number }} opts
+ * @returns {Promise<{ opportunity: object, applications: object[], total: number, page: number, limit: number, totalPages: number }>}
+ * @throws {ReportError} 404 if the opportunity doesn't exist
+ */
+const getApplicationsForOpportunity = async (opportunityId, { page = 1, limit = 20 } = {}) => {
+  const opportunity = await Opportunity.findById(opportunityId)
+    .select('title ngo_id status location date')
+    .populate('ngo_id', 'name username')
+    .lean();
+
+  if (!opportunity) {
+    throw new ReportError('Opportunity not found.', 404);
+  }
+
+  const skip = (page - 1) * limit;
+
+  const [applications, total] = await Promise.all([
+    Application.find({ opportunity_id: opportunityId })
+      .populate('volunteer_id', 'name username email')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean(),
+    Application.countDocuments({ opportunity_id: opportunityId }),
+  ]);
+
+  return {
+    opportunity,
+    applications,
+    total,
+    page,
+    limit,
+    totalPages: Math.ceil(total / limit) || 1,
+  };
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Browse preview helpers — one per report type
+// Powers the "preview before download" flow for all report types.
+// Each returns a page of records + pagination metadata so the frontend
+// can show a live table before the admin commits to a download.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Paginated preview of users (all roles, or filtered by role).
+ *
+ * @param {{ page?, limit?, startDate?, endDate?, role? }} opts
+ * @returns {Promise<{ records: object[], total: number, page: number, limit: number, totalPages: number }>}
+ */
+const browseUsers = async ({ page = 1, limit = 20, startDate, endDate, role } = {}) => {
+  const filter = buildDateFilter(startDate, endDate, 'createdAt');
+  if (role) filter.role = role;
+
+  const skip = (Number(page) - 1) * Number(limit);
+  const [records, total] = await Promise.all([
+    User.find(filter)
+      .select('-password -__v')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(Number(limit))
+      .lean(),
+    User.countDocuments(filter),
+  ]);
+
+  return { records, total, page: Number(page), limit: Number(limit), totalPages: Math.ceil(total / limit) || 1 };
+};
+
+/**
+ * Paginated preview of pickups, optionally scoped to one volunteer.
+ *
+ * @param {{ page?, limit?, startDate?, endDate?, volunteerUsername? }} opts
+ */
+const browsePickups = async ({ page = 1, limit = 20, startDate, endDate, volunteerUsername } = {}) => {
+  const filter = buildDateFilter(startDate, endDate, 'scheduledDate');
+
+  if (volunteerUsername) {
+    const volunteerId = await resolveUserIdByUsername(volunteerUsername, 'volunteer');
+    filter.user_id = volunteerId;
+  }
+
+  const skip = (Number(page) - 1) * Number(limit);
+  const [records, total] = await Promise.all([
+    Pickup.find(filter)
+      .sort({ scheduledDate: -1 })
+      .skip(skip)
+      .limit(Number(limit))
+      .lean(),
+    Pickup.countDocuments(filter),
+  ]);
+
+  return { records, total, page: Number(page), limit: Number(limit), totalPages: Math.ceil(total / limit) || 1 };
+};
+
+/**
+ * Paginated preview of opportunities, optionally scoped to one NGO.
+ *
+ * @param {{ page?, limit?, startDate?, endDate?, ngoUsername? }} opts
+ */
+const browseOpportunities = async ({ page = 1, limit = 20, startDate, endDate, ngoUsername } = {}) => {
+  const filter = buildDateFilter(startDate, endDate, 'createdAt');
+
+  if (ngoUsername) {
+    const ngoId = await resolveUserIdByUsername(ngoUsername, 'ngo');
+    filter.ngo_id = ngoId;
+  }
+
+  const skip = (Number(page) - 1) * Number(limit);
+  const [records, total] = await Promise.all([
+    Opportunity.find(filter)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(Number(limit))
+      .lean(),
+    Opportunity.countDocuments(filter),
+  ]);
+
+  return { records, total, page: Number(page), limit: Number(limit), totalPages: Math.ceil(total / limit) || 1 };
+};
+
+/**
+ * Paginated preview of applications, scoped to one opportunity or all of an NGO's opportunities.
+ * Requires either opportunityId or ngoUsername (same rule as the download endpoint).
+ *
+ * @param {{ page?, limit?, startDate?, endDate?, opportunityId?, ngoUsername? }} opts
+ */
+const browseApplications = async ({ page = 1, limit = 20, startDate, endDate, opportunityId, ngoUsername } = {}) => {
+  const filter = buildDateFilter(startDate, endDate, 'createdAt');
+
+  if (opportunityId) {
+    filter.opportunity_id = opportunityId;
+  } else if (ngoUsername) {
+    const ngoId = await resolveUserIdByUsername(ngoUsername, 'ngo');
+    const opportunityIds = await Opportunity.find({ ngo_id: ngoId }).distinct('_id');
+    filter.opportunity_id = { $in: opportunityIds };
+  } else {
+    throw new ReportError('applications preview requires opportunityId or ngoUsername.', 400);
+  }
+
+  const skip = (Number(page) - 1) * Number(limit);
+  const [records, total] = await Promise.all([
+    Application.find(filter)
+      .populate('volunteer_id', 'name username email')
+      .populate('opportunity_id', 'title')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(Number(limit))
+      .lean(),
+    Application.countDocuments(filter),
+  ]);
+
+  return { records, total, page: Number(page), limit: Number(limit), totalPages: Math.ceil(total / limit) || 1 };
+};
+
+/**
+ * Paginated preview of the full admin activity log.
+ *
+ * @param {{ page?, limit?, startDate?, endDate? }} opts
+ */
+const browseFullActivity = async ({ page = 1, limit = 20, startDate, endDate } = {}) => {
+  const filter = buildDateFilter(startDate, endDate, 'timestamp');
+
+  const skip = (Number(page) - 1) * Number(limit);
+  const [records, total] = await Promise.all([
+    AdminLog.find(filter)
+      .sort({ timestamp: -1 })
+      .skip(skip)
+      .limit(Number(limit))
+      .lean(),
+    AdminLog.countDocuments(filter),
+  ]);
+
+  return { records, total, page: Number(page), limit: Number(limit), totalPages: Math.ceil(total / limit) || 1 };
+};
+
+/**
+ * Unified browse dispatcher — used by the generic browse controller.
+ * Maps report type → preview function.
+ *
+ * @param {string} reportType
+ * @param {object} opts
+ */
+const browseReport = async (reportType, opts = {}) => {
+  switch (reportType) {
+    case 'users':          return browseUsers(opts);
+    case 'pickups':        return browsePickups(opts);
+    case 'opportunities':  return browseOpportunities(opts);
+    case 'applications':   return browseApplications(opts);
+    case 'full-activity':  return browseFullActivity(opts);
+    default:
+      throw new ReportError(`Unknown report type: ${reportType}`, 400);
   }
 };
 
@@ -257,4 +613,14 @@ module.exports = {
   REPORT_COLUMNS,
   getCursorForReport,
   buildDateFilter,
+  resolveUserIdByUsername,
+  getOpportunitiesByNgoUsername,
+  getApplicationsForOpportunity,
+  browseReport,
+  browseUsers,
+  browsePickups,
+  browseOpportunities,
+  browseApplications,
+  browseFullActivity,
+  ReportError,
 };

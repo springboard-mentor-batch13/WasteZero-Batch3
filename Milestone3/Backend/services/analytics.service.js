@@ -21,6 +21,8 @@ const User        = require('../models/users.model');
 const Pickup      = require('../models/pickup.model');
 const WasteStats  = require('../models/wasteStats.model');
 const Opportunity = require('../models/opportunity.model');
+const Application = require('../models/application.model');
+const { parseDurationToHours } = require('../utils/durationParser');
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Helpers
@@ -185,6 +187,7 @@ const getAdminDashboardStats = async () => {
   const [oppStats] = await Opportunity.aggregate([
     {
       $facet: {
+        totalOpportunities: [{ $count: 'count' }],
         activeOpportunities: [
           { $match: { status: 'open', isRemovedByAdmin: { $ne: true } } },
           { $count: 'count' },
@@ -238,6 +241,16 @@ const getAdminDashboardStats = async () => {
   const prevOpps     = extract(oppStats.activeLastMonth);
 
   return {
+    // ── Headline cards (Admin Dashboard top row) ──────────────────────────
+    // Exactly the four KPIs shown as headline cards on the admin dashboard.
+    headline: {
+      totalUsers:         extract(userStats.totalUsers),
+      totalNGOs:          extract(userStats.ngoCount),
+      totalOpportunities: extract(oppStats.totalOpportunities),
+      totalPickups:       extract(pickupStats.totalPickups),
+    },
+
+    // ── Detailed breakdowns (secondary dashboard sections, not headline) ──
     users: {
       total:          extract(userStats.totalUsers),
       active:         extract(userStats.activeUsers),
@@ -257,6 +270,7 @@ const getAdminDashboardStats = async () => {
       pendingGrowth:   growthPercent(curPending, prevPending),
     },
     opportunities: {
+      total:           extract(oppStats.totalOpportunities),
       active:          extract(oppStats.activeOpportunities),
       activeGrowth:    growthPercent(curOpps, prevOpps),
     },
@@ -273,121 +287,214 @@ const getAdminDashboardStats = async () => {
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * User personal dashboard: aggregated metrics scoped to one user.
- * Returns total pickups, CO₂ saved, recycled weight, and growth percentages.
+ * User personal dashboard: aggregated metrics scoped to one user, branched
+ * by role since Volunteers and NGOs care about different headline numbers.
+ *
+ * Volunteer headline cards:
+ *   - pickupsCreated     — pickups THEY requested (Pickup.user_id = them)
+ *   - applicationsCount  — opportunities they applied to
+ *   - volunteerHours     — sum of Opportunity.duration for their ACCEPTED
+ *                           applications (parsed via durationParser.js,
+ *                           since duration is free text like "4 hours")
+ *   - co2SavedKg (+growth) — from WasteStats, scoped to them as requester
+ *
+ * NGO headline cards:
+ *   - opportunitiesCreated  — Opportunity.ngo_id = them
+ *   - applicationsReceived  — Applications against any of their opportunities
+ *   - pickupsCompleted      — pickups THEY completed as the assigned agent
+ *                             (Pickup.agent_id = them, status = 'Completed')
+ *   - recycledItemsCount/recycledWeightKg (+growth) — WasteStats joined
+ *     through Pickup.agent_id, since WasteStats.user_id is always the
+ *     volunteer requester, never the NGO agent.
+ *
+ * Any other role (e.g. admin viewing their own personal metrics) falls back
+ * to the original requester-scoped pickup/waste view.
  *
  * @param {string} userId
+ * @param {string} [role]  'volunteer' | 'ngo' | 'admin'
  * @returns {Promise<object>}
  */
-const getUserDashboardMetrics = async (userId) => {
+const getUserDashboardMetrics = async (userId, role) => {
   const uid = new mongoose.Types.ObjectId(userId);
   const { startOfCurrentMonth, startOfPrevMonth } = getMonthBoundaries();
+  const extract = (arr) => arr?.[0]?.count || 0;
 
-  // ── Pickup metrics ─────────────────────────────────────────────────────
+  if (role === 'ngo') {
+    return getNgoDashboardMetrics(uid, startOfCurrentMonth, startOfPrevMonth, extract);
+  }
+
+  if (role === 'volunteer') {
+    return getVolunteerDashboardMetrics(uid, startOfCurrentMonth, startOfPrevMonth, extract);
+  }
+
+  // ── Fallback (e.g. admin's own personal metrics) — original requester-
+  // scoped pickup/waste view, kept for backward compatibility. ───────────
   const [pickupMetrics] = await Pickup.aggregate([
     {
       $facet: {
-        totalPickups: [
-          { $match: { user_id: uid } },
-          { $count: 'count' },
-        ],
-        completedPickups: [
-          { $match: { user_id: uid, status: 'Completed' } },
-          { $count: 'count' },
-        ],
-        thisMonthPickups: [
-          { $match: { user_id: uid, createdAt: { $gte: startOfCurrentMonth } } },
-          { $count: 'count' },
-        ],
-        lastMonthPickups: [
+        totalPickups:     [{ $match: { user_id: uid } }, { $count: 'count' }],
+        completedPickups: [{ $match: { user_id: uid, status: 'Completed' } }, { $count: 'count' }],
+      },
+    },
+  ]);
+  const [wasteTotals] = await WasteStats.aggregate([
+    { $match: { user_id: uid } },
+    { $group: { _id: null, totalWeightKg: { $sum: '$weight' }, totalCO2Kg: { $sum: '$co2_saved_kg' }, itemCount: { $sum: 1 } } },
+  ]);
+
+  return {
+    totalPickups:       extract(pickupMetrics.totalPickups),
+    completedPickups:   extract(pickupMetrics.completedPickups),
+    recycledItemsCount: wasteTotals?.itemCount     || 0,
+    recycledWeightKg:   Math.round((wasteTotals?.totalWeightKg || 0) * 100) / 100,
+    co2SavedKg:         Math.round((wasteTotals?.totalCO2Kg    || 0) * 100) / 100,
+  };
+};
+
+/**
+ * Volunteer dashboard headline metrics.
+ * @private
+ */
+const getVolunteerDashboardMetrics = async (uid, startOfCurrentMonth, startOfPrevMonth, extract) => {
+  // ── Pickups they created ────────────────────────────────────────────────
+  const [pickupMetrics] = await Pickup.aggregate([
+    {
+      $facet: {
+        totalPickups:     [{ $match: { user_id: uid } }, { $count: 'count' }],
+        thisMonthPickups: [{ $match: { user_id: uid, createdAt: { $gte: startOfCurrentMonth } } }, { $count: 'count' }],
+        lastMonthPickups: [{ $match: { user_id: uid, createdAt: { $gte: startOfPrevMonth, $lt: startOfCurrentMonth } } }, { $count: 'count' }],
+      },
+    },
+  ]);
+
+  // ── Applications they submitted, + accepted ones (for volunteer hours) ──
+  const [applicationMetrics] = await Application.aggregate([
+    { $match: { volunteer_id: uid } },
+    {
+      $facet: {
+        totalApplications: [{ $count: 'count' }],
+        acceptedWithOpportunity: [
+          { $match: { status: 'accepted' } },
           {
-            $match: {
-              user_id: uid,
-              createdAt: { $gte: startOfPrevMonth, $lt: startOfCurrentMonth },
+            $lookup: {
+              from: 'opportunities',
+              localField: 'opportunity_id',
+              foreignField: '_id',
+              as: 'opportunity',
             },
           },
-          { $count: 'count' },
+          { $unwind: '$opportunity' },
+          { $project: { _id: 0, duration: '$opportunity.duration' } },
         ],
       },
     },
   ]);
 
-  // ── WasteStats metrics scoped to this user ────────────────────────────
+  const volunteerHours = (applicationMetrics?.acceptedWithOpportunity || [])
+    .reduce((sum, doc) => sum + parseDurationToHours(doc.duration), 0);
+
+  // ── CO₂ saved, scoped to them as the pickup requester ───────────────────
   const [wasteMetrics] = await WasteStats.aggregate([
     { $match: { user_id: uid } },
     {
       $facet: {
-        totals: [
-          {
-            $group: {
-              _id: null,
-              totalWeightKg: { $sum: '$weight' },
-              totalCO2Kg:    { $sum: '$co2_saved_kg' },
-              itemCount:     { $sum: 1 },
-            },
-          },
-        ],
-        thisMonth: [
-          { $match: { date: { $gte: startOfCurrentMonth } } },
-          {
-            $group: {
-              _id: null,
-              weightKg: { $sum: '$weight' },
-              co2Kg:    { $sum: '$co2_saved_kg' },
-            },
-          },
-        ],
-        lastMonth: [
-          { $match: { date: { $gte: startOfPrevMonth, $lt: startOfCurrentMonth } } },
-          {
-            $group: {
-              _id: null,
-              weightKg: { $sum: '$weight' },
-              co2Kg:    { $sum: '$co2_saved_kg' },
-            },
-          },
+        totals:    [{ $group: { _id: null, totalCO2Kg: { $sum: '$co2_saved_kg' } } }],
+        thisMonth: [{ $match: { date: { $gte: startOfCurrentMonth } } }, { $group: { _id: null, co2Kg: { $sum: '$co2_saved_kg' } } }],
+        lastMonth: [{ $match: { date: { $gte: startOfPrevMonth, $lt: startOfCurrentMonth } } }, { $group: { _id: null, co2Kg: { $sum: '$co2_saved_kg' } } }],
+      },
+    },
+  ]);
+
+  const totalCO2  = wasteMetrics?.totals?.[0]?.totalCO2Kg || 0;
+  const curCO2     = wasteMetrics?.thisMonth?.[0]?.co2Kg || 0;
+  const prevCO2    = wasteMetrics?.lastMonth?.[0]?.co2Kg || 0;
+
+  return {
+    headline: {
+      pickupsCreated:      extract(pickupMetrics.totalPickups),
+      applicationsCount:   extract(applicationMetrics.totalApplications),
+      volunteerHours:      Math.round(volunteerHours * 10) / 10,
+      co2SavedKg:          Math.round(totalCO2 * 100) / 100,
+      co2SavedGrowth:      growthPercent(curCO2, prevCO2),
+    },
+    pickupsCreatedGrowth: growthPercent(
+      extract(pickupMetrics.thisMonthPickups),
+      extract(pickupMetrics.lastMonthPickups)
+    ),
+  };
+};
+
+/**
+ * NGO dashboard headline metrics.
+ * @private
+ */
+const getNgoDashboardMetrics = async (uid, startOfCurrentMonth, startOfPrevMonth, extract) => {
+  // ── Opportunities they created ──────────────────────────────────────────
+  const opportunityIds = await Opportunity.find({ ngo_id: uid }).distinct('_id');
+  const totalOpportunities = opportunityIds.length;
+
+  // ── Applications received against those opportunities ──────────────────
+  const applicationsReceived = opportunityIds.length
+    ? await Application.countDocuments({ opportunity_id: { $in: opportunityIds } })
+    : 0;
+
+  // ── Pickups they completed as the assigned agent ────────────────────────
+  const [pickupMetrics] = await Pickup.aggregate([
+    {
+      $facet: {
+        completedPickups: [
+          { $match: { agent_id: uid, status: 'Completed' } },
+          { $count: 'count' },
         ],
       },
     },
   ]);
 
-  const extract = (arr) => arr?.[0]?.count || 0;
+  // ── Recycled items/weight for pickups they completed as agent ──────────
+  // WasteStats.user_id is always the volunteer requester, never the NGO
+  // agent, so we join through Pickup.agent_id to attribute impact to the NGO.
+  const [wasteMetrics] = await WasteStats.aggregate([
+    {
+      $lookup: {
+        from: 'pickups',
+        localField: 'pickup_id',
+        foreignField: '_id',
+        as: 'pickup',
+      },
+    },
+    { $unwind: '$pickup' },
+    { $match: { 'pickup.agent_id': uid } },
+    {
+      $facet: {
+        totals: [
+          { $group: { _id: null, totalWeightKg: { $sum: '$weight' }, itemCount: { $sum: 1 } } },
+        ],
+        thisMonth: [
+          { $match: { date: { $gte: startOfCurrentMonth } } },
+          { $group: { _id: null, weightKg: { $sum: '$weight' } } },
+        ],
+        lastMonth: [
+          { $match: { date: { $gte: startOfPrevMonth, $lt: startOfCurrentMonth } } },
+          { $group: { _id: null, weightKg: { $sum: '$weight' } } },
+        ],
+      },
+    },
+  ]);
 
-  const totalP       = extract(pickupMetrics.totalPickups);
-  const curMonthP    = extract(pickupMetrics.thisMonthPickups);
-  const prevMonthP   = extract(pickupMetrics.lastMonthPickups);
-
-  const totalW       = wasteMetrics?.totals?.[0]?.totalWeightKg || 0;
-  const totalCO2     = wasteMetrics?.totals?.[0]?.totalCO2Kg    || 0;
-  const totalItems   = wasteMetrics?.totals?.[0]?.itemCount      || 0;
-
-  const curWaste     = wasteMetrics?.thisMonth?.[0];
-  const prevWaste    = wasteMetrics?.lastMonth?.[0];
+  const totalWeight = wasteMetrics?.totals?.[0]?.totalWeightKg || 0;
+  const totalItems  = wasteMetrics?.totals?.[0]?.itemCount     || 0;
+  const curWeight    = wasteMetrics?.thisMonth?.[0]?.weightKg || 0;
+  const prevWeight   = wasteMetrics?.lastMonth?.[0]?.weightKg || 0;
 
   return {
-    totalPickups:          totalP,
-    completedPickups:      extract(pickupMetrics.completedPickups),
-    totalPickupsGrowth:    growthPercent(curMonthP, prevMonthP),
-
-    recycledItemsCount:    totalItems,
-    recycledWeightKg:      Math.round(totalW * 100) / 100,
-    recycledItemsGrowth:   growthPercent(
-      curWaste?.weightKg  || 0,
-      prevWaste?.weightKg || 0
-    ),
-
-    co2SavedKg:            Math.round(totalCO2 * 100) / 100,
-    co2SavedGrowth:        growthPercent(
-      curWaste?.co2Kg  || 0,
-      prevWaste?.co2Kg || 0
-    ),
-
-    // Volunteer hours: estimate 2 hours per completed pickup
-    volunteerHours:        extract(pickupMetrics.completedPickups) * 2,
-    volunteerHoursGrowth:  growthPercent(
-      curMonthP * 2,
-      prevMonthP * 2
-    ),
+    headline: {
+      opportunitiesCreated:   totalOpportunities,
+      applicationsReceived:   applicationsReceived,
+      pickupsCompleted:       extract(pickupMetrics.completedPickups),
+      recycledItemsCount:     totalItems,
+      recycledWeightKg:       Math.round(totalWeight * 100) / 100,
+      recycledWeightGrowth:   growthPercent(curWeight, prevWeight),
+    },
   };
 };
 
