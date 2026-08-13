@@ -66,10 +66,38 @@ const reportRateLimiter = rateLimit({
   },
 });
 
+// Volunteer report download limiter
+// Applied to: GET /api/v1/reports/download/:type
+// 10 downloads per hour per volunteer — slightly more generous than admin
+// since volunteer reports are scoped to their own data only (smaller datasets).
+const volunteerReportDlLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 10,
+  message: {
+    success: false,
+    message: 'Report download limit reached. You may download up to 10 reports per hour.',
+  },
+});
+
+// NGO report download limiter
+// Applied to: GET /api/v1/ngo/reports/download/:type
+// 10 downloads per hour per NGO — same generosity as the volunteer limiter,
+// since NGO reports are scoped to that NGO's own opportunities/applications/pickups.
+const ngoReportDlLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 10,
+  message: {
+    success: false,
+    message: 'Report download limit reached. You may download up to 10 reports per hour.',
+  },
+});
+
 module.exports = {
   loginLimiter,
   otpLimiter,
   generalLimiter,
   adminLimiter,
   reportRateLimiter,
+  volunteerReportDlLimiter,
+  ngoReportDlLimiter,
 };

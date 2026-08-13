@@ -22,8 +22,9 @@ const { checkProfileCompleteness } = require('../utils/profileCompleteness');
 const { canTransition } = require('../utils/pickup.transitions');
 
 // ── M4 Developer B: Audit + WasteStats ──────────────────────────────────────
-const auditService   = require('../services/audit.service');
-const { recordWasteStatsForPickup } = require('../services/pickup.service');
+// (recordWasteStatsForPickup is called as pickupService.recordWasteStatsForPickup
+// below — no separate destructured import needed.)
+const auditService = require('../services/audit.service');
 
 // ---------------------------------------------------------------------------
 // Volunteer — Create
@@ -420,9 +421,11 @@ const updatePickupStatus = async (req, res) => {
     }
 
     // ── M4: Record WasteStats when NGO marks pickup Completed ────────────
-    // Fire-and-forget — WasteStats recording must not block the response.
+    // `wasteCollected` is the NGO's on-site entry — the "button to enter waste
+    // details" — validated by pickupStatusValidationRules() to be required
+    // whenever status === 'Completed'. Fire-and-forget: must not block the response.
     if (nextStatus === 'Completed') {
-      pickupService.recordWasteStatsForPickup(updated).catch((err) => {
+      pickupService.recordWasteStatsForPickup(updated, req.body.wasteCollected).catch((err) => {
         console.error('[updatePickupStatus] WasteStats recording failed (non-fatal):', err.message);
       });
     }
@@ -446,11 +449,31 @@ const updatePickupStatus = async (req, res) => {
  */
 const adminUpdatePickup = async (req, res) => {
   try {
+    // req.pickup is pre-fetched by checkPickupAdminAccess — snapshot it as
+    // the "before" state for the audit log before it gets overwritten.
+    const before = req.pickup.toObject ? req.pickup.toObject() : req.pickup;
+
     const updated = await pickupService.adminEditPickupFields(req.pickup._id, req.body);
 
     if (!updated) {
       return sendError(res, 'Pickup not found', 404);
     }
+
+    // ── M4: Audit log (PICKUP_UPDATED) ────────────────────────────────────
+    // An admin editing pickup fields left no AdminLog entry before this fix —
+    // non-throwing per auditService contract, so it never blocks the response.
+    auditService.logAction({
+      adminId:    req.user.id,
+      action:     'PICKUP_UPDATED',
+      targetType: 'Pickup',
+      targetId:   String(req.pickup._id),
+      details:    `Admin edited pickup fields. Pickup ID: ${req.pickup._id}`.slice(0, 500),
+      before,
+      after:      updated,
+      req,
+    }).catch((err) => {
+      console.error('[adminUpdatePickup] Audit log failed (non-fatal):', err.message);
+    });
 
     return sendSuccess(res, updated, 'Pickup updated successfully');
   } catch (error) {
@@ -469,17 +492,26 @@ const adminUpdatePickup = async (req, res) => {
  *   Layer 2 — adminForceStatus() in service
  *              (rejects if current status is not in {Pending, Assigned})
  *
+ * Body may optionally include `agent_id` — attributes the pickup to that
+ * NGO when force-completing it (e.g. resolving a dispute where the NGO did
+ * the pickup but never formally claimed it). Only applied when
+ * status === 'Completed'; ignored/irrelevant for 'Cancelled'. Rejected with
+ * 400 if `agent_id` doesn't resolve to an existing NGO user.
+ *
  * M4 Developer B integration:
  *   - Logs PICKUP_STATUS_OVERRIDE via Developer A's auditService
  *   - Records WasteStats if admin force-completes a pickup
  */
 const adminForcePickupStatus = async (req, res) => {
   try {
-    const { status: nextStatus, agent_id } = req.body;
+    const { status: nextStatus, agent_id: agentId } = req.body;
     const previousStatus = req.pickup.status;
 
-    // If agent_id provided, optionally assign before force-close
-    let updated = await pickupService.adminForceStatus(req.pickup._id, nextStatus);
+    // If agent_id is provided, adminForceStatus() attributes the pickup to
+    // that NGO when force-completing it (only meaningful for 'Completed' —
+    // see the service docstring). Throws a typed 400 if agentId doesn't
+    // resolve to an existing NGO user.
+    let updated = await pickupService.adminForceStatus(req.pickup._id, nextStatus, agentId);
 
     // null means the pickup exists but is not in an open state (already
     // Completed, Cancelled, or Missed) — the service's atomic filter didn't match
@@ -493,30 +525,40 @@ const adminForcePickupStatus = async (req, res) => {
 
     // ── M4: Audit log (PICKUP_STATUS_OVERRIDE) ───────────────────────────
     // Developer B calls Developer A's audit infrastructure — non-throwing.
+    const agentNote = (nextStatus === 'Completed' && updated.agent_id)
+      ? ` Attributed to NGO ${updated.agent_id}.`
+      : '';
     auditService.logAction({
       adminId:    req.user.id,
       action:     'PICKUP_STATUS_OVERRIDE',
       targetType: 'Pickup',
       targetId:   String(req.pickup._id),
-      details:    `Admin forced pickup status from "${previousStatus}" to "${nextStatus}". Pickup ID: ${req.pickup._id}`.slice(0, 500),
+      details:    `Admin forced pickup status from "${previousStatus}" to "${nextStatus}".${agentNote} Pickup ID: ${req.pickup._id}`.slice(0, 500),
       before:     { status: previousStatus },
-      after:      { status: nextStatus },
+      after:      { status: nextStatus, agent_id: updated.agent_id ?? null },
       req,
     }).catch((err) => {
       console.error('[adminForcePickupStatus] Audit log failed (non-fatal):', err.message);
     });
 
     // ── M4: Record WasteStats if force-completed ─────────────────────────
+    // wasteCollected is optional for admin (adminPickupStatusValidationRules) —
+    // recordWasteStatsForPickup no-ops cleanly if it's absent.
     // Fire-and-forget — failure must never affect the pickup response.
     if (nextStatus === 'Completed') {
-      pickupService.recordWasteStatsForPickup(updated).catch((err) => {
+      pickupService.recordWasteStatsForPickup(updated, req.body.wasteCollected).catch((err) => {
         console.error('[adminForcePickupStatus] WasteStats recording failed (non-fatal):', err.message);
       });
     }
 
     return sendSuccess(res, updated, `Pickup force-closed to ${nextStatus}`);
   } catch (error) {
-    return sendError(res, 'Failed to update pickup status', 500, error.message);
+    // adminForceStatus throws a typed 400 when agent_id doesn't resolve to
+    // an existing NGO user — surface that as a 400, not a generic 500.
+    const statusCode = error.statusCode || 500;
+    const message = error.statusCode ? error.message : 'Failed to update pickup status';
+    if (!error.statusCode) console.error('[Pickup] adminForcePickupStatus error:', error.message);
+    return sendError(res, message, statusCode);
   }
 };
 
@@ -527,11 +569,28 @@ const adminForcePickupStatus = async (req, res) => {
  */
 const adminDeletePickup = async (req, res) => {
   try {
-    const deleted = await pickupService.adminDeletePickup(req.pickup._id);
+    const pickupId = req.pickup._id;
+    const deleted = await pickupService.adminDeletePickup(pickupId);
 
     if (!deleted) {
       return sendError(res, 'Pickup not found', 404);
     }
+
+    // ── M4: Audit log (PICKUP_DELETED) ────────────────────────────────────
+    // This is a hard delete — the most destructive pickup action in the
+    // system — so it must never go unlogged. Non-throwing per contract.
+    auditService.logAction({
+      adminId:    req.user.id,
+      action:     'PICKUP_DELETED',
+      targetType: 'Pickup',
+      targetId:   String(pickupId),
+      details:    `Admin hard-deleted pickup. Pickup ID: ${pickupId}`.slice(0, 500),
+      before:     deleted,
+      after:      null,
+      req,
+    }).catch((err) => {
+      console.error('[adminDeletePickup] Audit log failed (non-fatal):', err.message);
+    });
 
     return sendSuccess(res, null, 'Pickup deleted successfully');
   } catch (error) {

@@ -13,10 +13,13 @@
 //   requests cannot both "succeed" and leave the document contradictory.
 //   When findOneAndUpdate returns null, the caller emits HTTP 409 — not 500.
 
-const Pickup = require('../models/pickup.model');
-const User   = require('../models/users.model');
+const Pickup     = require('../models/pickup.model');
+const User       = require('../models/users.model');
+const WasteStats = require('../models/wasteStats.model');
 const { computeMissedCutoff, addTimeDisplayFields } = require('../utils/pickup.timeUtils');
 const { canTransition, ADMIN_OPEN_STATUSES }        = require('../utils/pickup.transitions');
+const { calculateCO2Saved }                         = require('../utils/co2Calculator');
+const { emitDashboardUpdate }                       = require('../sockets/events/dashboard.events');
 
 // ---------------------------------------------------------------------------
 // Internal helpers
@@ -125,6 +128,7 @@ const createPickup = async (volunteerId, pickupData) => {
   });
 
   const saved = await newPickup.save();
+  emitDashboardUpdate('pickup:created');
   return formatPickupResponse(saved.toObject());
 };
 
@@ -452,7 +456,93 @@ const transitionPickupStatus = async ({ pickupId, fromStatus, nextStatus, ngoId 
   if (nextStatus === 'Cancelled' && fromStatus === 'Assigned') $set.agent_id = null;
 
   const updated = await Pickup.findOneAndUpdate(filter, { $set }, { new: true }).lean();
+  emitDashboardUpdate(`pickup:${nextStatus.toLowerCase()}`);
   return formatPickupResponse(updated);
+};
+
+// ---------------------------------------------------------------------------
+// WasteStats recording (M4)
+// ---------------------------------------------------------------------------
+
+/**
+ * Record WasteStats entries for a pickup that has just been marked Completed.
+ *
+ * This is the "button to enter the details of waste collected" step: the NGO
+ * (or an admin force-closing a pickup) reports what was actually found on
+ * site — which may differ from the volunteer's original `wasteTypes` guess
+ * at request time (extra categories they didn't mention, or listed ones that
+ * didn't materialize). `wasteCollected` is that on-site report; this
+ * function converts it into per-category WasteStats rows with CO₂ pre-computed,
+ * which is what every analytics/dashboard pipeline in analytics.service.js reads.
+ *
+ * Called fire-and-forget from the controller — never let a WasteStats write
+ * fail the pickup-completion response, but do let the caller `.catch()` it
+ * for logging.
+ *
+ * IDEMPOTENT: a pickup can only reach Completed once (the transition table
+ * makes Completed terminal), so if stats already exist for this pickup_id —
+ * e.g. this got invoked twice due to a retried request — it's a no-op rather
+ * than double-counting.
+ *
+ * @param {object} pickup           - the just-completed pickup (needs _id, user_id, agent_id, completedAt)
+ * @param {Array<{category: string, weight: number}>} wasteCollected
+ *   category must be one of ALLOWED_WASTE_TYPES; weight is in kilograms.
+ * @returns {Promise<object[]>}  the inserted WasteStats docs (empty array if skipped)
+ */
+const recordWasteStatsForPickup = async (pickup, wasteCollected) => {
+  if (!pickup || !Array.isArray(wasteCollected) || wasteCollected.length === 0) {
+    return [];
+  }
+
+  const pickupId = pickup._id;
+
+  // Guard against double-recording (a retry of the fire-and-forget call).
+  const alreadyRecorded = await WasteStats.exists({ pickup_id: pickupId });
+  if (alreadyRecorded) return [];
+
+  // WasteStats.user_id is the volunteer whose pickup this was; ngo_id is the
+  // NGO who entered these details (Pickup.agent_id at completion time — may
+  // be null if an admin force-completed a pickup that was never claimed).
+  const volunteerId = pickup.user_id?._id || pickup.user_id;
+  const ngoId        = pickup.agent_id?._id || pickup.agent_id || null;
+  const recordedAt  = pickup.completedAt || new Date();
+
+  const docs = wasteCollected
+    .map((item) => {
+      if (!item || !item.category) return null;
+      const numWeight = Number(item.weight);
+      if (isNaN(numWeight) || numWeight <= 0) return null;
+      return {
+        user_id:      volunteerId,
+        ngo_id:       ngoId,
+        pickup_id:    pickupId,
+        category:     item.category,
+        weight:       numWeight,
+        co2_saved_kg: calculateCO2Saved(item.category, numWeight),
+        date:         recordedAt,
+      };
+    })
+    .filter(Boolean);
+
+  if (docs.length === 0) return [];
+
+  try {
+    const inserted = await WasteStats.insertMany(docs, { ordered: true });
+    emitDashboardUpdate('waste:recorded');
+    return inserted;
+  } catch (err) {
+    // E11000 = duplicate key on the {pickup_id, category} unique index —
+    // this means a concurrent/retried call already inserted these rows
+    // between our exists() check above and this insertMany (the check-then-
+    // act race the unique index exists to close). That's the idempotency
+    // guard doing its job, not a real failure, so swallow it here rather
+    // than letting it surface as an unhandled rejection from this
+    // fire-and-forget call. Any other error still propagates.
+    if (err && err.code === 11000) {
+      return [];
+    }
+    throw err;
+  }
 };
 
 // ---------------------------------------------------------------------------
@@ -536,16 +626,30 @@ const adminEditPickupFields = async (pickupId, updateData) => {
  * call (from another internal module, a script, a future endpoint) bypasses
  * input validation.
  *
+ * OPTIONAL AGENT ASSIGNMENT:
+ *   An admin force-completing a pickup may optionally pass `agentId` to
+ *   attribute the pickup to a specific NGO — e.g. resolving a dispute where
+ *   an NGO actually did the pickup but it was never formally claimed through
+ *   the normal Pending→Assigned flow. Only meaningful for `nextStatus ===
+ *   'Completed'`: a Cancelled pickup always has agent_id cleared (see below),
+ *   and Missed is never reachable from this path. `agentId` must reference
+ *   an existing user with role 'ngo' — throws a typed 400 error otherwise,
+ *   so a malformed or wrong-role ID can never silently attribute a pickup.
+ *   Downstream, `agent_id` is what recordWasteStatsForPickup() uses to set
+ *   WasteStats.ngo_id, so getting this right matters for analytics/reports.
+ *
  * Returns null if the pickup doesn't exist or is not in an open state.
- * Throws a typed error (statusCode: 409) if the pickup exists but is in a
+ * Throws a typed error (statusCode: 400) if `agentId` is provided but
+ * invalid/not an NGO, or (statusCode: 409) if the pickup exists but is in a
  * non-open state, so the controller can distinguish "not found" from
- * "wrong state".
+ * "wrong state" from "bad input".
  *
  * @param {string} pickupId
  * @param {'Completed'|'Cancelled'} nextStatus
+ * @param {string|null} [agentId] - optional NGO user ID to assign on force-complete
  * @returns {Promise<object|null>}
  */
-const adminForceStatus = async (pickupId, nextStatus) => {
+const adminForceStatus = async (pickupId, nextStatus, agentId = null) => {
   // Layer 2: transition table guard
   // We check against the admin role in canTransition, which only allows
   // open states → {Completed, Cancelled}.
@@ -557,6 +661,17 @@ const adminForceStatus = async (pickupId, nextStatus) => {
   // If forcing Cancelled on an Assigned pickup, clear agent_id
   if (nextStatus === 'Cancelled') $set.agent_id = null;
 
+  // Optional admin-supplied agent assignment — only applies on Completed.
+  if (nextStatus === 'Completed' && agentId) {
+    const ngo = await User.findById(agentId).select('role').lean();
+    if (!ngo || ngo.role !== 'ngo') {
+      const err = new Error('agent_id must reference an existing NGO user.');
+      err.statusCode = 400;
+      throw err;
+    }
+    $set.agent_id = agentId;
+  }
+
   const updated = await Pickup.findOneAndUpdate(
     {
       _id:    pickupId,
@@ -566,6 +681,7 @@ const adminForceStatus = async (pickupId, nextStatus) => {
     { new: true }
   ).lean();
 
+  if (updated) emitDashboardUpdate(`pickup:${nextStatus.toLowerCase()}`);
   return formatPickupResponse(updated);
 };
 
@@ -628,6 +744,7 @@ module.exports = {
 
   // ngo writes
   transitionPickupStatus,
+  recordWasteStatsForPickup,
 
   // admin writes
   adminEditPickupFields,

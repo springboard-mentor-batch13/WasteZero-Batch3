@@ -28,6 +28,7 @@ const CO2_FACTORS = {
   Glass:    0.31,  // Glass cullet reuse vs. raw material extraction
   'E-Waste': 4.50, // Circuit board metal recovery — highest CO₂ avoidance
   Organic:  0.85,  // Composting vs. landfill methane emissions avoided
+  Metal:    2.00,  // Mixed metals (steel/iron); conservative WRAP/EPA WARM baseline
 };
 
 // Sanity check: all allowed waste types must have a factor

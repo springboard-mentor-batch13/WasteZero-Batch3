@@ -29,6 +29,8 @@ const VALID_AUDIT_ACTIONS = [
   'OPPORTUNITY_REMOVED',
   'OPPORTUNITY_RESTORED',
   'PICKUP_STATUS_OVERRIDE',
+  'PICKUP_UPDATED',
+  'PICKUP_DELETED',
   'REPORT_DOWNLOADED',
 ];
 const VALID_TARGET_TYPES = ['User', 'Opportunity', 'Pickup', 'Report'];
@@ -84,6 +86,13 @@ const userListQueryRules = () => [
     .trim()
     .isLength({ max: 100 })
     .withMessage('search must be at most 100 characters.'),
+
+  query('city')
+    .optional()
+    .isString()
+    .trim()
+    .isLength({ max: 100 })
+    .withMessage('city must be at most 100 characters.'),
 
   query('sort')
     .optional()

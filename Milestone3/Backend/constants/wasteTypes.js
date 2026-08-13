@@ -8,6 +8,6 @@
 //
 // DO NOT add arbitrary values here — new categories require migration.
 
-const ALLOWED_WASTE_TYPES = ['Plastic', 'Paper', 'Glass', 'E-Waste', 'Organic'];
+const ALLOWED_WASTE_TYPES = ['Plastic', 'Paper', 'Glass', 'E-Waste', 'Organic', 'Metal'];
 
 module.exports = { ALLOWED_WASTE_TYPES };

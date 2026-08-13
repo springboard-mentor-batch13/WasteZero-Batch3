@@ -115,15 +115,16 @@ const startNotInPastCheck = (value, { req }) => {
  * @param {boolean} required
  */
 const wasteTypesRules = (required = true) => {
-  const arrayRule = required
-    ? body('wasteTypes')
-        .notEmpty().withMessage('At least one waste type is required')
-        .isArray({ min: 1 }).withMessage('Waste types must be an array with at least one entry')
-    : body('wasteTypes')
-        .optional()
-        .isArray({ min: 1 }).withMessage('If provided, waste types must be a non-empty array');
+  const isPost = (value, { req }) => req.method === 'POST';
+  const isPresent = (value, { req }) => req.body && req.body.wasteTypes !== undefined;
+
+  const arrayRule = body('wasteTypes')
+    .if((value, { req }) => (required ? isPost(value, { req }) || isPresent(value, { req }) : isPresent(value, { req })))
+    .notEmpty().withMessage('At least one waste type is required')
+    .isArray({ min: 1 }).withMessage('Waste types must be an array with at least one entry');
 
   const itemRule = body('wasteTypes.*')
+    .if((value, { req }) => isPresent(value, { req }))
     .isString().withMessage('Each waste type must be a string')
     .trim()
     .isIn(ALLOWED_WASTE_TYPES)
@@ -131,6 +132,49 @@ const wasteTypesRules = (required = true) => {
 
   return [arrayRule, itemRule];
 };
+
+/**
+ * Validate `wasteCollected` — the actor's on-site record of what was
+ * actually picked up (weights in kilograms), submitted alongside a
+ * status → 'Completed' transition. Feeds WasteStats via
+ * pickupService.recordWasteStatsForPickup().
+ *
+ * This is intentionally a SEPARATE list from Pickup.wasteTypes:
+ *   - wasteTypes       = the volunteer's pre-pickup estimate (request time)
+ *   - wasteCollected    = what was physically found/collected (completion time)
+ * so a category can appear here that was never in wasteTypes (e.g. wet waste
+ * present on-site that the volunteer didn't mention), and a listed wasteType
+ * can be absent here if none of it materialized.
+ *
+ * @param {(value, meta) => boolean} whenRequired
+ *   Predicate deciding whether the array is REQUIRED for this request.
+ *   When it returns false, the array is optional but still validated if present.
+ */
+const wasteCollectedRules = (whenRequired) => [
+  body('wasteCollected')
+    .if(whenRequired)
+    .notEmpty().withMessage('wasteCollected is required when marking a pickup Completed')
+    .isArray({ min: 1 })
+    .withMessage('wasteCollected must be a non-empty array of { category, weight }'),
+
+  body('wasteCollected')
+    .if((value, meta) => !whenRequired(value, meta))
+    .optional({ nullable: true })
+    .isArray({ min: 1 })
+    .withMessage('If provided, wasteCollected must be a non-empty array of { category, weight }'),
+
+  body('wasteCollected.*.category')
+    .isString().withMessage('Each wasteCollected category must be a string')
+    .trim()
+    .isIn(ALLOWED_WASTE_TYPES)
+    .withMessage(`Each wasteCollected category must be one of: ${ALLOWED_WASTE_TYPES.join(', ')}`),
+
+  body('wasteCollected.*.weight')
+    .notEmpty().withMessage('Each wasteCollected entry needs a weight')
+    .isFloat({ gt: 0 })
+    .withMessage('Each wasteCollected weight must be a positive number, in kilograms (e.g. 0.5 for 500g)')
+    .toFloat(),
+];
 
 // ---------------------------------------------------------------------------
 // Rule sets
@@ -253,6 +297,10 @@ const pickupStatusValidationRules = () => [
       `Status must be one of: ${NGO_STATUS_INPUT_ALLOWED.join(', ')}. ` +
       `Note: "Missed" is set automatically by the system and cannot be requested.`
     ),
+
+  // Required the moment the NGO is marking the pickup Completed — this is
+  // the "enter what you actually collected" step the button triggers.
+  ...wasteCollectedRules((value, { req }) => req.body.status === 'Completed'),
 ];
 
 /**
@@ -269,6 +317,20 @@ const adminPickupStatusValidationRules = () => [
     .withMessage(
       `Admin can only force status to: ${ADMIN_STATUS_INPUT_ALLOWED.join(', ')}.`
     ),
+
+  // Optional: attribute the pickup to a specific NGO when force-completing
+  // it (resolving a dispute, e.g. the NGO did the pickup but never formally
+  // claimed it). Format-checked here; existence + role('ngo') checked in
+  // the service layer (adminForceStatus), same defense-in-depth pattern as
+  // every other admin write in this file.
+  body('agent_id')
+    .optional({ nullable: true })
+    .isMongoId().withMessage('agent_id must be a valid user ID'),
+
+  // Never required for admin (they may be force-closing a pickup with no
+  // physical waste data on hand — e.g. resolving a dispute) — but validated
+  // if the admin does supply it.
+  ...wasteCollectedRules(() => false),
 ];
 
 /**

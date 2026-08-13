@@ -17,10 +17,20 @@ jest.mock('../utils/passwordValidator');
 jest.mock('../models/otp.model');
 
 const User = require('../models/users.model');
+const OtpModel = require('../models/otp.model');
 const issueOtp = require('../utils/issueOtp');
+const verifyOtp = require('../utils/verifyOtp');
 const generateToken = require('../utils/generateToken');
 const passwordValidator = require('../utils/passwordValidator');
-const { registerUser, loginUser, setupAdmin } = require('../controllers/auth.controllers');
+const {
+  registerUser,
+  loginUser,
+  setupAdmin,
+  verifyUserOtp,
+  resendOtp,
+  forgotPassword,
+  resetPassword,
+} = require('../controllers/auth.controllers');
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -200,6 +210,156 @@ describe('setupAdmin — P0-04', () => {
     expect(res.status).toHaveBeenCalledWith(503);
     // Restore
     process.env.ADMIN_INIT_SECRET = 'test_admin_init_secret_16';
+  });
+
+});
+
+// ── verifyUserOtp ────────────────────────────────────────────────────────────
+
+describe('verifyUserOtp', () => {
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  test('returns 400 when email or otp is missing', async () => {
+    const req = { body: { email: '', otp: '' } };
+    const res = makeRes();
+    await verifyUserOtp(req, res);
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ message: expect.stringMatching(/required/i) }));
+  });
+
+  test('returns 400 when verifyOtp returns failure (invalid / expired)', async () => {
+    verifyOtp.mockResolvedValue({ success: false, message: 'Invalid OTP.' });
+    const req = { body: { email: 'user@test.com', otp: '000000' } };
+    const res = makeRes();
+    await verifyUserOtp(req, res);
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ success: false, message: 'Invalid OTP.' }));
+  });
+
+  test('returns 200 if user is already verified and exists', async () => {
+    verifyOtp.mockResolvedValue({ success: true, payload: { email: 'user@test.com' } });
+    User.findOne = mockFindOneReturning({ _id: 'existing_user', email: 'user@test.com' });
+    const req = { body: { email: 'user@test.com', otp: '123456' } };
+    const res = makeRes();
+    await verifyUserOtp(req, res);
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ success: true, message: expect.stringMatching(/already verified/i) }));
+  });
+
+  test('creates new user and returns 200 on valid verification', async () => {
+    verifyOtp.mockResolvedValue({
+      success: true,
+      payload: {
+        name: 'Test User',
+        username: 'testuser',
+        email: 'user@test.com',
+        password: 'hashed_password',
+        role: 'volunteer',
+      },
+    });
+    User.findOne = mockFindOneReturning(null);
+    const mockSave = jest.fn().mockResolvedValue(true);
+    User.mockImplementation(function (data) {
+      Object.assign(this, data);
+      this.$locals = {};
+      this.save = mockSave;
+    });
+
+    const req = { body: { email: 'user@test.com', otp: '123456' } };
+    const res = makeRes();
+    await verifyUserOtp(req, res);
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ success: true, message: expect.stringMatching(/verified successfully/i) }));
+    expect(mockSave).toHaveBeenCalled();
+  });
+
+});
+
+// ── resendOtp ────────────────────────────────────────────────────────────────
+
+describe('resendOtp', () => {
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  test('returns 400 when email is missing', async () => {
+    const req = { body: {} };
+    const res = makeRes();
+    await resendOtp(req, res);
+    expect(res.status).toHaveBeenCalledWith(400);
+  });
+
+  test('returns 200 generic message even if otp document not found', async () => {
+    OtpModel.findOne = jest.fn().mockResolvedValue(null);
+    const req = { body: { email: 'unknown@test.com' } };
+    const res = makeRes();
+    await resendOtp(req, res);
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
+  });
+
+  test('re-issues otp and returns 200 when pending otp exists', async () => {
+    OtpModel.findOne = jest.fn().mockResolvedValue({
+      email: 'pending@test.com',
+      purpose: 'verify',
+      payload: { name: 'Pending' },
+    });
+    issueOtp.mockResolvedValue();
+    const req = { body: { email: 'pending@test.com' } };
+    const res = makeRes();
+    await resendOtp(req, res);
+    expect(issueOtp).toHaveBeenCalledWith('pending@test.com', 'verify', { name: 'Pending' });
+    expect(res.status).toHaveBeenCalledWith(200);
+  });
+
+});
+
+// ── forgotPassword & resetPassword ───────────────────────────────────────────
+
+describe('forgotPassword & resetPassword', () => {
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    passwordValidator.mockReturnValue(true);
+  });
+
+  test('forgotPassword returns 200 generic message', async () => {
+    User.findOne = mockFindOneReturning({ email: 'user@test.com', isVerified: true });
+    issueOtp.mockResolvedValue();
+    const req = { body: { email: 'user@test.com' } };
+    const res = makeRes();
+    await forgotPassword(req, res);
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(issueOtp).toHaveBeenCalledWith('user@test.com', 'forgot-password');
+  });
+
+  test('resetPassword returns 400 when verifyOtp fails', async () => {
+    verifyOtp.mockResolvedValue({ success: false, message: 'Invalid OTP.' });
+    const req = { body: { email: 'user@test.com', otp: '123456', newPassword: 'NewP@ssw0rd1' } };
+    const res = makeRes();
+    await resetPassword(req, res);
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ message: 'Invalid OTP.' }));
+  });
+
+  test('resetPassword returns 200 on successful reset', async () => {
+    verifyOtp.mockResolvedValue({ success: true });
+    const mockUser = {
+      email: 'user@test.com',
+      password: 'old_hash',
+      matchPassword: jest.fn().mockResolvedValue(false),
+      save: jest.fn().mockResolvedValue(true),
+    };
+    User.findOne = jest.fn().mockReturnValue({ select: jest.fn().mockResolvedValue(mockUser) });
+    const req = { body: { email: 'user@test.com', otp: '123456', newPassword: 'NewP@ssw0rd1' } };
+    const res = makeRes();
+    await resetPassword(req, res);
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ success: true, message: expect.stringMatching(/reset successful/i) }));
   });
 
 });

@@ -14,6 +14,7 @@
 //     in the opportunity dropdown (not something an admin types by hand).
 
 const { param, query, validationResult } = require('express-validator');
+const { VALID_TIME_RANGES } = require('../utils/timeRange.utils');
 
 const VALID_FORMATS = ['csv', 'xlsx', 'pdf'];
 const VALID_TYPES   = ['users', 'pickups', 'opportunities', 'applications', 'full-activity'];
@@ -36,6 +37,29 @@ const reportTypeParam = () =>
  * Shared date + scoping query rules — reused by download and browse endpoints.
  */
 const sharedQueryRules = () => [
+  // ── Time range selector ─────────────────────────────────────────────────
+  // Named time range: 'all' | 'week' | 'month' | 'year' | 'custom'.
+  // When provided, the controller converts it to startDate/endDate before
+  // calling the service. Explicit startDate/endDate are still accepted for
+  // backward compatibility (treated as timeRange='custom' internally).
+  query('timeRange')
+    .optional({ checkFalsy: true })
+    .trim()
+    .isIn(VALID_TIME_RANGES)
+    .withMessage(`timeRange must be one of: ${VALID_TIME_RANGES.join(', ')}.`),
+
+  query('year')
+    .optional({ checkFalsy: true })
+    .isInt({ min: 2000, max: 2100 })
+    .withMessage('year must be between 2000 and 2100.')
+    .toInt(),
+
+  query('month')
+    .optional({ checkFalsy: true })
+    .isInt({ min: 1, max: 12 })
+    .withMessage('month must be between 1 and 12.')
+    .toInt(),
+
   query('startDate')
     .optional({ checkFalsy: true })
     .matches(/^\d{4}-\d{2}-\d{2}$/)

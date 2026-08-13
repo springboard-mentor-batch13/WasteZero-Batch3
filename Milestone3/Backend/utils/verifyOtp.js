@@ -15,8 +15,18 @@ const MAX_OTP_ATTEMPTS = 5;
  * @returns {Promise<{ success: boolean, message?: string, payload?: any }>}
  */
 const verifyOtp = async (email, otp, purpose) => {
+  if (!email || !otp || !purpose) {
+    return {
+      success: false,
+      message: 'Email, OTP, and purpose are required.',
+    };
+  }
+
+  const normalizedEmail = String(email).trim().toLowerCase();
+  const cleanOtp = String(otp).trim();
+
   const otpDoc = await OtpModel.findOne({
-    email: email.trim().toLowerCase(),
+    email: normalizedEmail,
     purpose,
   });
 
@@ -28,8 +38,8 @@ const verifyOtp = async (email, otp, purpose) => {
     };
   }
 
- 
-  if (otpDoc.otpExpiresAt && otpDoc.otpExpiresAt.getTime() < Date.now()) {
+  // Check explicit expiration timestamp
+  if (otpDoc.otpExpiresAt && new Date(otpDoc.otpExpiresAt).getTime() < Date.now()) {
     return {
       success: false,
       message: 'OTP not found or has expired. Please request a new one.',
@@ -48,7 +58,7 @@ const verifyOtp = async (email, otp, purpose) => {
   }
 
   // Bcrypt comparison — safe against timing attacks
-  const valid = await bcrypt.compare(String(otp), otpDoc.otp);
+  const valid = await bcrypt.compare(cleanOtp, otpDoc.otp);
 
   if (!valid) {
     // Record the failed attempt. $inc is atomic, so concurrent wrong

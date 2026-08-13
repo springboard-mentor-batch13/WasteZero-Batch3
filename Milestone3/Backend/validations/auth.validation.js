@@ -38,6 +38,52 @@ const loginValidation = [
     .withMessage("Password is required"),
 ];
 
+const verifyOtpValidation = [
+  body("email")
+    .trim()
+    .notEmpty().withMessage("Email is required").bail()
+    .isEmail().withMessage("Please enter a valid email"),
+
+  body("otp")
+    .trim()
+    .notEmpty().withMessage("OTP is required").bail()
+    .isLength({ min: 6, max: 6 }).withMessage("OTP must be 6 digits").bail()
+    .matches(/^\d{6}$/).withMessage("OTP must contain only digits"),
+];
+
+const resendOtpValidation = [
+  body("email")
+    .trim()
+    .notEmpty().withMessage("Email is required").bail()
+    .isEmail().withMessage("Please enter a valid email"),
+];
+
+const forgotPasswordValidation = [
+  body("email")
+    .trim()
+    .notEmpty().withMessage("Email is required").bail()
+    .isEmail().withMessage("Please enter a valid email"),
+];
+
+const resetPasswordValidation = [
+  body("email")
+    .trim()
+    .notEmpty().withMessage("Email is required").bail()
+    .isEmail().withMessage("Please enter a valid email"),
+
+  body("otp")
+    .trim()
+    .notEmpty().withMessage("OTP is required").bail()
+    .isLength({ min: 6, max: 6 }).withMessage("OTP must be 6 digits").bail()
+    .matches(/^\d{6}$/).withMessage("OTP must contain only digits"),
+
+  body("newPassword")
+    .notEmpty().withMessage("New password is required").bail()
+    .isLength({ min: 8 }).withMessage("Password must be at least 8 characters").bail()
+    .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&]).{8,}$/)
+    .withMessage("Password must contain uppercase, lowercase, number, and special character"),
+];
+
 const validate = (req, res, next) => {
   const errors = validationResult(req);
 
@@ -45,6 +91,7 @@ const validate = (req, res, next) => {
     return res.status(400).json({
       success: false,
       errors: errors.array(),
+      message: errors.array()[0]?.msg || "Validation error",
     });
   }
 
@@ -54,5 +101,9 @@ const validate = (req, res, next) => {
 module.exports = {
   registerValidation,
   loginValidation,
+  verifyOtpValidation,
+  resendOtpValidation,
+  forgotPasswordValidation,
+  resetPasswordValidation,
   validate,
 };

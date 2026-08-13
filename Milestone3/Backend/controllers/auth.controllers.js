@@ -7,6 +7,7 @@ const issueOtp = require('../utils/issueOtp');
 const passwordValidator = require('../utils/passwordValidator');
 const verifyOtp = require('../utils/verifyOtp');
 const OtpModel = require('../models/otp.model');
+const { emitDashboardUpdate } = require('../sockets/events/dashboard.events');
 
 /* ============================================
    Register User (Atomic Flow)
@@ -360,6 +361,7 @@ const verifyUserOtp = async (req, res) => {
       });
       newUser.$locals.skipHash = true;
       await newUser.save();
+      emitDashboardUpdate('user:registered');
     } catch (createError) {
       if (createError.code === 11000) {
         const field = Object.keys(createError.keyValue || {})[0] || 'username';

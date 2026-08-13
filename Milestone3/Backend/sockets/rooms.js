@@ -1,6 +1,9 @@
 // Backend/sockets/rooms.js
 
-const getUserRoom = (userId) => `user:${userId}`;
+const getUserRoom  = (userId) => `user:${userId}`;
+
+/** Shared room that every connected admin socket joins automatically. */
+const getAdminRoom = () => 'room:admins';
 
 
 const getConversationRoom = (conversationId) => `conversation:${conversationId}`;
@@ -12,6 +15,7 @@ const buildConversationId = (id1, id2) => {
 
 module.exports = {
   getUserRoom,
+  getAdminRoom,
   getConversationRoom,
   buildConversationId,
 };

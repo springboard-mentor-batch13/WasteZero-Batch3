@@ -34,8 +34,10 @@
 //   Developer A's auditService.logAction() — non-throwing, fire-and-forget.
 //   Browse endpoints are read-only previews and are NOT audit-logged.
 
+const mongoose        = require('mongoose');
 const reportService  = require('../services/report.service');
 const auditService   = require('../services/audit.service');
+const { resolveTimeRange } = require('../utils/timeRange.utils');
 
 /**
  * @desc    Generate and stream a report to the client
@@ -44,8 +46,22 @@ const auditService   = require('../services/audit.service');
  */
 const downloadReport = async (req, res, next) => {
   const { type: reportType }    = req.params;
-  const { format, startDate, endDate, ngoUsername, opportunityId, volunteerUsername } = req.query;
+  const {
+    format,
+    timeRange,
+    year, month,
+    startDate: rawStart, endDate: rawEnd,
+    ngoUsername, opportunityId, volunteerUsername,
+  } = req.query;
   const generatedBy = req.user.email || req.user.name || req.user.id;
+
+  // Resolve named time range → concrete YYYY-MM-DD dates.
+  // If timeRange is absent or 'custom', rawStart/rawEnd pass through unchanged.
+  const { startDate, endDate } = resolveTimeRange(timeRange || 'custom', {
+    year, month,
+    startDate: rawStart,
+    endDate:   rawEnd,
+  });
 
   try {
     // Generate + stream the report — this pipes directly to res
@@ -61,14 +77,22 @@ const downloadReport = async (req, res, next) => {
       generatedBy,
     });
 
-    // Fire-and-forget audit log — non-throwing per auditService contract
-    await auditService.logAction({
+    // Fire-and-forget audit log — non-throwing per auditService contract.
+    // There's no real "Report" entity to reference (a report is generated,
+    // not stored), so target_id previously reused the admin's own _id —
+    // which conflates admin_id and target_id and reads as "the admin is the
+    // target of their own action". Instead we mint a fresh ObjectId that
+    // stands for this specific download event, and put every identifying
+    // detail (type/format/filters) into `details` where it's actually useful.
+    auditService.logAction({
       adminId:    req.user.id,
       action:     'REPORT_DOWNLOADED',
       targetType: 'Report',
-      targetId:   req.user._id,
+      targetId:   new mongoose.Types.ObjectId(),
       details:    `Report downloaded: type=${reportType} format=${format} range=${startDate || 'all'}→${endDate || 'all'}${ngoUsername ? ` ngoUsername=${ngoUsername}` : ''}${opportunityId ? ` opportunityId=${opportunityId}` : ''}${volunteerUsername ? ` volunteerUsername=${volunteerUsername}` : ''}`.slice(0, 500),
       req,
+    }).catch((err) => {
+      console.error('[ReportController] downloadReport audit log failed (non-fatal):', err.message);
     });
 
   } catch (error) {
@@ -126,9 +150,18 @@ const browseReport = async (req, res) => {
     const { type: reportType } = req.params;
     const {
       page, limit,
-      startDate, endDate,
+      timeRange,
+      year, month,
+      startDate: rawStart, endDate: rawEnd,
       ngoUsername, volunteerUsername, opportunityId,
     } = req.query;
+
+    // Resolve named time range → concrete dates; pass-through if absent
+    const { startDate, endDate } = resolveTimeRange(timeRange || 'custom', {
+      year, month,
+      startDate: rawStart,
+      endDate:   rawEnd,
+    });
 
     const result = await reportService.browseReport(reportType, {
       page:              page  || 1,

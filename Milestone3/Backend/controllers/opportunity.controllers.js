@@ -3,7 +3,9 @@
 const mongoose = require('mongoose');
 const opportunityService = require('../services/opportunity.service');
 const matchingService = require('../services/matching.service');
+const auditService = require('../services/audit.service');
 const { sendSuccess, sendError } = require('../utils/apiResponse');
+const { emitDashboardUpdate } = require('../sockets/events/dashboard.events');
 
 // ── ObjectId validation guard ───────────────────────────────────────────────
 // Rejects malformed IDs before any DB query runs, preventing CastError crashes.
@@ -26,6 +28,7 @@ const createOpportunity = async (req, res) => {
       console.error('[Matching] Failed to notify matched volunteers:', err.message);
     });
 
+    emitDashboardUpdate('opportunity:created');
     return sendSuccess(res, savedOpportunity, 'Opportunity created successfully', 201);
   } catch (error) {
     // If DB write failed after a successful Cloudinary upload, clean up the orphan
@@ -106,7 +109,10 @@ const updateOpportunity = async (req, res) => {
  * The Opportunity document is NOT physically removed.
  * Applications are NOT cascade-deleted.
  * The Cloudinary image is NOT removed (opportunity could be restored).
- * Admin will receive an AdminLog entry in M4 — prepared here as a comment.
+ * Writes an AdminLog entry (OPPORTUNITY_REMOVED) so this route leaves the
+ * same audit trail as admin.controller.js::removeOpportunity — this is the
+ * "owner" delete path (NGO or admin deleting their own opportunity), and an
+ * admin using it must not be able to delete without a trace.
  */
 const deleteOpportunity = async (req, res) => {
   try {
@@ -130,18 +136,23 @@ const deleteOpportunity = async (req, res) => {
       return sendError(res, 'Opportunity not found', 404);
     }
 
-    // TODO (M4): Write AdminLog entry here once audit.service.js is implemented.
-    // Example:
-    // await auditService.logAction({
-    //   adminId: req.user.id,
-    //   action: 'OPPORTUNITY_REMOVED',
-    //   targetType: 'Opportunity',
-    //   targetId: req.params.id,
-    //   details: `Opportunity removed. Reason: ${reason || 'none'}`,
-    //   ip: req.ip,
-    //   userAgent: req.headers['user-agent'],
-    // });
+    // Only an admin acting as owner counts as an admin write action for
+    // AdminLog purposes — an NGO deleting its own opportunity is ordinary
+    // user activity, not something the admin audit trail needs to capture.
+    if (req.user.role === 'admin') {
+      auditService.logAction({
+        adminId:    req.user.id,
+        action:     'OPPORTUNITY_REMOVED',
+        targetType: 'Opportunity',
+        targetId:   req.params.id,
+        details:    `Opportunity removed by admin (owner route). Reason: ${reason || 'none'}`.slice(0, 500),
+        req,
+      }).catch((err) => {
+        console.error('[Opportunity] deleteOpportunity audit log failed (non-fatal):', err.message);
+      });
+    }
 
+    emitDashboardUpdate('opportunity:removed');
     return sendSuccess(res, null, 'Opportunity removed successfully');
   } catch (error) {
     return sendError(res, 'Failed to remove opportunity', 500, error.message);

@@ -28,7 +28,7 @@ const AdminLog = require('../models/admin-log.model');
 
 const adminService = require('../services/admin.service');
 const auditService = require('../services/audit.service');
-const { requireAdmin } = require('../middlewares/rbac.middleware');
+const { requireAdmin, blockAdmin } = require('../middlewares/rbac.middleware');
 const { forceDisconnectUser } = require('../sockets/adminSocket');
 const auditController = require('../controllers/audit.controller');
 const adminController = require('../controllers/admin.controller');
@@ -93,6 +93,49 @@ describe('requireAdmin middleware — RBAC', () => {
     const req = { user: { role: 'admin' } };
     const res = mockRes();
     requireAdmin(req, res, next);
+    expect(next).toHaveBeenCalledTimes(1);
+    expect(res.status).not.toHaveBeenCalled();
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 1b. RBAC — blockAdmin middleware (B3 fix: GET /api/v1/dashboard/metrics
+//     has no personal-metrics view for admin — should be 403, not 200)
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('blockAdmin middleware — RBAC', () => {
+  const next = jest.fn();
+
+  beforeEach(() => next.mockClear());
+
+  test('returns 401 when req.user is absent (no prior protect call)', () => {
+    const req = { user: undefined };
+    const res = mockRes();
+    blockAdmin(req, res, next);
+    expect(res.status).toHaveBeenCalledWith(401);
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  test('returns 403 when user role is admin', () => {
+    const req = { user: { role: 'admin' } };
+    const res = mockRes();
+    blockAdmin(req, res, next);
+    expect(res.status).toHaveBeenCalledWith(403);
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  test('calls next() when user role is volunteer', () => {
+    const req = { user: { role: 'volunteer' } };
+    const res = mockRes();
+    blockAdmin(req, res, next);
+    expect(next).toHaveBeenCalledTimes(1);
+    expect(res.status).not.toHaveBeenCalled();
+  });
+
+  test('calls next() when user role is ngo', () => {
+    const req = { user: { role: 'ngo' } };
+    const res = mockRes();
+    blockAdmin(req, res, next);
     expect(next).toHaveBeenCalledTimes(1);
     expect(res.status).not.toHaveBeenCalled();
   });

@@ -51,8 +51,12 @@ const parseHHmm = (timeStr) => {
 // fix is to store an explicit timezone per user/pickup and use a proper
 // timezone library (e.g. luxon) instead of a single global offset.
 const APP_TZ_OFFSET_MINUTES = (() => {
-  const raw = parseInt(process.env.APP_TZ_OFFSET_MINUTES, 10);
-  return Number.isFinite(raw) ? raw : 0;
+  if (process.env.APP_TZ_OFFSET_MINUTES !== undefined && process.env.APP_TZ_OFFSET_MINUTES !== '') {
+    const raw = parseInt(process.env.APP_TZ_OFFSET_MINUTES, 10);
+    if (Number.isFinite(raw)) return raw;
+  }
+  // Automatically detects system timezone offset (e.g. +330 for IST/Kolkata)
+  return -new Date().getTimezoneOffset();
 })();
 
 /**

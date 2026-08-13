@@ -144,11 +144,17 @@ describe('AdminLog model (P0-06)', () => {
       target_id: new mongoose.Types.ObjectId(),
       details: 'User suspended for spam',
     });
-    const err = log.validateSync();
+    let err;
+    try {
+      await log.validate();
+    } catch (e) {
+      err = e;
+    }
+    expect(err).toBeDefined();
     expect(err.errors['admin_id']).toBeDefined();
   });
 
-  test('rejects invalid action', () => {
+  test('rejects invalid action', async () => {
     const log = new AdminLog({
       admin_id: new mongoose.Types.ObjectId(),
       action: 'INVALID_ACTION',
@@ -156,11 +162,17 @@ describe('AdminLog model (P0-06)', () => {
       target_id: new mongoose.Types.ObjectId(),
       details: 'Test',
     });
-    const err = log.validateSync();
+    let err;
+    try {
+      await log.validate();
+    } catch (e) {
+      err = e;
+    }
+    expect(err).toBeDefined();
     expect(err.errors['action']).toBeDefined();
   });
 
-  test('accepts valid action USER_SUSPENDED', () => {
+  test('accepts valid action USER_SUSPENDED', async () => {
     const log = new AdminLog({
       admin_id: new mongoose.Types.ObjectId(),
       action: 'USER_SUSPENDED',
@@ -168,11 +180,16 @@ describe('AdminLog model (P0-06)', () => {
       target_id: new mongoose.Types.ObjectId(),
       details: 'Suspended for abuse',
     });
-    const err = log.validateSync();
+    let err;
+    try {
+      await log.validate();
+    } catch (e) {
+      err = e;
+    }
     expect(err).toBeUndefined();
   });
 
-  test('rejects invalid target_type', () => {
+  test('rejects invalid target_type', async () => {
     const log = new AdminLog({
       admin_id: new mongoose.Types.ObjectId(),
       action: 'USER_SUSPENDED',
@@ -180,7 +197,13 @@ describe('AdminLog model (P0-06)', () => {
       target_id: new mongoose.Types.ObjectId(),
       details: 'Test',
     });
-    const err = log.validateSync();
+    let err;
+    try {
+      await log.validate();
+    } catch (e) {
+      err = e;
+    }
+    expect(err).toBeDefined();
     expect(err.errors['target_type']).toBeDefined();
   });
 
@@ -205,12 +228,18 @@ describe('WasteStats model (P0-07)', () => {
       weight: 5,
       co2_saved_kg: 1.5,
     });
-    const err = stat.validateSync();
+    let err;
+    try {
+      await stat.validate();
+    } catch (e) {
+      err = e;
+    }
+    expect(err).toBeDefined();
     expect(err.errors['category']).toBeDefined();
   });
 
-  test('accepts all ALLOWED_WASTE_TYPES', () => {
-    ALLOWED_WASTE_TYPES.forEach((cat) => {
+  test('accepts all ALLOWED_WASTE_TYPES', async () => {
+    for (const cat of ALLOWED_WASTE_TYPES) {
       const stat = new WasteStats({
         user_id: new mongoose.Types.ObjectId(),
         pickup_id: new mongoose.Types.ObjectId(),
@@ -218,12 +247,17 @@ describe('WasteStats model (P0-07)', () => {
         weight: 2,
         co2_saved_kg: 0.5,
       });
-      const err = stat.validateSync();
+      let err;
+      try {
+        await stat.validate();
+      } catch (e) {
+        err = e;
+      }
       expect(err).toBeUndefined();
-    });
+    }
   });
 
-  test('rejects weight below 0.01', () => {
+  test('rejects weight below 0.01', async () => {
     const stat = new WasteStats({
       user_id: new mongoose.Types.ObjectId(),
       pickup_id: new mongoose.Types.ObjectId(),
@@ -231,7 +265,13 @@ describe('WasteStats model (P0-07)', () => {
       weight: 0,
       co2_saved_kg: 0.5,
     });
-    const err = stat.validateSync();
+    let err;
+    try {
+      await stat.validate();
+    } catch (e) {
+      err = e;
+    }
+    expect(err).toBeDefined();
     expect(err.errors['weight']).toBeDefined();
   });
 
@@ -249,13 +289,14 @@ describe('Pickup model — wasteTypes enum (P1-06)', () => {
     'preferredTimeSlot.end': '11:00',
   };
 
-  test('ALLOWED_WASTE_TYPES constant exports the correct 5 categories', () => {
-    expect(ALLOWED_WASTE_TYPES).toHaveLength(5);
+  test('ALLOWED_WASTE_TYPES constant exports the correct 6 categories', () => {
+    expect(ALLOWED_WASTE_TYPES).toHaveLength(6);
     expect(ALLOWED_WASTE_TYPES).toContain('Plastic');
     expect(ALLOWED_WASTE_TYPES).toContain('Paper');
     expect(ALLOWED_WASTE_TYPES).toContain('Glass');
     expect(ALLOWED_WASTE_TYPES).toContain('E-Waste');
     expect(ALLOWED_WASTE_TYPES).toContain('Organic');
+    expect(ALLOWED_WASTE_TYPES).toContain('Metal');
   });
 
   test('pickup schema wasteTypes field has enum constraint', () => {

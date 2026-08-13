@@ -41,6 +41,7 @@ const getUsers = async (req, res) => {
       search:      req.query.search,
       role:        req.query.role,
       isSuspended: req.query.isSuspended,
+      city:        req.query.city,
       sort:        req.query.sort,
       order:       req.query.order,
     });
@@ -136,8 +137,8 @@ const toggleUserSuspension = async (req, res) => {
       action = 'USER_UNSUSPENDED';
     }
 
-    // Append-only audit log — derived from req, not req.body
-    await auditService.logAction({
+    // Append-only audit log — derived from req, not req.body (non-blocking)
+    auditService.logAction({
       adminId,
       action,
       targetType: 'User',
@@ -148,6 +149,8 @@ const toggleUserSuspension = async (req, res) => {
       before: result.before,
       after:  result.after,
       req,
+    }).catch((err) => {
+      console.error('[Admin] toggleUserSuspension audit log failed (non-fatal):', err.message);
     });
 
     return res.status(200).json({
@@ -197,7 +200,7 @@ const updateUserRole = async (req, res) => {
       req.body.role
     );
 
-    await auditService.logAction({
+    auditService.logAction({
       adminId:    req.user.id,
       action:     'USER_ROLE_CHANGED',
       targetType: 'User',
@@ -206,6 +209,8 @@ const updateUserRole = async (req, res) => {
       before:     result.before,
       after:      result.after,
       req,
+    }).catch((err) => {
+      console.error('[Admin] updateUserRole audit log failed (non-fatal):', err.message);
     });
 
     return res.status(200).json({
@@ -257,7 +262,7 @@ const removeOpportunity = async (req, res) => {
       reason
     );
 
-    await auditService.logAction({
+    auditService.logAction({
       adminId:    req.user.id,
       action:     'OPPORTUNITY_REMOVED',
       targetType: 'Opportunity',
@@ -266,6 +271,8 @@ const removeOpportunity = async (req, res) => {
       before:     result.before,
       after:      result.after,
       req,
+    }).catch((err) => {
+      console.error('[Admin] removeOpportunity audit log failed (non-fatal):', err.message);
     });
 
     return res.status(200).json({
@@ -310,7 +317,7 @@ const restoreOpportunity = async (req, res) => {
       req.user.id
     );
 
-    await auditService.logAction({
+    auditService.logAction({
       adminId:    req.user.id,
       action:     'OPPORTUNITY_RESTORED',
       targetType: 'Opportunity',
@@ -319,6 +326,8 @@ const restoreOpportunity = async (req, res) => {
       before:     result.before,
       after:      result.after,
       req,
+    }).catch((err) => {
+      console.error('[Admin] restoreOpportunity audit log failed (non-fatal):', err.message);
     });
 
     return res.status(200).json({

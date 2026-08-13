@@ -130,7 +130,7 @@ if (req.query.opportunity) {
             filter.status = req.query.status;
         }
 
-        const applications = await applicationService.getApplications(
+        const { applications, total } = await applicationService.getApplications(
             filter,
             skip,
             limit,
@@ -142,6 +142,8 @@ if (req.query.opportunity) {
             {
                 page,
                 limit,
+                total,
+                totalPages: Math.ceil(total / limit) || 1,
                 applications
             },
             "Applications fetched successfully"

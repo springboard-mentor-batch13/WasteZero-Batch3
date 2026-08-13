@@ -23,6 +23,7 @@ const {
 // Validation
 const {
   updateProfileValidation,
+  changePasswordOtpValidation,
   validate,
 } = require("../validations/user.validation");
 
@@ -79,6 +80,8 @@ router.put(
   protect,
   authorize("volunteer", "ngo", "admin"),
   otpLimiter,
+  changePasswordOtpValidation,
+  validate,
   changePasswordWithOtp
 );
 

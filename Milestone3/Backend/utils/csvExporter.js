@@ -24,18 +24,34 @@
 //   });
 
 const { Transform } = require('stream');
+const { formatCellValue } = require('./cellFormatter');
+
+/**
+ * VUL-004 mitigation: neutralize CSV/Excel formula injection.
+ * If a field's first character is one that spreadsheet apps (Excel, Sheets,
+ * LibreOffice) treat as the start of a formula, prefix it with a single
+ * quote. Excel renders the value as plain text instead of evaluating it,
+ * so `=cmd|'/c calc'!A0` in a user-supplied field (notes, bio, title, ...)
+ * can no longer execute when an admin opens the exported report.
+ *
+ * @param {string} str
+ * @returns {string}
+ */
+const sanitizeFormula = (str) =>
+  /^[=+\-@\t\r]/.test(str) ? `'${str}` : str;
 
 /**
  * Escape a single CSV field value.
- * Wraps in quotes if it contains commas, quotes, or newlines.
- * Doubles any internal quotes.
+ * Neutralizes leading formula-trigger characters (VUL-004), then wraps in
+ * quotes if it contains commas, quotes, or newlines. Doubles any internal
+ * quotes.
  *
  * @param {*} value
  * @returns {string}
  */
 const escapeCsvField = (value) => {
   if (value === null || value === undefined) return '';
-  const str = String(value);
+  const str = sanitizeFormula(String(value));
   // Must quote if contains comma, double-quote, or newline
   if (/[",\n\r]/.test(str)) {
     return '"' + str.replace(/"/g, '""') + '"';
@@ -47,16 +63,21 @@ const escapeCsvField = (value) => {
  * Convert a document to a CSV row string.
  *
  * @param {object} doc        - The raw document from MongoDB cursor
- * @param {string[]} keys     - Ordered list of field keys to extract
+ * @param {{ key: string, format?: string }[]} columns - Ordered column definitions
  * @param {Function} [transform] - Optional transform applied before field extraction
  * @returns {string}          - CSV row ending with \n
  */
-const docToRow = (doc, keys, transform) => {
+const docToRow = (doc, columns, transform) => {
   const processed = transform ? transform(doc) : doc;
-  const fields = keys.map((key) => {
+  const fields = columns.map(({ key, format }) => {
     // Support dot-notation: 'address.city'
     const val = key.split('.').reduce((obj, k) => obj?.[k], processed);
-    return escapeCsvField(val);
+    // Apply the column's format (date/bool-status/bool-yn/array/kg/number)
+    // before escaping — previously this did String(val) directly, so
+    // booleans rendered as "true"/"false" and dates as full JS Date strings
+    // instead of the labels/format the report column defines.
+    const formatted = val === null || val === undefined ? '' : formatCellValue(val, format);
+    return escapeCsvField(formatted);
   });
   return fields.join(',') + '\n';
 };
@@ -70,9 +91,12 @@ const docToRow = (doc, keys, transform) => {
  * @param {string}                         opts.filename - Download filename (e.g. 'report.csv')
  * @param {{ header: string, key: string }[]} opts.columns - Column definitions
  * @param {Function}                       [opts.transform] - Optional doc transformer
+ * @param {[string, string|number][]}      [opts.summaryRows] - Extra [label, value] rows
+ *   written as a "REPORT SUMMARY" block after the data, e.g. [['Total Users', 250], ...].
+ *   Same formula-injection sanitization applied as data cells.
  * @returns {Promise<void>}
  */
-const streamCSV = ({ cursor, res, filename, columns, transform }) => {
+const streamCSV = ({ cursor, res, filename, columns, transform, summaryRows }) => {
   return new Promise((resolve, reject) => {
     // Set streaming headers BEFORE data flows
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
@@ -81,7 +105,6 @@ const streamCSV = ({ cursor, res, filename, columns, transform }) => {
     res.setHeader('Cache-Control', 'no-cache');
 
     const headers = columns.map((c) => c.header);
-    const keys    = columns.map((c) => c.key);
 
     // Write CSV header row immediately so client starts receiving data fast
     res.write(headers.map(escapeCsvField).join(',') + '\n');
@@ -92,7 +115,7 @@ const streamCSV = ({ cursor, res, filename, columns, transform }) => {
       objectMode: true, // input: JS objects; output: strings
       transform(doc, _encoding, callback) {
         try {
-          const row = docToRow(doc, keys, transform);
+          const row = docToRow(doc, columns, transform);
           rowCount++;
           callback(null, row);
         } catch (err) {
@@ -118,9 +141,24 @@ const streamCSV = ({ cursor, res, filename, columns, transform }) => {
     res.on('finish', () => resolve());
     res.on('error', reject);
 
-    // Pipe: cursor → transform → response
-    cursor.pipe(csvTransform).pipe(res);
+    // After the data stream finishes, append the headline summary block
+    // (totals + status breakdown) as extra rows at the BOTTOM of the file —
+    // matches whatever filters were applied to the data above it.
+    csvTransform.on('end', () => {
+      if (summaryRows && summaryRows.length) {
+        res.write('\n');
+        res.write('REPORT SUMMARY\n');
+        summaryRows.forEach(([label, value]) => {
+          res.write(`${escapeCsvField(label)},${escapeCsvField(value)}\n`);
+        });
+      }
+      res.end();
+    });
+
+    // Pipe: cursor → transform → response (manual .end() above, so don't
+    // let .pipe() close res itself)
+    cursor.pipe(csvTransform).pipe(res, { end: false });
   });
 };
 
-module.exports = { streamCSV, escapeCsvField };
+module.exports = { streamCSV, escapeCsvField, sanitizeFormula };

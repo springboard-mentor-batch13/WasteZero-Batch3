@@ -59,14 +59,15 @@ const deriveUserAgent = (req) =>
 
 /**
  * Sanitise a before/after snapshot so it is safe to persist.
- * Removes password hashes and other sensitive fields before storing.
+ * Removes password hashes, OTPs, tokens, and other sensitive fields before storing.
  *
  * @param {object|null} snapshot
  * @returns {object|null}
  */
 const sanitiseSnapshot = (snapshot) => {
   if (!snapshot || typeof snapshot !== 'object') return null;
-  const { password, __v, ...safe } = snapshot;
+  const plain = typeof snapshot.toObject === 'function' ? snapshot.toObject() : { ...snapshot };
+  const { password, otp, token, secret, __v, ...safe } = plain;
   return safe;
 };
 

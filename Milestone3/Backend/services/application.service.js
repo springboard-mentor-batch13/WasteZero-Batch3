@@ -7,14 +7,25 @@ const apply = (data) => {
 };
 
 
-const getApplications = (filter, skip, limit, sort) => {
-  return Application.find(filter)
-    .populate('volunteer_id', 'name email username')   // username added for Contact Volunteer
-    .populate('opportunity_id', 'title location status date ngo_id')  // Key fields only
-    .sort(sort)
-    .skip(skip)
-    .limit(limit)
-    .lean();
+/**
+ * Returns both the page of applications and the total matching count, so
+ * callers can report page/total/totalPages the same way every other
+ * paginated list endpoint in this codebase does (getMyApplications, admin
+ * getUsers, report browse* helpers, etc).
+ */
+const getApplications = async (filter, skip, limit, sort) => {
+  const [applications, total] = await Promise.all([
+    Application.find(filter)
+      .populate('volunteer_id', 'name email username')   // username added for Contact Volunteer
+      .populate('opportunity_id', 'title location status date ngo_id')  // Key fields only
+      .sort(sort)
+      .skip(skip)
+      .limit(limit)
+      .lean(),
+    Application.countDocuments(filter),
+  ]);
+
+  return { applications, total };
 };
 
 /**

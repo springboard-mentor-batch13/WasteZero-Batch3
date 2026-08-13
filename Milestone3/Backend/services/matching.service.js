@@ -131,7 +131,10 @@ const getMatchesForVolunteer = async (volunteerId, limit = 10) => {
     throw new Error('Matching is only available for volunteer accounts');
   }
 
-  const openOpportunities = await Opportunity.find({ status: 'open' })
+  const openOpportunities = await Opportunity.find({
+    status: 'open',
+    isRemovedByAdmin: { $ne: true },
+  })
     .sort({ createdAt: -1 })
     .lean();
 

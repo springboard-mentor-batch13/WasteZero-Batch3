@@ -52,24 +52,49 @@ const escapeRegex = (str) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
  * @param {object} opts
  * @param {number} opts.page
  * @param {number} opts.limit         - Already capped at 100 by validation
- * @param {string} [opts.search]      - Name or email substring (escaped)
+ * @param {string} [opts.search]      - Name, email, or username substring (escaped)
  * @param {string} [opts.role]        - 'volunteer' | 'ngo' | 'admin'
  * @param {string} [opts.isSuspended] - 'true' | 'false' string from query
+ * @param {string} [opts.city]        - City substring — matches locations.primary.city
+ *                                      OR any entry in locations.secondary[].city
  * @param {string} [opts.sort]        - Field name (whitelist-enforced)
  * @param {string} [opts.order]       - 'asc' | 'desc'
  * @returns {Promise<{ users, total, page, limit, totalPages }>}
  */
-const getUsers = async ({ page, limit, search, role, isSuspended, sort = 'createdAt', order = 'desc' }) => {
+const getUsers = async ({ page, limit, search, role, isSuspended, city, sort = 'createdAt', order = 'desc' }) => {
   const filter = {};
 
-  // Safe regex search — escaped to prevent ReDoS / injection
+  // Build independent OR clauses, then combine with $and — MongoDB only allows
+  // one top-level $or key, so search + city must each live in their own $or
+  // wrapped inside a shared $and.
+  const andClauses = [];
+
+  // Safe regex search across name / email / username — escaped to prevent ReDoS
   if (search) {
     const escaped = escapeRegex(search.trim());
-    filter.$or = [
-      { name: { $regex: escaped, $options: 'i' } },
-      { email: { $regex: escaped, $options: 'i' } },
+    andClauses.push({ $or: [
+      { name:     { $regex: escaped, $options: 'i' } },
+      { email:    { $regex: escaped, $options: 'i' } },
       { username: { $regex: escaped, $options: 'i' } },
-    ];
+    ]});
+  }
+
+  // City filter — matches primary city or any secondary city (case-insensitive)
+  if (city) {
+    const escaped   = escapeRegex(city.trim());
+    const cityRegex = { $regex: escaped, $options: 'i' };
+    andClauses.push({ $or: [
+      { 'locations.primary.city':   cityRegex },
+      { 'locations.secondary.city': cityRegex },
+    ]});
+  }
+
+  // Merge OR clauses into the filter
+  if (andClauses.length === 1) {
+    // Single clause — no $and wrapper needed; inline it directly
+    Object.assign(filter, andClauses[0]);
+  } else if (andClauses.length > 1) {
+    filter.$and = andClauses;
   }
 
   if (role) {

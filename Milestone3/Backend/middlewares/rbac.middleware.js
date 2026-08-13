@@ -36,4 +36,29 @@ const requireAdmin = (req, res, next) => {
   next();
 };
 
-module.exports = { requireAdmin };
+// RBAC matrix (personal-dashboard endpoints — e.g. /dashboard/metrics):
+//   Anonymous        → 401 (handled by protect before this middleware runs)
+//   Volunteer        → next()
+//   NGO              → next()
+//   Admin            → 403 (admin has no personal volunteer/NGO metrics —
+//                          use /admin/dashboard/stats instead)
+const blockAdmin = (req, res, next) => {
+  // protect middleware MUST run first — if req.user is absent, treat as 401
+  if (!req.user) {
+    return res.status(401).json({
+      success: false,
+      message: 'Access denied. No token provided.',
+    });
+  }
+
+  if (req.user.role === 'admin') {
+    return res.status(403).json({
+      success: false,
+      message: 'Access denied. This endpoint is not available for administrator accounts. Use /api/v1/admin/dashboard/stats instead.',
+    });
+  }
+
+  next();
+};
+
+module.exports = { requireAdmin, blockAdmin };

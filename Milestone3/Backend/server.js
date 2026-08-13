@@ -35,8 +35,10 @@ const notificationRoutes = require('./routes/notification.routes');
 
 // ===== Milestone 4 Routes =====
 const adminRoutes = require('./routes/admin.routes');
-const dashboardRoutes = require('./routes/dashboard.routes'); // Developer B — dashboard/analytics/stats
-const reportRoutes = require('./routes/report.routes');       // Developer B — report downloads
+const dashboardRoutes = require('./routes/dashboard.routes');           // Developer B — dashboard/analytics/stats
+const reportRoutes = require('./routes/report.routes');                 // Developer B — admin report downloads
+const volunteerReportRoutes = require('./routes/volunteerReport.routes'); // Volunteer self-service reports
+const ngoReportRoutes = require('./routes/ngoReport.routes');           // NGO self-service reports
 
 // ===== Socket =====
 const { initSocket } = require('./sockets');
@@ -117,6 +119,18 @@ app.use('/api/v1/admin', adminRoutes);
 // /api/v1/dashboard/metrics, and /api/v1/stats/* (see routes/dashboard.routes.js header)
 app.use('/api/v1', dashboardRoutes);
 app.use('/api/v1/admin/reports', reportRoutes);
+
+// Volunteer self-service reports (role-gated inside the router)
+// GET /api/v1/reports/options        — available types/ranges/formats
+// GET /api/v1/reports/browse/:type   — paginated JSON preview
+// GET /api/v1/reports/download/:type — file download (CSV/XLSX/PDF)
+app.use('/api/v1/reports', volunteerReportRoutes);
+
+// NGO self-service reports (role-gated inside the router)
+// GET /api/v1/ngo/reports/options        — available types/ranges/formats
+// GET /api/v1/ngo/reports/browse/:type   — paginated JSON preview
+// GET /api/v1/ngo/reports/download/:type — file download (CSV/XLSX/PDF)
+app.use('/api/v1/ngo/reports', ngoReportRoutes);
 
 // ======================================================
 // Health Check

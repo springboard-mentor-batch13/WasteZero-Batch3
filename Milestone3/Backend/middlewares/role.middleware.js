@@ -123,7 +123,8 @@ const checkApplicationViewAccess = async (req, res, next) => {
     }
 
     if (req.user.role === 'volunteer') {
-      if (application.volunteer_id._id.toString() !== req.user.id.toString()) {
+      const volId = application.volunteer_id?._id?.toString() || application.volunteer_id?.toString();
+      if (volId !== req.user.id.toString()) {
         return sendError(res, 'Access denied. This is not your application.', 403);
       }
       req.application = application;
@@ -131,7 +132,8 @@ const checkApplicationViewAccess = async (req, res, next) => {
     }
 
     // NGO role: verify ownership through the linked opportunity
-    if (application.opportunity_id.ngo_id.toString() !== req.user.id.toString()) {
+    const oppNgoId = application.opportunity_id?.ngo_id?.toString();
+    if (!oppNgoId || oppNgoId !== req.user.id.toString()) {
       return sendError(
         res,
         'Access denied. You do not own the opportunity this application belongs to.',
@@ -225,19 +227,32 @@ const checkPickupViewAccess = async (req, res, next) => {
     }
 
     if (req.user.role === 'volunteer') {
-      if (pickup.user_id._id.toString() !== req.user.id.toString()) {
+      const pickupOwnerId = pickup.user_id?._id?.toString() || pickup.user_id?.toString();
+      if (pickupOwnerId !== req.user.id.toString()) {
         return sendError(res, 'Access denied. This is not your pickup.', 403);
       }
       req.pickup = pickup;
       return next();
     }
 
-    if (!pickup.agent_id || pickup.agent_id._id.toString() !== req.user.id.toString()) {
-      return sendError(res, 'Access denied. You are not the assigned agent for this pickup.', 403);
+    // NGO is the assigned agent — always allowed.
+    const agentId = pickup.agent_id?._id?.toString() || pickup.agent_id?.toString();
+    if (agentId && agentId === req.user.id.toString()) {
+      req.pickup = pickup;
+      return next();
     }
 
-    req.pickup = pickup;
-    next();
+    // NGO is not (yet) the assigned agent, but the pickup is still Pending
+    // and matches this NGO's coverage area + waste types — the same
+    // eligibility check checkPickupNgoMatch uses for claiming. Without this,
+    // an NGO that legitimately sees a pickup in the "available pickups" list
+    // would get a 403 the moment the frontend links to a detail view for it.
+    if (pickup.status === 'Pending' && pickupService.isNgoEligibleForPickup(req.user, pickup)) {
+      req.pickup = pickup;
+      return next();
+    }
+
+    return sendError(res, 'Access denied. You are not the assigned agent for this pickup.', 403);
   } catch (error) {
     return sendError(res, 'Error verifying pickup access', 500, error.message);
   }

@@ -12,6 +12,10 @@ const {
 const {
   registerValidation,
   loginValidation,
+  verifyOtpValidation,
+  resendOtpValidation,
+  forgotPasswordValidation,
+  resetPasswordValidation,
   validate,
 } = require('../validations/auth.validation');
 
@@ -56,6 +60,8 @@ router.post(
 router.post(
   '/verify-otp',
   otpLimiter,
+  verifyOtpValidation,
+  validate,
   verifyUserOtp
 );
 
@@ -63,6 +69,8 @@ router.post(
 router.post(
   '/resend-otp',
   otpLimiter,
+  resendOtpValidation,
+  validate,
   resendOtp
 );
 
@@ -70,6 +78,8 @@ router.post(
 router.post(
   '/forgot-password',
   otpLimiter,
+  forgotPasswordValidation,
+  validate,
   forgotPassword
 );
 
@@ -77,6 +87,8 @@ router.post(
 router.post(
   '/reset-password',
   otpLimiter,
+  resetPasswordValidation,
+  validate,
   resetPassword
 );
 
