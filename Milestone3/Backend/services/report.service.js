@@ -112,8 +112,6 @@ const REPORT_COLUMNS = {
     { header: 'Duration',      key: 'duration',      width: 15, pdfWidth: 75  },
     { header: 'Status',        key: 'status',        width: 14, pdfWidth: 65  },
     { header: 'Skills',        key: 'required_skills', width: 30, pdfWidth: 140, format: 'array' },
-    { header: 'Removed',       key: 'isRemovedByAdmin', width: 10, pdfWidth: 55, format: 'bool-yn' },
-    { header: 'Removal Reason', key: 'removalReason', width: 25, pdfWidth: 120 },
     { header: 'Event Date',    key: 'date',          width: 18, pdfWidth: 85, format: 'date' },
     { header: 'Created',       key: 'createdAt',     width: 18, pdfWidth: 85, format: 'date' },
   ],
