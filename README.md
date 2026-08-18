@@ -171,24 +171,7 @@ A state-machine engine managing the full lifecycle of recyclable waste pickups:
 
 ---
 
-### 5. Ecological Analytics & CO₂ Impact Calculation
-
-The built-in environmental calculator transforms raw weight data into verified carbon offset equivalents:
-
-$$\text{CO}_2\text{ Saved (kg)} = \sum \left( \text{Weight of Material (kg)} \times \text{Emission Factor} \right)$$
-
-*Emission Factors configured in `constants/wasteTypes.js`:*
-- **Plastic:** $1.50\text{ kg CO}_2\text{e / kg}$
-- **Paper:** $0.90\text{ kg CO}_2\text{e / kg}$
-- **Glass:** $0.30\text{ kg CO}_2\text{e / kg}$
-- **E-Waste:** $2.50\text{ kg CO}_2\text{e / kg}$
-- **Organic:** $0.50\text{ kg CO}_2\text{e / kg}$
-
-Interactive charts display **Yearly Aggregations**, **Monthly Comparisons**, **Weekly Run-Rates**, and **Daily Trends**, complemented by community **Leaderboard Rankings**.
-
----
-
-### 6. Multi-Format Reporting & Export Engine
+### 5. Multi-Format Reporting & Export Engine
 
 A multi-tier reporting system offering interactive previews and on-demand file generation:
 
@@ -212,7 +195,7 @@ A multi-tier reporting system offering interactive previews and on-demand file g
 
 ---
 
-### 7. Platform Governance & Append-Only Audit Logging
+### 6. Platform Governance & Append-Only Audit Logging
 
 - **User Lifecycle Governance:** Admins can search, filter, promote/demote roles (with safeguards preventing the demotion of the last remaining admin), and suspend malicious accounts.
 - **Instant Revocation:** Account suspension immediately dispatches an `account:suspended` WebSocket event and severs all active client sockets.
