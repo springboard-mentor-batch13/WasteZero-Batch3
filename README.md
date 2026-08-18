@@ -1,4 +1,4 @@
-# 🌱 WasteZero Hub
+# 🌱 WasteZero
 
 <div align="center">
 
