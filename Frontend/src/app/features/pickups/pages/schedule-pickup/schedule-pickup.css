@@ -1,0 +1,767 @@
+/* ============================================
+   SCHEDULE PICKUP PAGE — WasteZero Design System
+   Extends M1/M2 tokens — no new custom values
+   ============================================ */
+
+.page-container { padding: 0; }
+
+/* ── Page Header ── */
+.page-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.header-text h1 {
+  margin: 0 0 0.4rem;
+  font-size: clamp(1.75rem, 4vw, 2.4rem);
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  color: var(--color-text-primary);
+}
+
+.header-text p {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: 1rem;
+}
+
+/* ── Stats Strip ── */
+.stats-strip {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.stat-chip {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius-full);
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.stat-chip.pending   { background: #fff3cd; color: #856404; }
+.stat-chip.assigned  { background: #cce5ff; color: #004085; }
+.stat-chip.completed { background: #d4edda; color: #155724; }
+.stat-chip.missed    { background: #ffe5d0; color: #843500; }
+.stat-chip.cancelled { background: #fde8e8; color: #991b1b; }
+
+.stat-chip .material-icons {
+  font-size: 1.15rem;
+  width: 1.15rem;
+  height: 1.15rem;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.stat-chip .stat-num { font-size: 1rem; }
+
+/* ── Tabs ── */
+.tab-bar {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+  border-bottom: 2px solid var(--color-border-neutral);
+  padding-bottom: 0;
+}
+
+.tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.65rem 1.25rem;
+  font-family: var(--font-base);
+  font-size: 0.9rem;
+  font-weight: 600;
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: var(--transition-fast);
+  margin-bottom: -2px;
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+}
+
+.tab-btn:hover { color: var(--color-primary); }
+
+.tab-btn.active {
+  color: var(--color-primary);
+  border-bottom-color: var(--color-primary);
+  background: var(--color-primary-light);
+}
+
+.tab-btn .material-icons { font-size: 1.05rem; }
+
+/* ── Tab Panel ── */
+.tab-panel { padding-top: 0.5rem; }
+
+/* ── Success Banner ── */
+.success-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 1rem 1.25rem;
+  background: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+  border-radius: var(--radius-md);
+  font-weight: 600;
+  margin-bottom: 1.25rem;
+}
+
+.success-banner .material-icons { font-size: 1.25rem; }
+
+/* Shown when Schedule New form is opened from a cancelled/rejected pickup */
+.prefill-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.9rem 1.25rem;
+  background: #e0f2fe;
+  color: #0369a1;
+  border: 1px solid #bae6fd;
+  border-radius: var(--radius-md);
+  font-size: 0.88rem;
+  font-weight: 500;
+  margin-bottom: 1.25rem;
+}
+
+.prefill-banner .material-icons { font-size: 1.1rem; }
+
+/* ── Form ── */
+.pickup-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.form-section {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-neutral);
+  border-radius: var(--radius-md);
+  padding: 1.5rem;
+}
+
+.section-heading {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  margin: 0 0 1.25rem;
+}
+
+.section-heading .material-icons { font-size: 1.1rem; color: var(--color-primary); }
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+}
+
+.form-field { display: flex; flex-direction: column; gap: 0.4rem; }
+
+.form-field label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+
+.required { color: var(--color-danger, #e74c3c); }
+
+.form-input,
+.form-textarea {
+  padding: 0.65rem 0.9rem;
+  border: 1.5px solid var(--color-border-neutral);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-base);
+  font-size: 0.9rem;
+  color: var(--color-text-primary);
+  background: var(--color-bg);
+  transition: border-color var(--transition-fast);
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Date/time inputs: make entire field clearly clickable */
+.form-input[type="date"],
+.form-input[type="time"] {
+  cursor: pointer;
+}
+
+.form-input:focus,
+.form-textarea:focus {
+  outline: none;
+  border-color: var(--color-primary);
+}
+
+.form-textarea { resize: vertical; }
+
+.field-error {
+  font-size: 0.78rem;
+  color: var(--color-danger, #e74c3c);
+}
+
+/* ── Waste Type Toggles ── */
+.waste-type-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+}
+
+.waste-toggle {
+  padding: 0.5rem 1rem;
+  border: 1.5px solid var(--color-border-neutral);
+  border-radius: var(--radius-full);
+  background: var(--color-bg);
+  color: var(--color-text-secondary);
+  font-family: var(--font-base);
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition-fast);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.waste-toggle:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.waste-toggle.selected {
+  border-color: var(--color-primary);
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+}
+
+.waste-check { font-size: 0.9rem; }
+
+/* ── Submit ── */
+.submit-error-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.85rem 1rem;
+  background: #fdecea;
+  color: var(--color-danger, #e74c3c);
+  border-radius: var(--radius-sm);
+  font-size: 0.875rem;
+}
+
+.form-actions { display: flex; justify-content: flex-start; }
+
+.btn-submit {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.85rem 2rem;
+  border: none;
+  border-radius: var(--radius-md);
+  background: var(--color-primary);
+  color: #fff;
+  font-family: var(--font-base);
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: var(--transition-fast);
+}
+
+.btn-submit:hover:not(:disabled) { background: var(--color-primary-dark); }
+.btn-submit:disabled { opacity: 0.6; cursor: not-allowed; }
+.btn-submit .material-icons { font-size: 1.1rem; }
+
+/* ── Pickup List ── */
+.pickup-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 1.25rem;
+}
+
+.pickup-card {
+  background: var(--color-surface);
+  border: 1.5px solid var(--color-border-neutral);
+  border-radius: var(--radius-md);
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  box-shadow: var(--shadow-sm);
+  transition: var(--transition-std);
+}
+
+.pickup-card:hover { box-shadow: var(--shadow-md); }
+
+.pickup-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.pickup-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.8rem;
+  border-radius: var(--radius-full);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.status-pending   .pickup-status-badge { background: #fff3cd; color: #856404; }
+.status-assigned  .pickup-status-badge { background: #cce5ff; color: #004085; }
+.status-completed .pickup-status-badge { background: #d4edda; color: #155724; }
+.status-cancelled .pickup-status-badge { background: #f8d7da; color: #721c24; }
+
+.pickup-status-badge .material-icons {
+  font-size: 1rem;
+  width: 1rem;
+  height: 1rem;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.pickup-date {
+  font-size: 0.82rem;
+  color: var(--color-text-muted);
+  font-weight: 500;
+}
+
+.pickup-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.pickup-detail-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+  font-size: 0.875rem;
+  color: var(--color-text-secondary);
+}
+
+.pickup-detail-icon {
+  font-size: 1.15rem;
+  width: 1.15rem;
+  height: 1.15rem;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-primary);
+  flex-shrink: 0;
+  margin-top: 0.1rem;
+}
+
+.pickup-notes {
+  font-style: italic;
+  color: var(--color-text-muted);
+}
+
+.waste-chips-row { align-items: flex-start; }
+
+.waste-chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+.waste-chip {
+  padding: 0.18rem 0.6rem;
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+  border-radius: var(--radius-full);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.pickup-card-footer { padding-top: 0.5rem; border-top: 1px solid var(--color-border-neutral); }
+
+.btn-cancel-pickup {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.55rem 1.1rem;
+  border: 1.5px solid #dc3545;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: #dc3545;
+  font-family: var(--font-base);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition-fast);
+}
+
+.btn-cancel-pickup:hover:not(:disabled) { background: #fdecea; }
+.btn-cancel-pickup:disabled { opacity: 0.6; cursor: not-allowed; }
+.btn-cancel-pickup .material-icons { font-size: 1rem; }
+
+/* ── State cards ── */
+.state-card {
+  text-align: center;
+  padding: 3rem 2rem;
+  background: var(--color-surface);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border-neutral);
+}
+
+.state-icon {
+  font-size: 3rem;
+  color: var(--color-text-muted);
+  display: block;
+  margin-bottom: 0.75rem;
+}
+
+.error-state .state-icon { color: var(--color-danger, #e74c3c); }
+.empty-state .state-icon { color: var(--color-primary); }
+
+.btn-retry {
+  margin-top: 1rem;
+  padding: 0.55rem 1.25rem;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: var(--color-primary);
+  color: #fff;
+  font-family: var(--font-base);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-primary {
+  margin-top: 1rem;
+  padding: 0.65rem 1.5rem;
+  border: none;
+  border-radius: var(--radius-md);
+  background: var(--color-primary);
+  color: #fff;
+  font-family: var(--font-base);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+/* ── Spinner ── */
+.spinner {
+  width: 2.5rem;
+  height: 2.5rem;
+  border: 3px solid var(--color-border-neutral);
+  border-top-color: var(--color-primary);
+  border-radius: var(--radius-full);
+  animation: spin 0.9s linear infinite;
+  margin: 0 auto 1rem;
+}
+
+@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+.spinning { animation: spin 0.9s linear infinite; font-size: 1.15rem; }
+
+/* Responsive */
+@media (max-width: 640px) {
+  .pickup-list { grid-template-columns: 1fr; }
+  .form-grid    { grid-template-columns: 1fr; }
+}
+
+/* ── Missed status ── */
+.status-missed {
+  background: #fff3e0;
+  border-color: #fb8c00;
+}
+
+.pickup-status-badge.status-missed {
+  background: #fff3e0;
+  color: #e65100;
+}
+
+/* ── Reschedule button ── */
+.btn-reschedule-pickup {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  border: none;
+  border-radius: var(--radius-md);
+  padding: 0.65rem 1.2rem;
+  background: #e65100;
+  color: #fff;
+  font-family: var(--font-base);
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: var(--transition-fast);
+}
+
+.btn-reschedule-pickup:hover {
+  background: #bf360c;
+  transform: translateY(-1px);
+}
+
+.btn-reschedule-pickup .material-icons { font-size: 1.05rem; }
+
+/* Informational hint shown below a Cancelled pickup card */
+.pickup-cancelled-hint {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.8rem;
+  color: #6b7280;
+  margin: 0 0 0.5rem;
+}
+
+/* ── Inline reschedule form ── */
+.reschedule-inline {
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--color-border-neutral);
+}
+
+.reschedule-inline-title {
+  margin: 0 0 0.75rem;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+
+.reschedule-fields {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.reschedule-field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.reschedule-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+
+.reschedule-input {
+  border: 1px solid var(--color-border-neutral);
+  border-radius: var(--radius-sm);
+  padding: 0.45rem 0.6rem;
+  font-family: var(--font-base);
+  font-size: 0.85rem;
+  color: var(--color-text-primary);
+  background: var(--color-bg);
+}
+
+.reschedule-input:focus {
+  outline: none;
+  border-color: #e65100;
+}
+
+.reschedule-error {
+  font-size: 0.8rem;
+  color: var(--color-danger, #dc2626);
+  margin: 0.25rem 0;
+}
+
+.reschedule-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.btn-reschedule-cancel {
+  border: none;
+  background: transparent;
+  font-family: var(--font-base);
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--radius-sm);
+  transition: var(--transition-fast);
+}
+
+.btn-reschedule-cancel:hover { color: var(--color-text-primary); }
+
+.btn-reschedule-submit {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 0.5rem 1rem;
+  background: #e65100;
+  color: #fff;
+  font-family: var(--font-base);
+  font-size: 0.88rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: var(--transition-fast);
+}
+
+.btn-reschedule-submit:disabled { opacity: 0.6; cursor: not-allowed; }
+.btn-reschedule-submit:not(:disabled):hover { background: #bf360c; }
+.btn-reschedule-submit .material-icons { font-size: 1rem; }
+
+@media (max-width: 480px) { .reschedule-fields { grid-template-columns: 1fr; } }
+
+/* ── Responsive ── */
+@media (max-width: 640px) {
+  .filter-row, .filter-bar { flex-direction: column !important; gap: 0.5rem !important; }
+  .filter-row select, .filter-row input { width: 100% !important; }
+  .kpi-row, .stats-row { flex-direction: column !important; gap: 0.5rem !important; }
+  table { min-width: 600px; }
+  .table-wrapper, .table-wrap, .pickup-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+}
+
+/* ── Dark Mode — uses :host-context so Angular ViewEncapsulation is respected ── */
+:host-context(html.dark) .pickup-card,
+:host-context(html.dark) .section-card,
+:host-context(html.dark) .filter-card {
+  background: var(--color-surface);
+  border-color: var(--color-border);
+}
+
+/* Stat chips — dark-friendly muted tones (hardcoded light values invisible in dark) */
+:host-context(html.dark) .stat-chip.pending {
+  background: rgba(250, 204, 21, 0.12);
+  color: #fcd34d;
+}
+:host-context(html.dark) .stat-chip.assigned {
+  background: rgba(59, 130, 246, 0.12);
+  color: #93c5fd;
+}
+:host-context(html.dark) .stat-chip.completed {
+  background: rgba(34, 197, 94, 0.12);
+  color: #86efac;
+}
+:host-context(html.dark) .stat-chip.missed {
+  background: rgba(249, 115, 22, 0.12);
+  color: #fdba74;
+}
+:host-context(html.dark) .stat-chip.cancelled {
+  background: rgba(239, 68, 68, 0.12);
+  color: #fca5a5;
+}
+
+/* Tables */
+:host-context(html.dark) table thead tr { background: var(--color-surface-alt); }
+:host-context(html.dark) table thead th { color: var(--color-text-muted); border-color: var(--color-border); }
+:host-context(html.dark) table tbody tr { border-color: var(--color-border); }
+:host-context(html.dark) table tbody tr:hover { background: var(--color-surface-alt); }
+:host-context(html.dark) table td  { color: var(--color-text); }
+
+/* Filter inputs */
+:host-context(html.dark) .filter-row select,
+:host-context(html.dark) .filter-row input,
+:host-context(html.dark) .filter-bar select {
+  background: var(--color-surface-alt);
+  color: var(--color-text);
+  border-color: var(--color-border);
+}
+
+/* Text */
+:host-context(html.dark) .page-title { color: var(--color-text); }
+:host-context(html.dark) .stat-label,
+:host-context(html.dark) .stat-value { color: var(--color-text-muted); }
+
+/* Pickup detail icon */
+:host-context(html.dark) .pickup-detail-icon { color: var(--color-text-muted); }
+
+/* Waste toggles */
+:host-context(html.dark) .waste-toggle {
+  background: var(--color-surface-alt);
+  border-color: var(--color-border-neutral);
+  color: var(--color-text-secondary);
+}
+:host-context(html.dark) .waste-toggle:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+:host-context(html.dark) .waste-toggle.selected {
+  background: rgba(34, 197, 94, 0.16);
+  border-color: var(--color-primary);
+  color: #4ade80;
+}
+
+/* Tabs */
+:host-context(html.dark) .tab-bar {
+  border-bottom-color: var(--color-border-neutral);
+}
+:host-context(html.dark) .tab-btn {
+  color: var(--color-text-secondary);
+}
+:host-context(html.dark) .tab-btn:hover {
+  color: var(--color-primary);
+}
+:host-context(html.dark) .tab-btn.active {
+  color: var(--color-primary);
+  border-bottom-color: var(--color-primary);
+  background: rgba(34, 197, 94, 0.12);
+}
+
+/* Banners */
+:host-context(html.dark) .success-banner {
+  background: rgba(34, 197, 94, 0.12);
+  border-color: rgba(34, 197, 94, 0.3);
+  color: #86efac;
+}
+:host-context(html.dark) .prefill-banner {
+  background: rgba(2, 132, 199, 0.12);
+  border-color: rgba(2, 132, 199, 0.3);
+  color: #7dd3fc;
+}
+:host-context(html.dark) .submit-error-bar {
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #fca5a5;
+}
+
+/* Form section & inputs */
+:host-context(html.dark) .form-section {
+  background: var(--color-surface);
+  border-color: var(--color-border-neutral);
+}
+:host-context(html.dark) .form-input,
+:host-context(html.dark) .form-textarea {
+  background: var(--color-surface-alt);
+  border-color: var(--color-border-neutral);
+  color: var(--color-text-primary);
+  color-scheme: dark;
+}
+:host-context(html.dark) .form-field label {
+  color: var(--color-text-secondary);
+}
+:host-context(html.dark) .section-heading {
+  color: var(--color-text-primary);
+}
+:host-context(html.dark) .pickup-cancelled-hint {
+  color: var(--color-text-muted);
+}
+:host-context(html.dark) .waste-chip {
+  background: var(--color-surface-alt);
+  border-color: var(--color-border-neutral);
+  color: var(--color-text-primary);
+}
+:host-context(html.dark) .pickup-notes {
+  color: var(--color-text-primary);
+}
+
+/* Status badges */
+:host-context(html.dark) .pickup-status-badge.status-pending  { background: rgba(250,204,21,0.12); color:#fcd34d; }
+:host-context(html.dark) .pickup-status-badge.status-assigned { background: rgba(59,130,246,0.12); color:#93c5fd; }
+:host-context(html.dark) .pickup-status-badge.status-completed{ background: rgba(34,197,94,0.12);  color:#86efac; }
+:host-context(html.dark) .pickup-status-badge.status-missed   { background: rgba(249,115,22,0.12); color:#fdba74; }
+:host-context(html.dark) .pickup-status-badge.status-cancelled{ background: rgba(239,68,68,0.12);  color:#fca5a5; }

@@ -1,0 +1,238 @@
+/* ============================================
+   DELETE CONFIRM DIALOG — WasteZero Design System
+   ============================================ */
+
+/* Backdrop */
+.dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 500;
+  padding: 1rem;
+  animation: backdrop-enter 0.18s ease;
+}
+
+/* Dialog Card */
+.dialog-card {
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg), 0 0 0 1px var(--color-border-neutral);
+  padding: 2.25rem 2rem;
+  width: min(100%, 26rem);
+  text-align: center;
+  animation: dialog-enter 0.2s ease;
+}
+
+/* Icon */
+.dialog-icon-wrap {
+  width: 4rem;
+  height: 4rem;
+  border-radius: var(--radius-full);
+  background: var(--color-danger-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 1.25rem;
+}
+
+.dialog-icon {
+  font-size: 1.75rem;
+  color: var(--color-danger);
+}
+
+/* Title */
+.dialog-title {
+  margin: 0 0 0.75rem;
+  font-size: 1.3rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: var(--color-text-primary);
+}
+
+/* Body */
+.dialog-body {
+  margin: 0 0 2rem;
+  font-size: 0.93rem;
+  color: var(--color-text-secondary);
+  line-height: 1.65;
+}
+
+.dialog-body strong {
+  color: var(--color-text-primary);
+  font-weight: 700;
+}
+
+/* Reason input */
+.dialog-reason-group {
+  text-align: left;
+  margin-bottom: 1.5rem;
+}
+
+.dialog-reason-label {
+  display: block;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  margin-bottom: 0.4rem;
+}
+
+.dialog-reason-hint {
+  font-weight: 400;
+  color: var(--color-text-muted, var(--color-text-secondary));
+}
+
+.dialog-reason-input {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid var(--color-border-neutral);
+  border-radius: var(--radius-md);
+  padding: 0.6rem 0.75rem;
+  font-family: var(--font-base);
+  font-size: 0.9rem;
+  color: var(--color-text-primary);
+  background: var(--color-bg);
+  resize: vertical;
+  transition: border-color 0.15s ease;
+}
+
+.dialog-reason-input:focus {
+  outline: none;
+  border-color: var(--color-info);
+}
+
+.dialog-reason-input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Actions */
+.dialog-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+
+.btn-cancel {
+  border: none;
+  background: transparent;
+  font-family: var(--font-base);
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-md);
+  transition: var(--transition-fast);
+}
+
+.btn-cancel:hover:not(:disabled) {
+  background: var(--color-bg);
+  color: var(--color-text-primary);
+}
+
+.btn-delete {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  border: none;
+  border-radius: var(--radius-md);
+  padding: 0.75rem 1.4rem;
+  background: var(--color-info);
+  color: #ffffff;
+  font-family: var(--font-base);
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: var(--transition-fast);
+}
+
+.btn-delete:hover:not(:disabled) {
+  background: #1d4ed8;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(37, 99, 235, 0.28);
+}
+
+.btn-delete:disabled,
+.btn-cancel:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.btn-delete .material-icons {
+  font-size: 1.1rem;
+}
+
+/* Animations */
+@keyframes backdrop-enter {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes dialog-enter {
+  from {
+    opacity: 0;
+    transform: scale(0.92) translateY(-12px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+.spinning {
+  animation: spin 0.9s linear infinite;
+  font-size: 1.1rem;
+}
+
+/* ── Responsive ── */
+@media (max-width: 640px) {
+  .profile-layout, .app-layout { flex-direction: column !important; }
+  .table-wrapper, .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  table { min-width: 540px; }
+  .chat-container, .messages-layout { flex-direction: column !important; height: auto !important; }
+  .chat-sidebar { width: 100% !important; height: 40vh !important; border-right: none !important; border-bottom: 1px solid var(--color-border); }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   DARK MODE — delete-confirm-dialog.css
+   ═══════════════════════════════════════════════════════════════════════ */
+
+:host-context(html.dark) .dialog-card {
+  background: var(--color-surface);
+  box-shadow: var(--shadow-lg), 0 0 0 1px var(--color-border-neutral);
+}
+
+:host-context(html.dark) .dialog-title { color: var(--color-text-primary); }
+:host-context(html.dark) .dialog-body  { color: var(--color-text-secondary); }
+:host-context(html.dark) .dialog-body strong { color: var(--color-text-primary); }
+
+/* Reason input */
+:host-context(html.dark) .dialog-reason-label { color: var(--color-text-secondary); }
+:host-context(html.dark) .dialog-reason-hint  { color: var(--color-text-muted); }
+:host-context(html.dark) .dialog-reason-input {
+  background: var(--color-surface-alt);
+  border-color: var(--color-border-neutral);
+  color: var(--color-text-primary);
+}
+:host-context(html.dark) .dialog-reason-input:focus {
+  border-color: var(--color-info);
+}
+
+/* Buttons */
+:host-context(html.dark) .btn-cancel {
+  color: var(--color-text-secondary);
+}
+:host-context(html.dark) .btn-cancel:hover:not(:disabled) {
+  background: var(--color-surface-alt);
+  color: var(--color-text-primary);
+}

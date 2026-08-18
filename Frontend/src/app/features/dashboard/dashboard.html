@@ -1,0 +1,836 @@
+<div class="db-page">
+
+  <!-- ═══ PAGE HEADER ═══════════════════════════════════════════════════ -->
+  <div class="db-header">
+    <div>
+      <h1 class="db-title">{{ userRole | titlecase }} Dashboard</h1>
+      <p class="db-subtitle">Welcome back, <strong>{{ userName }}</strong> 👋</p>
+    </div>
+    <span class="db-role-badge">
+      <span class="material-icons">verified_user</span>
+      {{ userRole | titlecase }}
+    </span>
+  </div>
+
+  <!-- ═══ VOLUNTEER ════════════════════════════════════════════════════ -->
+  @if(userRole === 'volunteer'){
+
+  <!-- Metrics error banner -->
+  @if(userMetricsError() && !loadingUserMetrics()){
+  <div class="banner banner--error">
+    <span class="material-icons">error_outline</span>
+    <span>{{ userMetricsError() }}</span>
+    <button (click)="loadUserMetrics()">Retry</button>
+  </div>
+  }
+
+  <!-- Volunteer KPI cards - real backend data -->
+  @if(loadingUserMetrics()){
+  <div class="banner banner--loading"><div class="spinner"></div><span>Loading your stats…</span></div>
+  }
+  <div class="kpi-row">
+    @let vm = asVolunteer(userMetrics());
+    <div class="kpi-card kpi-card--accent">
+      <div class="kpi-icon c-blue"><span class="material-icons">local_shipping</span></div>
+      <div class="kpi-body">
+        <span class="kpi-val">{{ vm?.totalPickups ?? 0 | number }}</span>
+        <span class="kpi-lbl">Total Pickups</span>
+        <span class="kpi-meta">{{ vm?.completedPickups ?? 0 }} completed</span>
+        @if(vm?.totalPickupsGrowth != null){
+        <span class="kpi-growth" [class.kpi-growth--up]="growthPositive(vm!.totalPickupsGrowth!)">
+          <span class="material-icons">{{ growthPositive(vm!.totalPickupsGrowth!) ? 'trending_up' : 'trending_down' }}</span>
+          {{ growthLabel(vm!.totalPickupsGrowth!) }} this month
+        </span>
+        }
+      </div>
+    </div>
+    <div class="kpi-card kpi-card--accent">
+      <div class="kpi-icon c-green"><span class="material-icons">recycling</span></div>
+      <div class="kpi-body">
+        <span class="kpi-val">{{ vm?.recycledWeightKg ?? 0 | number:'1.0-1' }}<span class="kpi-unit"> kg</span></span>
+        <span class="kpi-lbl">Recycled Waste</span>
+        <span class="kpi-meta">{{ vm?.recycledItemsCount ?? 0 }} items · {{ vm?.co2SavedKg ?? 0 | number:'1.0-1' }} kg CO₂</span>
+      </div>
+    </div>
+    <div class="kpi-card kpi-card--accent">
+      <div class="kpi-icon c-violet"><span class="material-icons">assignment</span></div>
+      <div class="kpi-body">
+        <span class="kpi-val">{{ vm?.totalApplications ?? 0 | number }}</span>
+        <span class="kpi-lbl">Applications</span>
+        <span class="kpi-meta">{{ vm?.acceptedApplications ?? 0 }} accepted</span>
+      </div>
+    </div>
+    <div class="kpi-card kpi-card--accent">
+      <div class="kpi-icon c-amber"><span class="material-icons">schedule</span></div>
+      <div class="kpi-body">
+        <span class="kpi-val">{{ vm?.volunteerHours ?? 0 | number:'1.0-1' }}<span class="kpi-unit"> hrs</span></span>
+        <span class="kpi-lbl">Volunteer Hours</span>
+        @if(vm?.volunteerHoursGrowth != null){
+        <span class="kpi-growth" [class.kpi-growth--up]="growthPositive(vm!.volunteerHoursGrowth!)">
+          <span class="material-icons">{{ growthPositive(vm!.volunteerHoursGrowth!) ? 'trending_up' : 'trending_down' }}</span>
+          {{ growthLabel(vm!.volunteerHoursGrowth!) }} this month
+        </span>
+        }
+      </div>
+    </div>
+  </div>
+
+  <div class="portal-card portal-card--volunteer">
+    <div class="portal-icon"><span class="material-icons">volunteer_activism</span></div>
+    <div><h2>Volunteer Portal</h2><p>Schedule waste pickups, track your recycling activities and contribute towards a cleaner environment.</p></div>
+  </div>
+
+  <!-- Match suggestions -->
+  <div class="panel">
+    <div class="panel-head"><span class="material-icons panel-head-icon">auto_awesome</span><h2>Opportunities For You</h2></div>
+    @if(loadingMatches()){ <div class="state-loading"><div class="spinner"></div><span>Finding matches…</span></div> }
+    @else if(missingFields().length > 0){
+    <div class="state-info">
+      <span class="material-icons state-icon">person_search</span>
+      <p>Complete your profile to unlock personalised matches.</p>
+      <small>Missing: <strong>{{ missingFields().join(', ') }}</strong></small>
+      <a routerLink="/profile" class="btn-primary">Complete Profile</a>
+    </div>
+    }
+    @else if(matchError()){
+    <div class="state-info">
+      <span class="material-icons state-icon">error_outline</span>
+      <p>{{ matchError() }}</p>
+      <button class="btn-primary" (click)="loadMatches()">Retry</button>
+    </div>
+    }
+    @else if(matches().length === 0){
+    <div class="state-info">
+      <span class="material-icons state-icon">search_off</span>
+      <p>No matches found right now.</p>
+      <small>Check back after new opportunities are posted.</small>
+    </div>
+    }
+    @else {
+    <ul class="match-list">
+      @for(match of matches(); track match._id){
+      <li class="match-item">
+        <div><p class="match-title">{{ match.title }}</p><span class="match-loc"><span class="material-icons">place</span>{{ match.location || 'Location not specified' }}</span></div>
+        <div class="match-actions">
+          <span class="match-badge" [class.match-badge--perfect]="match.locationMatch"><span class="material-icons">star</span>{{ match.matchScore }} match</span>
+          <a [routerLink]="['/opportunities', match._id]" class="btn-primary btn-sm">View</a>
+        </div>
+      </li>
+      }
+    </ul>
+    <a routerLink="/opportunities" class="btn-outline mt-1">Browse All Opportunities</a>
+    }
+  </div>
+
+  <!-- ── Two-column row: Activity Summary + Leaderboard ────────── -->
+  <div class="two-col">
+
+    <!-- Activity & Pickup breakdown from metrics -->
+    <div class="panel" style="min-width:0">
+      <div class="panel-head">
+        <span class="material-icons panel-head-icon">dashboard</span>
+        <h2>Activity &amp; Impact</h2>
+      </div>
+      @let vm2 = asVolunteer(userMetrics());
+      <div class="status-breakdown">
+        <div class="status-chip-item chip-assigned">
+          <span class="material-icons status-chip-icon">local_shipping</span>
+          <span class="status-chip-val">{{ vm2?.totalPickups ?? 0 }}</span>
+          <span class="status-chip-lbl">Total Pickups</span>
+        </div>
+        <div class="status-chip-item chip-completed">
+          <span class="material-icons status-chip-icon">check_circle</span>
+          <span class="status-chip-val">{{ vm2?.completedPickups ?? 0 }}</span>
+          <span class="status-chip-lbl">Completed</span>
+        </div>
+        <div class="status-chip-item chip-pending">
+          <span class="material-icons status-chip-icon">volunteer_activism</span>
+          <span class="status-chip-val">{{ vm2?.totalApplications ?? 0 }}</span>
+          <span class="status-chip-lbl">Applied Drives</span>
+        </div>
+        <div class="status-chip-item chip-missed">
+          <span class="material-icons status-chip-icon">task_alt</span>
+          <span class="status-chip-val">{{ vm2?.acceptedApplications ?? 0 }}</span>
+          <span class="status-chip-lbl">Accepted</span>
+        </div>
+        <div class="status-chip-item chip-cancelled">
+          <span class="material-icons status-chip-icon">recycling</span>
+          <span class="status-chip-val">{{ vm2?.recycledItemsCount ?? 0 }}</span>
+          <span class="status-chip-lbl">Items Recycled</span>
+        </div>
+      </div>
+      <a routerLink="/pickups/schedule" class="btn-outline mt-1">View My Pickups</a>
+    </div>
+
+    <!-- Leaderboard from GET /stats/leaderboard -->
+    <div class="panel" style="min-width:0">
+      <div class="panel-head">
+        <span class="material-icons panel-head-icon">leaderboard</span>
+        <h2>Recycling Leaderboard</h2>
+      </div>
+      @if(loadingLeaderboard()){
+      <div class="state-loading"><div class="spinner"></div><span>Loading…</span></div>
+      } @else if(leaderboard().length === 0){
+      <div class="state-info"><span class="material-icons state-icon">sports_score</span><p>No leaderboard data yet.</p></div>
+      } @else {
+      <div class="lb-table">
+        @for(entry of leaderboard(); track entry.userId; let i = $index){
+        <div class="lb-row" [class.lb-row--me]="leaderboardMe()?.userId === entry.userId">
+          <span class="lb-rank"
+            [class.lb-rank-gold]="i===0"
+            [class.lb-rank-silver]="i===1"
+            [class.lb-rank-bronze]="i===2">
+            {{ i===0?'🥇':i===1?'🥈':i===2?'🥉':'#'+(i+1) }}
+          </span>
+          <span class="lb-name">{{ entry.name || entry.username || 'User' }}</span>
+          <span class="lb-score">{{ entry.weightKg | number:'1.0-1' }}<small> kg</small></span>
+        </div>
+        }
+        @if(leaderboardMe() && leaderboardMe()!.rank > leaderboard().length){
+        <div class="lb-divider">• your position •</div>
+        <div class="lb-row lb-row--me">
+          <span class="lb-rank">#{{ leaderboardMe()!.rank }}</span>
+          <span class="lb-name">You</span>
+          <span class="lb-score">{{ leaderboardMe()!.weightKg | number:'1.0-1' }}<small> kg</small></span>
+        </div>
+        }
+      </div>
+      }
+    </div>
+
+  </div><!-- /two-col -->
+
+  } <!-- /volunteer -->
+
+  <!-- ═══ NGO ═══════════════════════════════════════════════════════════ -->
+  @else if(userRole === 'ngo'){
+
+  <!-- NGO metrics error -->
+  @if(userMetricsError() && !loadingUserMetrics()){
+  <div class="banner banner--error">
+    <span class="material-icons">error_outline</span>
+    <span>{{ userMetricsError() }}</span>
+    <button (click)="loadUserMetrics()">Retry</button>
+  </div>
+  }
+  @if(loadingUserMetrics()){
+  <div class="banner banner--loading"><div class="spinner"></div><span>Loading your stats…</span></div>
+  }
+
+  <!-- NGO KPI cards - real backend data -->
+  <div class="kpi-row kpi-row--4">
+    @let nm = asNgo(userMetrics());
+    <div class="kpi-card kpi-card--accent">
+      <div class="kpi-icon c-blue"><span class="material-icons">add_circle_outline</span></div>
+      <div class="kpi-body">
+        <span class="kpi-val">{{ nm?.totalOpportunities ?? 0 | number }}</span>
+        <span class="kpi-lbl">Opportunities</span>
+        <span class="kpi-meta">{{ nm?.activeOpportunities ?? 0 }} active now</span>
+        @if(nm?.opportunitiesGrowth != null){
+        <span class="kpi-growth" [class.kpi-growth--up]="growthPositive(nm!.opportunitiesGrowth!)">
+          <span class="material-icons">{{ growthPositive(nm!.opportunitiesGrowth!) ? 'trending_up' : 'trending_down' }}</span>
+          {{ growthLabel(nm!.opportunitiesGrowth!) }} this month
+        </span>
+        }
+      </div>
+    </div>
+    <div class="kpi-card kpi-card--accent">
+      <div class="kpi-icon c-green"><span class="material-icons">check_circle</span></div>
+      <div class="kpi-body">
+        <span class="kpi-val">{{ nm?.completedPickups ?? 0 | number }}</span>
+        <span class="kpi-lbl">Completed Pickups</span>
+        <span class="kpi-meta">{{ nm?.totalAssignedPickups ?? 0 }} total assigned</span>
+      </div>
+    </div>
+    <div class="kpi-card kpi-card--accent">
+      <div class="kpi-icon c-amber"><span class="material-icons">groups</span></div>
+      <div class="kpi-body">
+        <span class="kpi-val">{{ nm?.totalApplications ?? 0 | number }}</span>
+        <span class="kpi-lbl">Applications</span>
+        <span class="kpi-meta">{{ nm?.pendingApplications ?? 0 }} pending · {{ nm?.acceptedApplications ?? 0 }} accepted</span>
+      </div>
+    </div>
+    <div class="kpi-card kpi-card--accent">
+      <div class="kpi-icon c-teal"><span class="material-icons">eco</span></div>
+      <div class="kpi-body">
+        <span class="kpi-val">{{ nm?.co2SavedKg ?? 0 | number:'1.0-1' }}<span class="kpi-unit"> kg</span></span>
+        <span class="kpi-lbl">CO₂ Saved</span>
+        <span class="kpi-meta">{{ nm?.recycledWeightKg ?? 0 | number:'1.0-1' }} kg waste recycled</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- NGO upcoming schedule -->
+  @if(upcomingPickups().length > 0 || loadingUpcoming()){
+  <div class="panel">
+    <div class="panel-head">
+      <span class="material-icons panel-head-icon">event_upcoming</span>
+      <div><h2>Your Upcoming Schedule</h2><p class="panel-sub">Pickups &amp; active opportunities</p></div>
+    </div>
+    @if(loadingUpcoming()){
+    <div class="state-loading"><div class="spinner"></div><span>Loading…</span></div>
+    } @else {
+    <ul class="upcoming-list">
+      @for(p of upcomingPickups(); track p.id){
+      <li class="upcoming-item">
+        <div class="upcoming-info">
+          <span class="upcoming-name">{{ p.eventName }}</span>
+          <span class="upcoming-date"><span class="material-icons">calendar_today</span>{{ formatDate(p.date) }}</span>
+        </div>
+        <span class="status-badge" [ngClass]="statusClass(p.status)">{{ p.status }}</span>
+      </li>
+      }
+    </ul>
+    }
+  </div>
+  }
+  <div class="portal-card portal-card--ngo">
+    <div class="portal-icon"><span class="material-icons">corporate_fare</span></div>
+    <div><h2>NGO Portal</h2><p>Create volunteering opportunities, manage campaigns and connect with volunteers for waste management drives.</p></div>
+  </div>
+
+  <!-- NGO Leaderboard from GET /stats/leaderboard -->
+  <div class="panel">
+    <div class="panel-head">
+      <span class="material-icons panel-head-icon">leaderboard</span>
+      <div>
+        <h2>Platform Leaderboard</h2>
+        <p class="panel-sub">Top organizations by recycled weight &amp; CO₂ saved</p>
+      </div>
+    </div>
+    @if(loadingLeaderboard()){
+    <div class="state-loading"><div class="spinner"></div><span>Loading…</span></div>
+    } @else if(leaderboard().length === 0){
+    <div class="state-info"><span class="material-icons state-icon">sports_score</span><p>No leaderboard data yet.</p></div>
+    } @else {
+    <div class="lb-table">
+      @for(entry of leaderboard(); track entry.userId; let i = $index){
+      <div class="lb-row" [class.lb-row--me]="leaderboardMe()?.userId === entry.userId">
+        <span class="lb-rank"
+          [class.lb-rank-gold]="i===0"
+          [class.lb-rank-silver]="i===1"
+          [class.lb-rank-bronze]="i===2">
+          {{ i===0?'🥇':i===1?'🥈':i===2?'🥉':'#'+(i+1) }}
+        </span>
+        <span class="lb-name">{{ entry.name || entry.username || 'Organization' }}</span>
+        <span class="lb-score">{{ entry.weightKg | number:'1.0-1' }}<small> kg</small></span>
+      </div>
+      }
+      @if(leaderboardMe() && leaderboardMe()!.rank > leaderboard().length){
+      <div class="lb-divider">• your organization •</div>
+      <div class="lb-row lb-row--me">
+        <span class="lb-rank">#{{ leaderboardMe()!.rank }}</span>
+        <span class="lb-name">Your Organization</span>
+        <span class="lb-score">{{ leaderboardMe()!.weightKg | number:'1.0-1' }}<small> kg</small></span>
+      </div>
+      }
+    </div>
+    }
+  </div>
+
+  } <!-- /ngo -->
+
+  <!-- ═══ ADMIN ══════════════════════════════════════════════════════════ -->
+  @else if(userRole === 'admin'){
+
+  <!-- Loading / error banners -->
+  @if(loadingAdminStats()){
+  <div class="banner banner--loading"><div class="spinner"></div><span>Loading platform statistics…</span></div>
+  }
+  @if(adminStatsError() && !loadingAdminStats()){
+  <div class="banner banner--error">
+    <span class="material-icons">error_outline</span>
+    <span>{{ adminStatsError() }}</span>
+    <button (click)="loadAdminData()">Retry</button>
+  </div>
+  }
+
+  <!-- ── 1: KPI Cards ──────────────────────────────────────────────── -->
+  @if(adminStats()){
+  <div class="kpi-scroll-container">
+    <div class="kpi-row kpi-row--6">
+
+      <div class="kpi-card kpi-card--accent">
+        <div class="kpi-icon c-violet"><span class="material-icons">local_shipping</span></div>
+        <div class="kpi-body">
+          <span class="kpi-val">{{ adminStats()!.pickups.total | number }}</span>
+          <span class="kpi-lbl">Total Pickups</span>
+          <span class="kpi-meta">{{ adminStats()!.pickups.assigned }} assigned · {{ adminStats()!.pickups.pending }} pending</span>
+          @if(adminStats()!.pickups.completedGrowth != null){
+          <span class="kpi-growth" [class.kpi-growth--up]="growthPositive(adminStats()!.pickups.completedGrowth)">
+            <span class="material-icons">{{ growthPositive(adminStats()!.pickups.completedGrowth) ? 'trending_up' : 'trending_down' }}</span>
+            {{ growthLabel(adminStats()!.pickups.completedGrowth) }} completed
+          </span>
+          }
+        </div>
+      </div>
+
+      <div class="kpi-card kpi-card--accent">
+        <div class="kpi-icon c-green"><span class="material-icons">check_circle</span></div>
+        <div class="kpi-body">
+          <span class="kpi-val">{{ adminStats()!.pickups.completed | number }}</span>
+          <span class="kpi-lbl">Completed Pickups</span>
+          <span class="kpi-meta">{{ adminStats()!.pickups.missed }} missed · {{ adminStats()!.pickups.pending }} pending</span>
+        </div>
+      </div>
+
+      <div class="kpi-card kpi-card--accent">
+        <div class="kpi-icon c-teal"><span class="material-icons">recycling</span></div>
+        <div class="kpi-body">
+          <span class="kpi-val">{{ adminStats()!.waste.totalWeightKg | number:'1.0-1' }}<span class="kpi-unit"> kg</span></span>
+          <span class="kpi-lbl">Waste Collected</span>
+          <span class="kpi-meta">{{ adminStats()!.waste.totalCO2Kg | number:'1.0-1' }} kg CO₂ saved</span>
+        </div>
+      </div>
+
+      <div class="kpi-card kpi-card--accent">
+        <div class="kpi-icon c-blue"><span class="material-icons">people</span></div>
+        <div class="kpi-body">
+          <span class="kpi-val">{{ adminStats()!.users.total | number }}</span>
+          <span class="kpi-lbl">Total Users</span>
+          <span class="kpi-meta">{{ adminStats()!.users.volunteers }} volunteers · {{ adminStats()!.users.ngos }} NGOs</span>
+          @if(adminStats()!.users.growthPercent != null){
+          <span class="kpi-growth" [class.kpi-growth--up]="growthPositive(adminStats()!.users.growthPercent)">
+            <span class="material-icons">{{ growthPositive(adminStats()!.users.growthPercent) ? 'trending_up' : 'trending_down' }}</span>
+            {{ growthLabel(adminStats()!.users.growthPercent) }} this month
+          </span>
+          }
+        </div>
+      </div>
+
+      <div class="kpi-card kpi-card--accent">
+        <div class="kpi-icon c-amber"><span class="material-icons">volunteer_activism</span></div>
+        <div class="kpi-body">
+          <span class="kpi-val">{{ adminStats()!.opportunities.active | number }}</span>
+          <span class="kpi-lbl">Active Opportunities</span>
+          <span class="kpi-meta">{{ adminStats()!.opportunities.total }} total opportunities</span>
+          @if(adminStats()!.opportunities.activeGrowth != null){
+          <span class="kpi-growth" [class.kpi-growth--up]="growthPositive(adminStats()!.opportunities.activeGrowth)">
+            <span class="material-icons">{{ growthPositive(adminStats()!.opportunities.activeGrowth) ? 'trending_up' : 'trending_down' }}</span>
+            {{ growthLabel(adminStats()!.opportunities.activeGrowth) }} active
+          </span>
+          }
+        </div>
+      </div>
+
+      <div class="kpi-card kpi-card--accent">
+        <div class="kpi-icon c-rose"><span class="material-icons">assignment</span></div>
+        <div class="kpi-body">
+          <span class="kpi-val">{{ adminStats()!.applications.total | number }}</span>
+          <span class="kpi-lbl">Applications</span>
+          <span class="kpi-meta">{{ adminStats()!.applications.pending }} pending · {{ adminStats()!.applications.accepted }} accepted</span>
+          @if(adminStats()!.applications.growthPercent != null){
+          <span class="kpi-growth" [class.kpi-growth--up]="growthPositive(adminStats()!.applications.growthPercent)">
+            <span class="material-icons">{{ growthPositive(adminStats()!.applications.growthPercent) ? 'trending_up' : 'trending_down' }}</span>
+            {{ growthLabel(adminStats()!.applications.growthPercent) }} this month
+          </span>
+          }
+        </div>
+      </div>
+
+    </div>
+  </div>
+  } <!-- /adminStats -->
+
+  <!-- ── 2: Pickup Analytics Chart ───────────────────────────────── -->
+  <div class="panel">
+    <div class="panel-head">
+      <span class="material-icons panel-head-icon">bar_chart</span>
+      <div><h2>Pickup Analytics</h2><p class="panel-sub">Completed &amp; Pending per month · CO₂ saved — last 12 months</p></div>
+    </div>
+    @if(loadingTrends()){
+    <div class="state-loading"><div class="spinner"></div><span>Loading chart…</span></div>
+    } @else if(trendsLabels().length === 0){
+    <div class="state-empty"><span class="material-icons">bar_chart</span><p>No pickup data recorded yet.</p></div>
+    } @else {
+    <div class="chart-wrap"><canvas #trendsCanvas class="chart-canvas"></canvas></div>
+    <div class="chart-legend">
+      <span class="legend-item"><span class="legend-swatch" style="background:#22c55e"></span>Completed</span>
+      <span class="legend-item"><span class="legend-swatch" style="background:#6366f1"></span>Pending</span>
+      <span class="legend-item"><span class="legend-swatch legend-swatch--line" style="border-color:#f59e0b"></span>CO₂ (kg)</span>
+    </div>
+    }
+  </div>
+
+  <!-- ── 3: Pickup Status + Upcoming Pickups ──────────────────────── -->
+  <div class="two-col">
+
+    <!-- Pickup Status Donut -->
+    <div class="panel">
+      <div class="panel-head">
+        <span class="material-icons panel-head-icon">donut_large</span>
+        <div>
+          <h2>Pickup Status</h2>
+          <p class="panel-sub">Platform-wide distribution</p>
+        </div>
+      </div>
+      @if(loadingSummary()){
+      <div class="state-loading"><div class="spinner"></div><span>Loading…</span></div>
+      } @else if(!pickupStatusChart()){
+      <div class="state-empty"><span class="material-icons">donut_large</span><p>No status data yet.</p></div>
+      } @else {
+      <div class="donut-wrap"><canvas #pickupCanvas class="donut-canvas"></canvas></div>
+      <ul class="donut-legend">
+        @for(label of pickupStatusChart()!.labels; track label; let i = $index){
+        @if(pickupStatusChart()!.data[i] > 0){
+        <li class="donut-legend-item">
+          <span class="donut-dot" [style.background]="pickupStatusColor(i)"></span>
+          <span class="donut-lbl">{{ label }}</span>
+          <span class="donut-cnt">{{ pickupStatusChart()!.data[i] | number }}</span>
+          <span class="donut-pct">{{ (pickupStatusChart()!.data[i] / sumArray(pickupStatusChart()!.data) * 100) | number:'1.0-0' }}%</span>
+        </li>
+        }
+        }
+      </ul>
+      }
+    </div>
+
+    <!-- Upcoming Pickups -->
+    <div class="panel">
+      <div class="panel-head">
+        <span class="material-icons panel-head-icon">event_upcoming</span>
+        <div><h2>Upcoming Pickups</h2><p class="panel-sub">Next scheduled collections</p></div>
+        <a routerLink="/pickups/monitor" class="link-view-all">View All</a>
+      </div>
+      @if(loadingUpcoming()){
+      <div class="state-loading"><div class="spinner"></div><span>Loading…</span></div>
+      } @else if(upcomingPickups().length === 0){
+      <div class="state-empty"><span class="material-icons">event_busy</span><p>No upcoming pickups.</p></div>
+      } @else {
+      <ul class="upcoming-list">
+        @for(p of upcomingPickups(); track p.id){
+        <li class="upcoming-item">
+          <div class="upcoming-info">
+            <span class="upcoming-name">{{ p.eventName }}</span>
+            <span class="upcoming-date"><span class="material-icons">calendar_today</span>{{ formatDate(p.date) }}@if(formatTime(p)){<span class="upcoming-time"> · {{ formatTime(p) }}</span>}</span>
+            @if(p.address){ <span class="upcoming-date"><span class="material-icons">place</span>{{ p.address }}</span> }
+          </div>
+          <span class="status-badge" [ngClass]="statusClass(p.status)">{{ p.status }}</span>
+        </li>
+        }
+      </ul>
+      }
+    </div>
+
+  </div>
+
+  <!-- ── 4: Recycling Breakdown ───────────────────────────────────── -->
+  <div class="panel">
+    <div class="panel-head">
+      <span class="material-icons panel-head-icon">layers</span>
+      <div>
+        <h2>Recycling Breakdown</h2>
+        <p class="panel-sub">Waste by category@if(recyclingMonth()){ — {{ formatMonth(recyclingMonth()) }}}</p>
+      </div>
+      @if(recyclingTotalKg() > 0){
+      <div class="recycling-total">
+        <span class="rt-val">{{ recyclingTotalKg() | number:'1.0-1' }} kg</span>
+        <span class="rt-lbl">collected this month</span>
+      </div>
+      }
+    </div>
+
+    @if(loadingRecycling()){
+    <div class="state-loading"><div class="spinner"></div><span>Loading breakdown…</span></div>
+    } @else if(recyclingTotalKg() === 0){
+    <div class="state-empty"><span class="material-icons">layers_clear</span><p>No recycling data for this month.</p><small>Will appear once waste stats are recorded.</small></div>
+    } @else {
+    <div class="recycling-bars">
+      @for(cat of recyclingCategories(); track cat.category){
+      @if(cat.weightKg > 0){
+      <div class="rb-row">
+        <div class="rb-head">
+          <span class="rb-dot" [style.background]="categoryColor(cat.category)"></span>
+          <span class="rb-cat">{{ cat.category }}</span>
+          <span class="rb-kg">{{ cat.weightKg | number:'1.0-1' }} kg</span>
+          <span class="rb-pct">{{ cat.percentage }}%</span>
+        </div>
+        <div class="rb-track">
+          <div class="rb-fill" [style.width.%]="cat.percentage" [style.background]="categoryColor(cat.category)"></div>
+        </div>
+        <div class="rb-meta">
+          <span>{{ cat.co2SavedKg | number:'1.0-2' }} kg CO₂ saved</span>
+          <span>{{ cat.records }} record{{ cat.records !== 1 ? 's' : '' }}</span>
+        </div>
+      </div>
+      }
+      }
+    </div>
+    @if(recyclingGrowthPercent() !== 0){
+    <div class="recycling-growth">
+      <span class="material-icons">{{ growthPositive(recyclingGrowthPercent()) ? 'trending_up' : 'trending_down' }}</span>
+      <span [class.c-green-text]="growthPositive(recyclingGrowthPercent())"
+            [class.c-red-text]="!growthPositive(recyclingGrowthPercent())">
+        {{ growthLabel(recyclingGrowthPercent()) }} vs previous month
+      </span>
+    </div>
+    }
+    }
+  </div>
+
+  <!-- ── 5: Platform Leaderboards (Admin View) ─────────────────────── -->
+  <div class="panel admin-dashboard-lb-panel">
+    <div class="panel-head">
+      <div class="panel-head-title-wrap">
+        <span class="material-icons panel-head-icon">leaderboard</span>
+        <div>
+          <h2>Platform Leaderboards</h2>
+          <p class="panel-sub">Top ranked volunteers &amp; organizations by CO₂ saved and waste collected</p>
+        </div>
+      </div>
+
+      <div class="panel-head-actions">
+        <!-- Role Filter Pills -->
+        <div class="lb-role-pills" role="tablist">
+          <button type="button" class="lb-pill" [class.active]="adminLeaderboardRoleFilter() === 'all'" (click)="adminLeaderboardRoleFilter.set('all')">All</button>
+          <button type="button" class="lb-pill" [class.active]="adminLeaderboardRoleFilter() === 'volunteer'" (click)="adminLeaderboardRoleFilter.set('volunteer')">Volunteers</button>
+          <button type="button" class="lb-pill" [class.active]="adminLeaderboardRoleFilter() === 'ngo'" (click)="adminLeaderboardRoleFilter.set('ngo')">NGOs</button>
+        </div>
+
+        <a routerLink="/admin" [queryParams]="{ tab: 'leaderboard' }" class="link-view-all">
+          <span>Full Leaderboard</span>
+          <span class="material-icons" style="font-size: 1rem; vertical-align: middle;">arrow_forward</span>
+        </a>
+      </div>
+    </div>
+
+    @if(loadingAdminLeaderboard()){
+    <div class="state-loading"><div class="spinner"></div><span>Loading platform rankings…</span></div>
+    } @else if(adminLeaderboardError()){
+    <div class="banner banner--error" style="margin: 0.5rem 0;">
+      <span class="material-icons">error_outline</span>
+      <span>{{ adminLeaderboardError() }}</span>
+      <button (click)="loadAdminLeaderboard()">Retry</button>
+    </div>
+    } @else {
+    <div class="admin-dash-lb-grid" [class.grid-single]="adminLeaderboardRoleFilter() !== 'all'">
+
+      <!-- Volunteers Column -->
+      @if(adminLeaderboardRoleFilter() === 'all' || adminLeaderboardRoleFilter() === 'volunteer'){
+      <div class="admin-dash-lb-card">
+        <div class="card-mini-head">
+          <div class="mini-title-wrap">
+            <span class="material-icons mini-icon icon-vol">volunteer_activism</span>
+            <span class="mini-title">Top Volunteers</span>
+          </div>
+          <span class="mini-count-badge">{{ adminVolunteerLeaderboard().length }} ranked</span>
+        </div>
+
+        @if(adminVolunteerLeaderboard().length === 0){
+        <div class="state-empty" style="padding: 1.5rem 1rem;">
+          <span class="material-icons" style="font-size: 2rem;">sports_score</span>
+          <p>No volunteer activity recorded yet.</p>
+        </div>
+        } @else {
+        <div class="dash-lb-table-wrap">
+          <table class="dash-lb-table">
+            <thead>
+              <tr>
+                <th style="width: 50px;">Rank</th>
+                <th>Volunteer</th>
+                <th>CO₂ Saved</th>
+                <th>Weight</th>
+                <th>Pickups</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for(v of adminVolunteerLeaderboard(); track v.user?._id || $index; let i = $index){
+              <tr class="dash-lb-row">
+                <td>
+                  <span class="dash-rank-badge"
+                    [class.rank-gold]="i === 0"
+                    [class.rank-silver]="i === 1"
+                    [class.rank-bronze]="i === 2">
+                    {{ i === 0 ? '🥇 1' : i === 1 ? '🥈 2' : i === 2 ? '🥉 3' : '#' + v.rank }}
+                  </span>
+                </td>
+                <td>
+                  <div class="dash-user-cell">
+                    <span class="dash-avatar-mini vol-avatar">{{ (v.user?.name || 'V').charAt(0).toUpperCase() }}</span>
+                    <div class="dash-user-text">
+                      <span class="dash-user-name">{{ v.user?.name || 'Volunteer' }}</span>
+                      <span class="dash-user-sub">{{ v.user?.email || 'N/A' }}</span>
+                    </div>
+                  </div>
+                </td>
+                <td>
+                  <span class="dash-co2-metric">
+                    <span class="material-icons metric-leaf">eco</span>
+                    {{ v.totalCO2Kg | number:'1.1-2' }} <small>kg</small>
+                  </span>
+                </td>
+                <td>
+                  <span class="dash-weight-val">{{ v.totalWeightKg | number:'1.1-1' }} <small>kg</small></span>
+                </td>
+                <td>
+                  <span class="dash-pickups-badge">{{ v.pickupCount }}</span>
+                </td>
+              </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        }
+      </div>
+      }
+
+      <!-- NGOs Column -->
+      @if(adminLeaderboardRoleFilter() === 'all' || adminLeaderboardRoleFilter() === 'ngo'){
+      <div class="admin-dash-lb-card">
+        <div class="card-mini-head">
+          <div class="mini-title-wrap">
+            <span class="material-icons mini-icon icon-ngo">corporate_fare</span>
+            <span class="mini-title">Top NGOs &amp; Organizations</span>
+          </div>
+          <span class="mini-count-badge badge-ngo">{{ adminNgoLeaderboard().length }} ranked</span>
+        </div>
+
+        @if(adminNgoLeaderboard().length === 0){
+        <div class="state-empty" style="padding: 1.5rem 1rem;">
+          <span class="material-icons" style="font-size: 2rem;">sports_score</span>
+          <p>No NGO activity recorded yet.</p>
+        </div>
+        } @else {
+        <div class="dash-lb-table-wrap">
+          <table class="dash-lb-table">
+            <thead>
+              <tr>
+                <th style="width: 50px;">Rank</th>
+                <th>Organization</th>
+                <th>CO₂ Saved</th>
+                <th>Weight</th>
+                <th>Pickups</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for(n of adminNgoLeaderboard(); track n.user?._id || $index; let i = $index){
+              <tr class="dash-lb-row">
+                <td>
+                  <span class="dash-rank-badge"
+                    [class.rank-gold]="i === 0"
+                    [class.rank-silver]="i === 1"
+                    [class.rank-bronze]="i === 2">
+                    {{ i === 0 ? '🥇 1' : i === 1 ? '🥈 2' : i === 2 ? '🥉 3' : '#' + n.rank }}
+                  </span>
+                </td>
+                <td>
+                  <div class="dash-user-cell">
+                    <span class="dash-avatar-mini ngo-avatar">{{ (n.user?.name || 'O').charAt(0).toUpperCase() }}</span>
+                    <div class="dash-user-text">
+                      <span class="dash-user-name">{{ n.user?.name || 'Organization' }}</span>
+                      <span class="dash-user-sub">{{ n.user?.email || 'N/A' }}</span>
+                    </div>
+                  </div>
+                </td>
+                <td>
+                  <span class="dash-co2-metric">
+                    <span class="material-icons metric-leaf">eco</span>
+                    {{ n.totalCO2Kg | number:'1.1-2' }} <small>kg</small>
+                  </span>
+                </td>
+                <td>
+                  <span class="dash-weight-val">{{ n.totalWeightKg | number:'1.1-1' }} <small>kg</small></span>
+                </td>
+                <td>
+                  <span class="dash-pickups-badge badge-ngo-count">{{ n.pickupCount }}</span>
+                </td>
+              </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        }
+      </div>
+      }
+
+    </div>
+    }
+  </div>
+
+  <!-- ── 6: Platform Communications / Messages (Admin Role-Filtered) ─── -->
+  <div class="panel admin-dashboard-msg-panel">
+    <div class="panel-head">
+      <div class="panel-head-title-wrap">
+        <span class="material-icons panel-head-icon">chat</span>
+        <div>
+          <h2>Platform Messages &amp; Inquiries</h2>
+          <p class="panel-sub">Recent direct conversations filtered by participant role</p>
+        </div>
+      </div>
+
+      <div class="panel-head-actions">
+        <!-- Message Role Filter Pills -->
+        <div class="lb-role-pills" role="tablist" aria-label="Filter messages by role">
+          <button type="button" class="lb-pill" [class.active]="adminMessageRoleFilter() === 'all'" (click)="adminMessageRoleFilter.set('all')">All</button>
+          <button type="button" class="lb-pill" [class.active]="adminMessageRoleFilter() === 'volunteer'" (click)="adminMessageRoleFilter.set('volunteer')">Volunteers</button>
+          <button type="button" class="lb-pill" [class.active]="adminMessageRoleFilter() === 'ngo'" (click)="adminMessageRoleFilter.set('ngo')">NGOs</button>
+          <button type="button" class="lb-pill" [class.active]="adminMessageRoleFilter() === 'admin'" (click)="adminMessageRoleFilter.set('admin')">Admins</button>
+        </div>
+
+        <a routerLink="/messages" class="link-view-all">
+          <span>Open Messenger</span>
+          <span class="material-icons" style="font-size: 1rem; vertical-align: middle;">arrow_forward</span>
+        </a>
+      </div>
+    </div>
+
+    @if(loadingAdminMessages()){
+    <div class="state-loading"><div class="spinner"></div><span>Loading conversations…</span></div>
+    } @else if(filteredAdminConversations().length === 0){
+    <div class="state-empty" style="padding: 2rem 1rem;">
+      <span class="material-icons" style="font-size: 2.25rem;">chat_bubble_outline</span>
+      <p>No active conversations found for {{ adminMessageRoleFilter() === 'all' ? 'any role' : adminMessageRoleFilter() === 'volunteer' ? 'volunteers' : adminMessageRoleFilter() === 'ngo' ? 'NGOs' : 'administrators' }}.</p>
+    </div>
+    } @else {
+    <div class="dash-msg-list">
+      @for(conv of filteredAdminConversations(); track conv.conversationId){
+      <div class="dash-msg-card" (click)="openConversation(conv)">
+        <div class="dash-msg-avatar"
+          [class.vol]="conv.otherUser.role === 'volunteer'"
+          [class.ngo]="conv.otherUser.role === 'ngo'"
+          [class.admin]="conv.otherUser.role === 'admin'">
+          {{ (conv.otherUser.name || 'U').charAt(0).toUpperCase() }}
+        </div>
+        <div class="dash-msg-body">
+          <div class="dash-msg-top">
+            <div class="dash-msg-user">
+              <span class="dash-msg-name">{{ conv.otherUser.name || 'User' }}</span>
+              <span class="dash-msg-handle">{{ conv.otherUser.email }}</span>
+              <span class="dash-msg-role-tag"
+                [class.role-vol]="conv.otherUser.role === 'volunteer'"
+                [class.role-ngo]="conv.otherUser.role === 'ngo'"
+                [class.role-admin]="conv.otherUser.role === 'admin'">
+                {{ conv.otherUser.role === 'ngo' ? 'NGO' : conv.otherUser.role === 'volunteer' ? 'Volunteer' : conv.otherUser.role === 'admin' ? 'Admin' : 'User' }}
+              </span>
+            </div>
+            @if(conv.lastMessage?.createdAt){
+            <span class="dash-msg-time">{{ formatDate(conv.lastMessage!.createdAt) }}</span>
+            }
+          </div>
+          <p class="dash-msg-snippet">{{ conv.lastMessage?.content || 'Conversation started' }}</p>
+        </div>
+        <button type="button" class="btn-dash-msg-chat" (click)="openConversation(conv); $event.stopPropagation()">
+          <span class="material-icons">chat</span>
+          <span>Chat</span>
+        </button>
+      </div>
+      }
+    </div>
+    }
+  </div>
+
+  <!-- ── Admin Panel CTA ───────────────────────────────────────────── -->
+  <div class="portal-card portal-card--admin">
+    <div class="portal-icon"><span class="material-icons">admin_panel_settings</span></div>
+    <div>
+      <h2>Administrator Panel</h2>
+      <p>Manage users, suspend accounts, generate reports and monitor all platform operations.</p>
+      <a routerLink="/admin" class="btn-primary mt-1">
+        <span class="material-icons">open_in_new</span>Open Admin Panel
+      </a>
+    </div>
+  </div>
+
+  } <!-- /admin -->
+
+</div>

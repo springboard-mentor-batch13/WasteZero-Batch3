@@ -1,0 +1,196 @@
+<div class="page-container">
+
+  <!-- Loading Skeleton -->
+  @if(loading()){
+  <div class="detail-skeleton">
+    <div class="skeleton-hero"></div>
+    <div class="skeleton-body">
+      <div class="skeleton-line xlarge"></div>
+      <div class="skeleton-line medium"></div>
+      <div class="skeleton-line wide"></div>
+      <div class="skeleton-line wide"></div>
+      <div class="skeleton-line medium"></div>
+    </div>
+  </div>
+  }
+
+  <!-- Error State -->
+  @else if(error()){
+  <div class="state-card error-state">
+    <span class="material-icons state-icon">error_outline</span>
+    <h2>Oops! Something went wrong</h2>
+    <p>{{ error() }}</p>
+    <a routerLink="/opportunities" class="btn-back">
+      <span class="material-icons">arrow_back</span>
+      Back to Opportunities
+    </a>
+  </div>
+  }
+
+  <!-- Detail View -->
+  @else if(opportunity()){
+
+  <!-- Breadcrumb + Actions -->
+  <div class="page-header">
+    <a routerLink="/opportunities" class="back-link">
+      <span class="material-icons">arrow_back</span>
+      Back to Opportunities
+    </a>
+
+    @if(canEdit()){
+    <div class="header-actions">
+      <a
+        class="btn-edit"
+        [routerLink]="['/opportunities', opportunity()!._id, 'edit']">
+        <span class="material-icons">edit</span>
+        Edit
+      </a>
+      <button
+        type="button"
+        class="btn-delete-trigger"
+        (click)="openDeleteDialog()">
+        <span class="material-icons">delete</span>
+        Delete
+      </button>
+    </div>
+    }
+  </div>
+
+  <!-- Detail Card -->
+  <div class="detail-card">
+
+    <!-- Cover Image -->
+    @if(opportunity()!.image){
+    <div class="detail-hero">
+      <img [src]="opportunity()!.image" [alt]="opportunity()!.title" loading="lazy">
+    </div>
+    } @else {
+    <div class="detail-hero-placeholder">
+      <span class="material-icons hero-placeholder-icon">volunteer_activism</span>
+    </div>
+    }
+
+    <!-- Content -->
+    <div class="detail-content">
+
+      <!-- Title Row -->
+      <div class="detail-title-row">
+        <h1 class="detail-title">{{ opportunity()!.title }}</h1>
+        <span class="status-badge" [ngClass]="statusClass()">{{ statusLabel() }}</span>
+      </div>
+
+      <!-- Metadata Row -->
+      <ul class="detail-meta-row">
+        @if(formattedEventDate()){
+        <li>
+          <span class="material-icons meta-icon">event</span>
+          <span>Event: {{ formattedEventDate() }}</span>
+        </li>
+        }
+        <li>
+          <span class="material-icons meta-icon">calendar_today</span>
+          <span>Posted {{ formattedDate() }}</span>
+        </li>
+        <li>
+          <span class="material-icons meta-icon">location_on</span>
+          <span>{{ opportunity()!.location }}</span>
+        </li>
+        <li>
+          <span class="material-icons meta-icon">schedule</span>
+          <span>{{ opportunity()!.duration }}</span>
+        </li>
+        @if(ngoName() !== '—'){
+        <li>
+          <span class="material-icons meta-icon">apartment</span>
+          <span>{{ ngoName() }}</span>
+          @if(ngoUsername()){
+          <span class="ngo-username-badge">&#64;{{ ngoUsername() }}</span>
+          }
+        </li>
+        }
+      </ul>
+
+      <!-- Divider -->
+      <div class="detail-divider"></div>
+
+      <!-- Description -->
+      <section class="detail-section">
+        <h2 class="section-heading">About this Opportunity</h2>
+        <p class="detail-description">{{ opportunity()!.description }}</p>
+      </section>
+
+      <!-- Required Skills -->
+      <section class="detail-section">
+        <h2 class="section-heading">Required Skills</h2>
+        <div class="skills-list">
+          @for(skill of opportunity()!.required_skills; track skill){
+          <span class="skill-pill">
+            <span class="material-icons skill-icon">check_circle</span>
+            {{ skill }}
+          </span>
+          }
+        </div>
+      </section>
+
+      <!-- CTA -->
+      <div class="detail-cta">
+
+        @if(isVolunteer()){
+          @if(hasApplied()){
+          <div class="applied-banner">
+            <span class="material-icons">check_circle</span>
+            <span>Application submitted! Check My Applications for status updates.</span>
+          </div>
+          } @else if(opportunity()!.status === 'open'){
+          <button
+            type="button"
+            class="btn-apply"
+            (click)="onApply()"
+            [disabled]="isApplying()">
+            @if(isApplying()){
+            <span class="material-icons spinning">autorenew</span>
+            Applying...
+            } @else {
+            <span class="material-icons">send</span>
+            Apply Now
+            }
+          </button>
+          } @else {
+          <div class="closed-banner">
+            <span class="material-icons">lock</span>
+            <span>This opportunity is {{ opportunity()!.status === 'closed' ? 'closed' : 'in progress' }} and not accepting new applications.</span>
+          </div>
+          }
+
+          <!-- Contact button — visible to volunteers when opportunity is created by Admin or NGO -->
+          @if(canContactCreator()){
+          <button
+            type="button"
+            class="btn-contact-ngo"
+            (click)="contactCreator()">
+            <span class="material-icons">chat_bubble_outline</span>
+            {{ isCreatorAdmin() ? 'Contact Admin' : 'Contact NGO' }}
+          </button>
+          }
+        }
+
+
+      </div>
+
+    </div>
+
+  </div>
+
+  }
+
+  <!-- Delete Confirm Dialog -->
+  @if(showDeleteDialog() && opportunity()){
+  <app-delete-confirm-dialog
+    [opportunityTitle]="opportunity()!.title"
+    [isDeleting]="isDeleting()"
+    (confirmed)="onDeleteConfirmed()"
+    (cancelled)="closeDeleteDialog()">
+  </app-delete-confirm-dialog>
+  }
+
+</div>

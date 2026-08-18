@@ -1,0 +1,284 @@
+<div class="page-container">
+
+  <!-- Page Header -->
+  <div class="page-header">
+    <div class="header-text">
+      <a routerLink="/opportunities" class="back-link">
+        <span class="material-icons">arrow_back</span>
+        Back to Opportunities
+      </a>
+      <h1>{{ isEditMode() ? 'Edit Opportunity' : 'Create Opportunity' }}</h1>
+      <p>{{ isEditMode() ? 'Update the details of this volunteer opportunity.' : 'Create a new volunteer opportunity for your organization.' }}</p>
+    </div>
+  </div>
+
+  <!-- Load Error -->
+  @if(loadError()){
+  <div class="state-card error-state">
+    <span class="material-icons state-icon">error_outline</span>
+    <h2>Failed to load</h2>
+    <p>{{ loadError() }}</p>
+  </div>
+  }
+
+  <!-- Loading Skeleton (edit mode: waiting for existing data) -->
+  @else if(loading()){
+  <div class="form-card">
+    <div class="skeleton-rows">
+      @for(i of [1,2,3,4]; track i){
+      <div class="skeleton-field">
+        <div class="skeleton-label"></div>
+        <div class="skeleton-input"></div>
+      </div>
+      }
+    </div>
+  </div>
+  }
+
+  <!-- Form -->
+  @else {
+  <form class="form-card" [formGroup]="form" (ngSubmit)="onSubmit()" novalidate>
+
+    <!-- Image Upload -->
+    <div class="form-section">
+      <h2 class="section-title">
+        <span class="material-icons section-icon">image</span>
+        Cover Image
+      </h2>
+
+      <div class="image-upload-area">
+        @if(imagePreviewUrl()){
+        <div class="image-preview">
+          <img [src]="imagePreviewUrl()" alt="Image preview">
+          <button type="button" class="image-remove-btn" (click)="removeImage()" aria-label="Remove image">
+            <span class="material-icons">close</span>
+          </button>
+        </div>
+        } @else if(existingImageUrl() && !imagePreviewUrl() && !selectedImageFile()){
+        <div class="image-preview">
+          <img [src]="existingImageUrl()" alt="Current image">
+          <button type="button" class="image-remove-btn" (click)="existingImageUrl.set(null)" aria-label="Remove existing image">
+            <span class="material-icons">close</span>
+          </button>
+        </div>
+        } @else {
+        <label class="image-upload-label" for="image-input">
+          <span class="material-icons upload-icon">cloud_upload</span>
+          <span class="upload-text">Click to upload a cover image</span>
+          <small>PNG, JPG, WEBP · max 5MB</small>
+        </label>
+        }
+        <input
+          id="image-input"
+          type="file"
+          accept="image/*"
+          class="image-input-hidden"
+          (change)="onImageSelected($event)">
+      </div>
+    </div>
+
+    <!-- Basic Info -->
+    <div class="form-section">
+      <h2 class="section-title">
+        <span class="material-icons section-icon">info</span>
+        Basic Information
+      </h2>
+
+      <!-- Title -->
+      <div class="form-group">
+        <label class="form-label" for="opp-title">Title <span class="req">*</span></label>
+        <div class="input-wrap">
+          <span class="material-icons input-icon">title</span>
+          <input
+            id="opp-title"
+            class="form-input"
+            [class.invalid]="isInvalid('title')"
+            type="text"
+            placeholder="e.g. City Recycling Drive Volunteer"
+            formControlName="title"
+            autocomplete="off"
+            maxlength="100">
+        </div>
+        @if(isInvalid('title')){
+        <span class="form-error">
+          <span class="material-icons error-icon-sm">error</span>
+          Title is required (max 100 characters)
+        </span>
+        }
+      </div>
+
+      <!-- Description -->
+      <div class="form-group">
+        <label class="form-label" for="opp-description">Description <span class="req">*</span></label>
+        <textarea
+          id="opp-description"
+          class="form-textarea"
+          [class.invalid]="isInvalid('description')"
+          placeholder="Describe what volunteers will be doing, what you need, and the impact of this opportunity..."
+          formControlName="description">
+        </textarea>
+        @if(isInvalid('description')){
+        <span class="form-error">
+          <span class="material-icons error-icon-sm">error</span>
+          Description is required
+        </span>
+        }
+      </div>
+
+    </div>
+
+    <!-- Details -->
+    <div class="form-section">
+      <h2 class="section-title">
+        <span class="material-icons section-icon">tune</span>
+        Details
+      </h2>
+
+      <div class="form-row">
+
+        <!-- Duration -->
+        <div class="form-group">
+          <label class="form-label" for="opp-duration">Duration <span class="req">*</span></label>
+          <div class="input-wrap">
+            <span class="material-icons input-icon">schedule</span>
+            <input
+              id="opp-duration"
+              class="form-input"
+              [class.invalid]="isInvalid('duration')"
+              type="text"
+              placeholder="e.g. 3 hours per session"
+              formControlName="duration">
+          </div>
+          @if(isInvalid('duration')){
+          <span class="form-error">
+            <span class="material-icons error-icon-sm">error</span>
+            Duration is required
+          </span>
+          }
+        </div>
+
+        <!-- Location -->
+        <div class="form-group">
+          <label class="form-label" for="opp-location">Location <span class="req">*</span></label>
+          <div class="input-wrap">
+            <span class="material-icons input-icon">location_on</span>
+            <input
+              id="opp-location"
+              class="form-input"
+              [class.invalid]="isInvalid('location')"
+              type="text"
+              placeholder="e.g. Mumbai, Maharashtra"
+              formControlName="location">
+          </div>
+          @if(isInvalid('location')){
+          <span class="form-error">
+            <span class="material-icons error-icon-sm">error</span>
+            Location is required
+          </span>
+          }
+        </div>
+
+      </div>
+
+      <!-- Status (edit mode only — backend defaults to 'open' on create) -->
+      @if(isEditMode()){
+      <div class="form-group">
+        <label class="form-label" for="opp-status">Status</label>
+        <div class="select-wrap">
+          <span class="material-icons input-icon">flag</span>
+          <select id="opp-status" class="form-select" formControlName="status">
+            <option value="open">Open</option>
+            <option value="in-progress">In Progress</option>
+            <option value="closed">Closed</option>
+          </select>
+        </div>
+      </div>
+      }
+
+      <!-- Event Date -->
+      <div class="form-group">
+        <label class="form-label" for="opp-date">
+          Event Date
+          <span class="form-helper-inline">(optional)</span>
+        </label>
+        <div class="input-wrap">
+          <span class="material-icons input-icon">event</span>
+          <input
+            id="opp-date"
+            class="form-input"
+            type="date"
+            formControlName="date"
+            [min]="today">
+        </div>
+        <p class="form-helper">Select your required date for this volunteer opportunity.</p>
+      </div>
+
+    </div>
+
+    <!-- Required Skills -->
+    <div class="form-section">
+      <h2 class="section-title">
+        <span class="material-icons section-icon">psychology</span>
+        Required Skills <span class="req">*</span>
+      </h2>
+
+      <div class="form-group">
+        <label class="form-label" for="skill-input">Add Skills</label>
+        <div class="skill-input-row">
+          <div class="input-wrap" style="flex:1">
+            <span class="material-icons input-icon">star</span>
+            <input
+              id="skill-input"
+              class="form-input"
+              type="text"
+              placeholder="e.g. Waste Sorting, Community Outreach"
+              [value]="skillInput()"
+              (input)="onSkillInputChange($any($event.target).value)"
+              (keydown)="addSkillOnKey($event)">
+          </div>
+          <button type="button" class="btn-add-skill" (click)="addSkill()">
+            <span class="material-icons">add</span>
+            Add
+          </button>
+        </div>
+        <p class="form-helper">Press Enter or comma to add. At least one skill required.</p>
+      </div>
+
+      <!-- Skill Tags -->
+      @if(skills().length > 0){
+      <div class="skills-tags">
+        @for(skill of skills(); track skill; let i = $index){
+        <span class="skill-tag">
+          {{ skill }}
+          <button type="button" class="skill-remove" (click)="removeSkill(i)" [attr.aria-label]="'Remove ' + skill">
+            <span class="material-icons">close</span>
+          </button>
+        </span>
+        }
+      </div>
+      }
+
+    </div>
+
+    <!-- Form Actions -->
+    <div class="form-actions">
+      <a routerLink="/opportunities" class="btn-cancel-action">Cancel</a>
+      <button
+        type="submit"
+        id="opp-submit-btn"
+        class="btn-submit"
+        [disabled]="submitting()">
+        @if(submitting()){
+        <span class="material-icons spinning">autorenew</span>
+        {{ isEditMode() ? 'Saving...' : 'Creating...' }}
+        } @else {
+        <span class="material-icons">{{ isEditMode() ? 'save' : 'add_circle' }}</span>
+        {{ isEditMode() ? 'Save Changes' : 'Create Opportunity' }}
+        }
+      </button>
+    </div>
+
+  </form>
+  }
+
+</div>

@@ -1,0 +1,61 @@
+<!-- Backdrop -->
+<div class="dialog-backdrop" (click)="onCancel()">
+
+  <!-- Modal -->
+  <div class="dialog-card" (click)="$event.stopPropagation()" role="dialog" aria-modal="true" aria-labelledby="dialog-title">
+
+    <!-- Icon -->
+    <div class="dialog-icon-wrap">
+      <span class="material-icons dialog-icon">delete_outline</span>
+    </div>
+
+    <!-- Content -->
+    <h2 id="dialog-title" class="dialog-title">Are you sure?</h2>
+    <p class="dialog-body">
+      This action cannot be undone. This will permanently delete
+      <strong>{{ opportunityTitle() }}</strong> and remove all associated applications.
+    </p>
+
+    <!-- Reason input (optional) -->
+    <div class="dialog-reason-group">
+      <label class="dialog-reason-label" for="delete-reason">Reason for deletion <span class="dialog-reason-hint">(optional)</span></label>
+      <textarea
+        id="delete-reason"
+        class="dialog-reason-input"
+        rows="3"
+        maxlength="255"
+        placeholder="e.g. Event cancelled, duplicate listing..."
+        [value]="reason()"
+        (input)="reason.set($any($event.target).value)"
+        [disabled]="isDeleting()">
+      </textarea>
+    </div>
+
+    <!-- Actions -->
+    <div class="dialog-actions">
+      <button
+        class="btn-cancel"
+        type="button"
+        (click)="onCancel()"
+        [disabled]="isDeleting()">
+        Cancel
+      </button>
+
+      <button
+        class="btn-delete"
+        type="button"
+        (click)="onConfirm()"
+        [disabled]="isDeleting()">
+        @if(isDeleting()){
+        <span class="material-icons spinning">autorenew</span>
+        Deleting...
+        } @else {
+        <span class="material-icons">delete</span>
+        Delete
+        }
+      </button>
+    </div>
+
+  </div>
+
+</div>

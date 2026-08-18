@@ -1,0 +1,268 @@
+<div class="page-container">
+
+  <!-- Page Header -->
+  <div class="page-header">
+    <div class="header-text">
+      <h1>Application Review</h1>
+      <p>Review volunteer applications for your opportunities.</p>
+    </div>
+    <a routerLink="/opportunities/my-opportunities" class="btn-secondary">
+      <span class="material-icons">list_alt</span>
+      My Opportunities
+    </a>
+  </div>
+
+  <!-- Stats Bar -->
+  @if(!loading() && !error() && applications().length > 0){
+  <div class="stats-bar">
+    <div class="stat-card">
+      <span class="stat-num">{{ applications().length }}</span>
+      <span class="stat-label">Total</span>
+    </div>
+    <div class="stat-card pending">
+      <span class="material-icons stat-icon">hourglass_empty</span>
+      <span class="stat-num">{{ pendingCount() }}</span>
+      <span class="stat-label">Pending</span>
+    </div>
+    <div class="stat-card accepted">
+      <span class="material-icons stat-icon">check_circle</span>
+      <span class="stat-num">{{ acceptedCount() }}</span>
+      <span class="stat-label">Accepted</span>
+    </div>
+    <div class="stat-card rejected">
+      <span class="material-icons stat-icon">cancel</span>
+      <span class="stat-num">{{ rejectedCount() }}</span>
+      <span class="stat-label">Rejected</span>
+    </div>
+  </div>
+  }
+
+  <!-- Filter & Search -->
+  <div class="controls-bar">
+
+    <!-- Status Filter Tabs -->
+    <div class="status-tabs" role="tablist" aria-label="Filter applications by status">
+      <button
+        class="status-tab"
+        [class.active]="statusFilter() === 'all'"
+        type="button"
+        role="tab"
+        [attr.aria-selected]="statusFilter() === 'all'"
+        (click)="onStatusFilterChange('all')">
+        All
+      </button>
+      <button
+        class="status-tab pending"
+        [class.active]="statusFilter() === 'pending'"
+        type="button"
+        role="tab"
+        [attr.aria-selected]="statusFilter() === 'pending'"
+        (click)="onStatusFilterChange('pending')">
+        <span class="material-icons">hourglass_empty</span>
+        Pending
+      </button>
+      <button
+        class="status-tab accepted"
+        [class.active]="statusFilter() === 'accepted'"
+        type="button"
+        role="tab"
+        [attr.aria-selected]="statusFilter() === 'accepted'"
+        (click)="onStatusFilterChange('accepted')">
+        <span class="material-icons">check_circle</span>
+        Accepted
+      </button>
+      <button
+        class="status-tab rejected"
+        [class.active]="statusFilter() === 'rejected'"
+        type="button"
+        role="tab"
+        [attr.aria-selected]="statusFilter() === 'rejected'"
+        (click)="onStatusFilterChange('rejected')">
+        <span class="material-icons">cancel</span>
+        Rejected
+      </button>
+    </div>
+
+    <!-- Text Search -->
+    <div class="search-wrap">
+      <span class="material-icons search-icon">search</span>
+      <input
+        type="text"
+        class="search-input"
+        id="review-search"
+        placeholder="Search by opportunity or volunteer..."
+        [value]="searchQuery()"
+        (input)="onSearchInput($any($event.target).value)"
+        autocomplete="off">
+      @if(searchQuery()){
+      <button class="search-clear" type="button" (click)="clearSearch()" aria-label="Clear search">
+        <span class="material-icons">close</span>
+      </button>
+      }
+    </div>
+
+  </div>
+
+  <!-- Loading Skeleton -->
+  @if(loading()){
+  <div class="review-list">
+    @for(i of [1,2,3,4,5]; track i){
+    <div class="skeleton-row">
+      <div class="skeleton-avatar"></div>
+      <div class="skeleton-content">
+        <div class="skeleton-line wide"></div>
+        <div class="skeleton-line medium"></div>
+      </div>
+      <div class="skeleton-badge"></div>
+      <div class="skeleton-actions"></div>
+    </div>
+    }
+  </div>
+  }
+
+  <!-- Error State -->
+  @else if(error()){
+  <div class="state-card error-state">
+    <span class="material-icons state-icon">error_outline</span>
+    <h2>Something went wrong</h2>
+    <p>{{ error() }}</p>
+    <button type="button" class="btn-primary" (click)="loadApplications()">
+      <span class="material-icons">refresh</span>
+      Try Again
+    </button>
+  </div>
+  }
+
+  <!-- Empty State -->
+  @else if(isEmpty()){
+  <div class="state-card empty-state">
+    <span class="material-icons state-icon">assignment_turned_in</span>
+    <h2>No applications found</h2>
+    @if(statusFilter() !== 'all' || searchQuery()){
+    <p>No applications match your current filter. Try adjusting your search.</p>
+    <button type="button" class="btn-secondary" (click)="onStatusFilterChange('all'); clearSearch()">
+      Clear Filters
+    </button>
+    } @else {
+    <p>No volunteers have applied to your opportunities yet.</p>
+    <a routerLink="/opportunities" class="btn-secondary">Browse Opportunities</a>
+    }
+  </div>
+  }
+
+  <!-- Applications Table -->
+  @else {
+  <div class="review-table-wrap">
+    <table class="review-table" aria-label="Volunteer applications">
+      <thead>
+        <tr>
+          <th scope="col">Volunteer</th>
+          <th scope="col">Opportunity</th>
+          <th scope="col">Applied On</th>
+          <th scope="col">Status</th>
+          <th scope="col">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for(app of filteredApplications(); track app._id){
+        <tr class="review-row" [class.row-accepted]="app.status === 'accepted'" [class.row-rejected]="app.status === 'rejected'">
+
+          <!-- Volunteer -->
+          <td class="td-volunteer">
+            <div class="volunteer-info">
+              <div class="volunteer-avatar">
+                {{ getVolunteerName(app).charAt(0).toUpperCase() }}
+              </div>
+              <div class="volunteer-details">
+                <span class="volunteer-name">{{ getVolunteerName(app) }}</span>
+                <!-- M3: @username display -->
+                @if(getVolunteerUsername(app)){
+                <span class="volunteer-username">&#64;{{ getVolunteerUsername(app) }}</span>
+                }
+                <span class="volunteer-email">{{ getVolunteerEmail(app) }}</span>
+              </div>
+            </div>
+          </td>
+
+          <!-- Opportunity -->
+          <td class="td-opportunity">
+            <a class="opp-link" [routerLink]="['/opportunities', getOpportunityId(app)]" target="_blank">
+              {{ getOpportunityTitle(app) }}
+              <span class="material-icons opp-link-icon">open_in_new</span>
+            </a>
+          </td>
+
+          <!-- Applied On -->
+          <td class="td-date">{{ formatDate(app.createdAt) }}</td>
+
+          <!-- Status Badge -->
+          <td class="td-status">
+            <span class="status-badge" [ngClass]="statusClass(app.status)">
+              <span class="material-icons badge-icon">{{ statusIcon(app.status) }}</span>
+              {{ statusLabel(app.status) }}
+            </span>
+          </td>
+
+          <!-- Actions -->
+          <td class="td-actions">
+            @if(app.status === 'pending'){
+            <div class="action-btns">
+              <button
+                type="button"
+                class="btn-accept"
+                id="accept-{{ app._id }}"
+                [disabled]="updatingId() === app._id"
+                (click)="accept(app)"
+                [attr.aria-label]="'Accept application from ' + getVolunteerName(app)">
+                @if(updatingId() === app._id){
+                <span class="material-icons spinning">autorenew</span>
+                } @else {
+                <span class="material-icons">check</span>
+                Accept
+                }
+              </button>
+              <button
+                type="button"
+                class="btn-reject"
+                id="reject-{{ app._id }}"
+                [disabled]="updatingId() === app._id"
+                (click)="reject(app)"
+                [attr.aria-label]="'Reject application from ' + getVolunteerName(app)">
+                @if(updatingId() === app._id){
+                <span class="material-icons spinning">autorenew</span>
+                } @else {
+                <span class="material-icons">close</span>
+                Reject
+                }
+              </button>
+            </div>
+            } @else {
+            <span class="action-resolved">
+              <span class="material-icons">
+                {{ app.status === 'accepted' ? 'check_circle' : 'cancel' }}
+              </span>
+              Resolved
+            </span>
+            }
+            <!-- Chat With Volunteer button — NGO and Admin -->
+            @if(isNgo() || isAdmin()){
+            <button
+              type="button"
+              class="btn-contact-volunteer"
+              (click)="contactVolunteer(app)"
+              [attr.aria-label]="'Chat with ' + getVolunteerName(app)"
+              title="Chat with volunteer">
+              <span class="material-icons">chat</span>
+              Chat
+            </button>
+            }
+          </td>
+
+        </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+  }
+
+</div>

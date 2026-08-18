@@ -1,0 +1,188 @@
+<div class="faq-page">
+
+  <!-- Header Banner -->
+  <div class="faq-header">
+    <div class="faq-header-content">
+      <div class="faq-badge">
+        <span class="material-icons">help_outline</span>
+        <span>Help &amp; Knowledge Base</span>
+      </div>
+      <h1 class="faq-title">Frequently Asked Questions</h1>
+      <p class="faq-subtitle">Everything you need to know about WasteZero pickups, volunteer opportunities, roles, security, and leaderboard tracking.</p>
+    </div>
+
+    <!-- Search Input -->
+    <div class="faq-search-box">
+      <span class="material-icons faq-search-icon">search</span>
+      <input
+        type="text"
+        placeholder="Search by topic, feature, or keyword (e.g. pickup, OTP, CO2, NGO)..."
+        [ngModel]="searchQuery()"
+        (ngModelChange)="searchQuery.set($event)"
+        aria-label="Search FAQ">
+      @if(searchQuery()){
+      <button type="button" class="faq-clear-btn" (click)="searchQuery.set('')" aria-label="Clear search">
+        <span class="material-icons">close</span>
+      </button>
+      }
+    </div>
+  </div>
+
+  <!-- Category Filter Pills -->
+  <div class="faq-categories-bar" role="tablist" aria-label="FAQ Categories">
+    @for(cat of categories; track cat.id){
+    <button
+      type="button"
+      class="faq-cat-pill"
+      [class.active]="selectedCategory() === cat.id"
+      (click)="setCategory(cat.id)"
+      role="tab"
+      [attr.aria-selected]="selectedCategory() === cat.id">
+      <span class="material-icons">{{ cat.icon }}</span>
+      <span>{{ cat.label }}</span>
+    </button>
+    }
+  </div>
+
+  <!-- FAQ Controls (Count + Expand/Collapse) -->
+  <div class="faq-controls">
+    <span class="faq-count-text">
+      Showing <strong>{{ filteredFaqList().length }}</strong> questions
+    </span>
+    <div class="faq-actions">
+      <button type="button" class="btn-faq-action" (click)="expandAll()">
+        <span class="material-icons">unfold_more</span>
+        <span>Expand All</span>
+      </button>
+      <button type="button" class="btn-faq-action" (click)="collapseAll()">
+        <span class="material-icons">unfold_less</span>
+        <span>Collapse All</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Accordion List -->
+  @if(filteredFaqList().length === 0){
+  <div class="faq-empty-state">
+    <span class="material-icons faq-empty-icon">search_off</span>
+    <h3>No matching questions found</h3>
+    <p>Try searching for a different keyword or reset your category filter.</p>
+    <button type="button" class="btn-reset-filters" (click)="searchQuery.set(''); setCategory('all')">
+      Reset Filters
+    </button>
+  </div>
+  } @else {
+  <div class="faq-accordion-list" role="region" aria-label="Questions list">
+    @for(item of filteredFaqList(); track item.id){
+    <div class="faq-accordion-item" [class.expanded]="isExpanded(item.id)">
+      <button
+        type="button"
+        class="faq-accordion-header"
+        (click)="toggleItem(item.id)"
+        [attr.aria-expanded]="isExpanded(item.id)">
+        <div class="faq-question-wrap">
+          <span class="material-icons faq-q-icon">quiz</span>
+          <span class="faq-question-text">{{ item.question }}</span>
+        </div>
+        <span class="material-icons faq-expand-arrow" [class.rotated]="isExpanded(item.id)">
+          expand_more
+        </span>
+      </button>
+
+      @if(isExpanded(item.id)){
+      <div class="faq-accordion-body" [innerHTML]="item.answer"></div>
+      }
+    </div>
+    }
+  </div>
+  }
+
+  <!-- ── FINAL COMMUNITY / ADMIN SUPPORT SECTION (Volunteer & NGO only) ── -->
+  @if(isNonAdmin()){
+  <div class="faq-support-card">
+    <div class="support-card-icon">
+      <span class="material-icons">support_agent</span>
+    </div>
+    <div class="support-card-text">
+      <h3>Have additional questions or need assistance?</h3>
+      <p>Reach out to the community or administrators via direct messages in the platform.</p>
+    </div>
+    <div class="support-actions">
+      <button type="button" class="btn-support-chat" (click)="openMessagesFlow()">
+        <span class="material-icons">chat</span>
+        <span>Open Messages</span>
+      </button>
+    </div>
+  </div>
+  }
+
+  <!-- ── ADMIN DETAILS DIALOGUE MODAL ──────────────────────────────────── -->
+  @if(showAdminModal()){
+  <div class="modal-backdrop" (click)="closeAdminModal()">
+    <div class="admin-dialog-box" (click)="$event.stopPropagation()" role="dialog" aria-labelledby="admin-dialog-title" aria-modal="true">
+      
+      <div class="admin-dialog-head">
+        <div class="admin-dialog-title-wrap">
+          <span class="material-icons admin-dialog-head-icon">admin_panel_settings</span>
+          <div>
+            <h3 id="admin-dialog-title">Platform Administrator</h3>
+            <p>Official WasteZero support &amp; administrative contact</p>
+          </div>
+        </div>
+        <button type="button" class="btn-close-dialog" (click)="closeAdminModal()" aria-label="Close dialogue">
+          <span class="material-icons">close</span>
+        </button>
+      </div>
+
+      <div class="admin-dialog-body">
+        @if(loadingAdmin()){
+        <div class="admin-dialog-loading">
+          <div class="spinner-sm"></div>
+          <span>Connecting to Administrator profile…</span>
+        </div>
+        } @else if(adminError()){
+        <div class="admin-dialog-error">
+          <span class="material-icons">error_outline</span>
+          <p>{{ adminError() }}</p>
+          <button type="button" class="btn-retry-admin" (click)="openMessagesFlow()">
+            <span class="material-icons">refresh</span> Retry
+          </button>
+        </div>
+        } @else if(adminContact()){
+        <div class="admin-profile-card">
+          <div class="admin-avatar">
+            {{ adminContact()!.name.charAt(0).toUpperCase() }}
+          </div>
+          <div class="admin-details">
+            <h4 class="admin-name">{{ adminContact()!.name }}</h4>
+            <p class="admin-username">&#64;{{ adminContact()!.username }}</p>
+            <div class="admin-meta-row">
+              <span class="admin-role-badge">
+                <span class="material-icons">verified</span> Administrator
+              </span>
+              <span class="admin-email">{{ adminContact()!.email }}</span>
+            </div>
+          </div>
+        </div>
+        }
+      </div>
+
+      <div class="admin-dialog-footer">
+        <button type="button" class="btn-dialog-cancel" (click)="closeAdminModal()">
+          Cancel
+        </button>
+        <button
+          type="button"
+          class="btn-dialog-chat"
+          [disabled]="loadingAdmin() || !adminContact()"
+          (click)="chatWithAdmin()">
+          <span class="material-icons">chat</span>
+          <span>Chat</span>
+        </button>
+      </div>
+
+    </div>
+  </div>
+  }
+
+</div>

@@ -1,0 +1,308 @@
+/* =============================================
+   WASTEZERO — GLOBAL DESIGN SYSTEM
+   Applies across all pages via angular.json styles
+   ============================================= */
+
+/* --- Base Reset --- */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+/* --- Font & Root Tokens --- */
+:root {
+  /* Brand Colors */
+  --color-primary:        #16a34a;
+  --color-primary-dark:   #15803d;
+  --color-primary-light:  #dcfce7;
+  --color-primary-ring:   rgba(22, 163, 74, 0.18);
+
+  /* Neutral Scale */
+  --color-bg:             #f6faf8;
+  --color-surface:        #ffffff;
+  --color-border:         #d1fae5;
+  --color-border-neutral: #e2e8f0;
+  --color-text-primary:   #0f172a;
+  --color-text-secondary: #64748b;
+  --color-text-muted:     #94a3b8;
+  /* Aliases used by admin panel and shared components */
+  --color-text:           #0f172a;      /* = color-text-primary */
+  --color-surface-alt:    #f0f9f4;      /* slightly elevated surface for inputs/tables */
+
+  /* Status */
+  --color-danger:         #dc2626;
+  --color-danger-bg:      #fee2e2;
+  --color-info:           #2563eb;
+  --color-info-bg:        #dbeafe;
+
+  /* Radius */
+  --radius-sm:   0.5rem;
+  --radius-md:   0.95rem;
+  --radius-lg:   1.5rem;
+  --radius-full: 999px;
+
+  /* Shadows */
+  --shadow-sm:   0 2px 8px rgba(15, 23, 42, 0.06);
+  --shadow-md:   0 8px 24px rgba(15, 23, 42, 0.08);
+  --shadow-lg:   0 20px 50px rgba(15, 23, 42, 0.08);
+  --shadow-btn:  0 8px 20px rgba(22, 163, 74, 0.28);
+
+  /* Typography */
+  --font-base: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+
+  /* Transitions */
+  --transition-fast: all 0.18s ease;
+  --transition-std:  all 0.24s ease;
+}
+
+/* --- Body Base --- */
+body {
+  margin: 0;
+  font-family: var(--font-base);
+  font-size: 1rem;
+  line-height: 1.6;
+  color: var(--color-text-primary);
+  background: var(--color-bg);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  /* Smooth dark/light mode transition */
+  transition: background-color 0.25s ease, color 0.25s ease;
+}
+
+/* --- Smooth Scroll + Theme Transition --- */
+html {
+  scroll-behavior: smooth;
+  /* Dark mode class toggle triggers this transition */
+  transition: background-color 0.25s ease;
+}
+
+/* --- Shared Input Focus Ring (accessible) --- */
+:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* --- Snackbar Typography Fix --- */
+.mat-mdc-snack-bar-container {
+  font-family: var(--font-base) !important;
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   DARK MODE — applied when <html class="dark">
+   Toggle via layout.ts toggleDarkMode() which also persists to
+   localStorage('wz-dark-mode').
+   ───────────────────────────────────────────────────────────────── */
+html.dark {
+  --color-primary:        #22c55e;
+  --color-primary-dark:   #16a34a;
+  --color-primary-light:  #14532d;
+  --color-primary-ring:   rgba(34, 197, 94, 0.2);
+
+  --color-bg:             #0f172a;
+  --color-surface:        #1e293b;
+  --color-border:         #1e3a2e;
+  --color-border-neutral: #334155;
+  --color-text-primary:   #f1f5f9;
+  --color-text-secondary: #94a3b8;
+  --color-text-muted:     #64748b;
+  /* Aliases used by admin panel and shared components */
+  --color-text:           #f1f5f9;      /* = color-text-primary in dark */
+  --color-surface-alt:    #263244;      /* elevated surface for inputs/tables in dark */
+
+  --color-danger:         #f87171;
+  --color-danger-bg:      rgba(239, 68, 68, 0.15);
+  --color-info:           #60a5fa;
+  --color-info-bg:        rgba(37, 99, 235, 0.15);
+
+  --shadow-sm:   0 2px 8px  rgba(0, 0, 0, 0.3);
+  --shadow-md:   0 8px 24px rgba(0, 0, 0, 0.35);
+  --shadow-lg:   0 20px 50px rgba(0, 0, 0, 0.4);
+}
+
+/* Smooth dark/light transition */
+*, *::before, *::after {
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.15s ease;
+}
+/* But NOT on animated elements — override to avoid flash */
+.spinner, canvas, .rb-fill, .recycling-bar-fill {
+  transition: none !important;
+}
+
+/* ── Responsive global helpers ──────────────────────────────────── */
+@media (max-width: 768px) {
+  html { font-size: 15px; }
+}
+@media (max-width: 480px) {
+  html { font-size: 14px; }
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   GLOBAL RESPONSIVE UTILITIES
+   ─────────────────────────────────────────────────────────────────
+   Applied globally so every feature page can use them without
+   duplicating media queries. Component CSS adds page-specific rules.
+   ───────────────────────────────────────────────────────────────── */
+
+/* Horizontal-scroll wrapper — wraps any <table> on mobile */
+.table-scroll,
+.table-responsive,
+.table-wrap {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border-radius: 12px;
+  box-sizing: border-box;
+}
+
+/* Global modal viewport constraint */
+.modal-box,
+.confirm-modal-box {
+  max-width: min(95vw, 560px);
+  box-sizing: border-box;
+}
+
+/* Stacking form row utility */
+@media (max-width: 640px) {
+  .form-row-2 { flex-direction: column !important; }
+  .form-row-2 > * { width: 100% !important; }
+}
+
+/* Auth card sizing */
+@media (max-width: 480px) {
+  .auth-card { padding: 1.75rem 1.25rem !important; border-radius: 18px !important; }
+}
+
+/* Hide on mobile utility */
+@media (max-width: 640px) {
+  .hide-mobile { display: none !important; }
+}
+
+/* ─── Global dark-mode element transitions ────────────────────────────────
+   Applied to common structural tags so any html.dark token change animates
+   rather than snapping. Excluded from elements with existing fast transitions.
+   ─────────────────────────────────────────────────────────────────────── */
+*,
+*::before,
+*::after {
+  /* Only transition color-related properties to avoid breaking layout anims */
+  transition:
+    background-color 0.22s ease,
+    border-color     0.22s ease,
+    color            0.18s ease,
+    fill             0.18s ease,
+    box-shadow       0.18s ease;
+}
+
+/* Re-allow fast layout transitions to override the global rule where needed */
+.sidebar,
+.menu li,
+.tab-btn,
+.btn-primary,
+.btn-secondary,
+.btn-action,
+input, select, textarea,
+.modal-box {
+  transition:
+    background-color 0.2s ease,
+    border-color     0.2s ease,
+    color            0.15s ease,
+    opacity          0.15s ease,
+    transform        0.2s ease;
+}
+
+/* Keep existing fast animation on things that need precise timing */
+.spinner,
+.spinning {
+  transition: none;
+}
+
+/* =============================================
+   PASSWORD VISIBILITY TOGGLE (GLOBAL)
+   ============================================= */
+.field-input.has-toggle,
+.form-input.has-toggle {
+  padding-right: 2.85rem !important;
+}
+
+.password-toggle-btn {
+  position: absolute;
+  right: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border: none;
+  background: transparent;
+  border-radius: var(--radius-sm, 6px);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  z-index: 2;
+  transition: color 0.15s ease, background-color 0.15s ease;
+}
+
+.password-toggle-btn:hover {
+  color: var(--color-primary);
+  background: rgba(22, 163, 74, 0.08);
+}
+
+.password-toggle-btn:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 1px;
+  color: var(--color-primary);
+}
+
+.password-toggle-btn .material-icons {
+  font-size: 1.25rem;
+}
+
+html.dark .password-toggle-btn {
+  color: var(--color-text-muted);
+}
+
+html.dark .password-toggle-btn:hover {
+  color: var(--color-primary);
+  background: rgba(34, 197, 94, 0.15);
+}
+
+html.dark .password-toggle-btn:focus-visible {
+  outline-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+/* Global Date Input Styling */
+input[type="date"] {
+  color-scheme: light;
+  color: var(--color-text-primary);
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  opacity: 0.75;
+  filter: none;
+  transition: opacity 0.15s ease;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
+}
+
+/* Global Dark Mode Date Input */
+html.dark input[type="date"],
+:host-context(html.dark) input[type="date"] {
+  color-scheme: dark !important;
+  color: #f1f5f9 !important;
+  background-color: var(--color-surface) !important;
+}
+
+html.dark input[type="date"]::-webkit-calendar-picker-indicator,
+:host-context(html.dark) input[type="date"]::-webkit-calendar-picker-indicator {
+  color-scheme: dark !important;
+  filter: none !important;
+  opacity: 0.95 !important;
+  cursor: pointer;
+}
+

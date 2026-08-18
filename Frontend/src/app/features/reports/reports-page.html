@@ -1,0 +1,251 @@
+<!-- ============================================================
+     REPORTS PAGE — WasteZero Milestone 4
+     Role-adaptive: Volunteer | NGO | Admin
+     ============================================================ -->
+
+<div class="reports-root">
+
+  <!-- ── Page Header ─────────────────────────────────────────────── -->
+  <div class="reports-header">
+    <div class="reports-header-left">
+      <div class="reports-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+          <polyline points="14 2 14 8 20 8"/>
+          <line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>
+          <polyline points="10 9 9 9 8 9"/>
+        </svg>
+      </div>
+      <div>
+        <h1 class="reports-title">Reports</h1>
+        <p class="reports-subtitle">
+          @if (isAdmin()) { Platform-wide data export &amp; preview }
+          @else if (isNgo()) { Your organisation's activity reports }
+          @else { Your personal activity reports }
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Loading options ─────────────────────────────────────────── -->
+  @if (loadingOpts()) {
+    <div class="loading-state">
+      <div class="spinner"></div>
+      <span>Loading report options…</span>
+    </div>
+  } @else {
+
+    <!-- ── Controls panel ────────────────────────────────────────── -->
+    <div class="controls-card">
+
+      <!-- Row 1: Type + Format -->
+      <div class="controls-row">
+
+        <!-- Report Type -->
+        <div class="control-group">
+          <label class="control-label" for="rp-type">Report Type</label>
+          <select id="rp-type" class="control-select"
+                  [ngModel]="selectedType()"
+                  (ngModelChange)="selectedType.set($event); onTypeChange()">
+            @for (t of reportTypes(); track t.value) {
+              <option [value]="t.value">{{ t.label }}</option>
+            }
+          </select>
+        </div>
+
+        <!-- Format -->
+        <div class="control-group">
+          <label class="control-label" for="rp-format">Format</label>
+          <select id="rp-format" class="control-select"
+                  [ngModel]="selectedFormat()" (ngModelChange)="selectedFormat.set($event)">
+            @for (f of formats(); track f.value) {
+              <option [value]="f.value">{{ f.label }}</option>
+            }
+          </select>
+        </div>
+
+        <!-- Time Range (Volunteer / NGO) -->
+        @if (!isAdmin() && timeRanges().length > 0) {
+          <div class="control-group">
+            <label class="control-label" for="rp-timerange">Time Range</label>
+            <select id="rp-timerange" class="control-select"
+                    [ngModel]="selectedTimeRange()" (ngModelChange)="selectedTimeRange.set($event)">
+              @for (tr of timeRanges(); track tr.value) {
+                <option [value]="tr.value">{{ tr.label }}</option>
+              }
+            </select>
+          </div>
+        }
+      </div>
+
+      <!-- Row 2: Secondary filters -->
+      @if (!isAdmin()) {
+        @if (showYearMonth()) {
+          <div class="controls-row controls-row-sm">
+            @if (selectedTimeRange() === 'month' || selectedTimeRange() === 'year') {
+              <div class="control-group">
+                <label class="control-label" for="rp-year">Year</label>
+                <select id="rp-year" class="control-select"
+                        [ngModel]="filterYear()" (ngModelChange)="filterYear.set(+$event)">
+                  @for (y of years; track y) {
+                    <option [value]="y">{{ y }}</option>
+                  }
+                </select>
+              </div>
+            }
+            @if (selectedTimeRange() === 'month') {
+              <div class="control-group">
+                <label class="control-label" for="rp-month">Month</label>
+                <select id="rp-month" class="control-select"
+                        [ngModel]="filterMonth()" (ngModelChange)="filterMonth.set(+$event)">
+                  @for (m of months; track m.value) {
+                    <option [value]="m.value">{{ m.label }}</option>
+                  }
+                </select>
+              </div>
+            }
+          </div>
+        }
+        @if (showDateRange()) {
+          <div class="controls-row controls-row-sm">
+            <div class="control-group">
+              <label class="control-label" for="rp-start">Start Date</label>
+              <input id="rp-start" type="date" class="control-input"
+                     [ngModel]="filterStartDate()" (ngModelChange)="filterStartDate.set($event)">
+            </div>
+            <div class="control-group">
+              <label class="control-label" for="rp-end">End Date</label>
+              <input id="rp-end" type="date" class="control-input"
+                     [ngModel]="filterEndDate()" (ngModelChange)="filterEndDate.set($event)">
+            </div>
+          </div>
+        }
+      }
+
+      <!-- Admin extra filters -->
+      @if (isAdmin()) {
+        <div class="controls-row controls-row-sm">
+          <div class="control-group">
+            <label class="control-label" for="rp-adm-start">Start Date</label>
+            <input id="rp-adm-start" type="date" class="control-input"
+                   [ngModel]="adminFilterStartDate()" (ngModelChange)="adminFilterStartDate.set($event)">
+          </div>
+          <div class="control-group">
+            <label class="control-label" for="rp-adm-end">End Date</label>
+            <input id="rp-adm-end" type="date" class="control-input"
+                   [ngModel]="adminFilterEndDate()" (ngModelChange)="adminFilterEndDate.set($event)">
+          </div>
+          @if (selectedType() === 'opportunities' || selectedType() === 'applications') {
+            <div class="control-group">
+              <label class="control-label" for="rp-ngo-username">NGO Username</label>
+              <input id="rp-ngo-username" type="text" class="control-input"
+                     placeholder="Filter by NGO username"
+                     [ngModel]="adminNgoUsername()" (ngModelChange)="adminNgoUsername.set($event)">
+            </div>
+          }
+          @if (selectedType() === 'pickups') {
+            <div class="control-group">
+              <label class="control-label" for="rp-vol-username">Volunteer Username</label>
+              <input id="rp-vol-username" type="text" class="control-input"
+                     placeholder="Filter by volunteer username"
+                     [ngModel]="adminVolunteerUsername()" (ngModelChange)="adminVolunteerUsername.set($event)">
+            </div>
+          }
+        </div>
+      }
+
+      <!-- Action buttons -->
+      <div class="controls-actions">
+        <button class="btn-preview" id="reports-preview-btn"
+                [disabled]="browseLoading() || !selectedType()"
+                (click)="browse(1)">
+          @if (browseLoading()) {
+            <span class="btn-spinner"></span> Loading…
+          } @else {
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="2" width="16" height="16">
+              <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+            Preview Data
+          }
+        </button>
+
+        <button class="btn-download" id="reports-download-btn"
+                [disabled]="downloading() || !selectedType()"
+                (click)="download()">
+          @if (downloading()) {
+            <span class="btn-spinner"></span> Downloading…
+          } @else {
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="2" width="16" height="16">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="7 10 12 15 17 10"/>
+              <line x1="12" y1="15" x2="12" y2="3"/>
+            </svg>
+            Download {{ selectedFormat() | uppercase }}
+          }
+        </button>
+      </div>
+    </div>
+
+    <!-- ── Browse error ────────────────────────────────────────────── -->
+    @if (browseError()) {
+      <div class="error-banner" role="alert">{{ browseError() }}</div>
+    }
+
+    <!-- ── Browse table ────────────────────────────────────────────── -->
+    @if (hasBrowseData()) {
+      <div class="browse-card">
+        <div class="browse-header">
+          <div class="browse-title">
+            Preview — {{ getTypeLabel(selectedType()) }}
+            @if (browseDateRange()) { <span class="browse-range">{{ browseDateRange() }}</span> }
+          </div>
+          <div class="browse-meta">
+            {{ browseTotal() | number }} record{{ browseTotal() !== 1 ? 's' : '' }}
+          </div>
+        </div>
+
+        @if (browseRecords().length === 0) {
+          <div class="empty-table">No records found for the selected filters.</div>
+        } @else {
+          <div class="table-wrapper">
+            <table class="report-table" aria-label="Report preview data">
+              <thead>
+                <tr>
+                  @for (col of browseColumns(); track col.key) {
+                    <th scope="col">{{ col.header }}</th>
+                  }
+                </tr>
+              </thead>
+              <tbody>
+                @for (row of browseRecords(); track $index) {
+                  <tr>
+                    @for (col of browseColumns(); track col.key) {
+                      <td>{{ cellValue(row, col.key) }}</td>
+                    }
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Pagination -->
+          <div class="browse-pagination">
+            <button class="pg-btn" [disabled]="!hasPrev()" (click)="prevPage()">
+              ← Previous
+            </button>
+            <span class="pg-info">
+              Page {{ browsePage() }} of {{ browseTotalPages() }}
+            </span>
+            <button class="pg-btn" [disabled]="!hasNext()" (click)="nextPage()">
+              Next →
+            </button>
+          </div>
+        }
+      </div>
+    }
+
+  }
+</div>

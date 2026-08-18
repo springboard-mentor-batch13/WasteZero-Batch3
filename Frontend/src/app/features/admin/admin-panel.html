@@ -1,0 +1,1157 @@
+<!-- ============================================================
+     ADMIN PANEL — WasteZero Milestone 4
+     Route: /admin  |  Guard: adminGuard
+     ============================================================ -->
+
+<div class="page-container">
+
+  <!-- ── Page Header ────────────────────────────────────────── -->
+  <div class="page-header">
+    <div class="header-text">
+      <h1>Admin Panel</h1>
+      <p>Manage users, generate reports, and review audit logs.</p>
+    </div>
+    <button type="button" class="btn-refresh" title="Refresh stats" (click)="loadStats()">
+      <span class="material-icons" [class.spinning]="loadingStats()">refresh</span>
+    </button>
+  </div>
+
+  <!-- ── KPI Cards ─────────────────────────────────────────── -->
+  @if(loadingStats()){
+  <div class="kpi-loading">
+    <div class="spinner"></div>
+    <span>Loading platform stats…</span>
+  </div>
+  }
+
+  @if(statsError() && !loadingStats()){
+  <div class="state-card error-state" style="margin-bottom:1.5rem">
+    <span class="material-icons state-icon">error_outline</span>
+    <p>{{ statsError() }}</p>
+    <button class="btn-retry" (click)="loadStats()">Retry</button>
+  </div>
+  }
+
+  @if(stats()){
+  <div class="kpi-section">
+    <div class="kpi-grid">
+      <!-- 1. Total Pickups -->
+      <div class="kpi-card">
+        <div class="kpi-icon-wrap blue"><span class="material-icons">local_shipping</span></div>
+        <div class="kpi-body">
+          <span class="kpi-value">{{ stats()!.pickups.total | number }}</span>
+          <span class="kpi-label">Total Pickups</span>
+          <span class="kpi-sub">{{ stats()!.pickups.pending }} pending · {{ stats()!.pickups.assigned }} assigned</span>
+        </div>
+      </div>
+
+      <!-- 2. Completed Pickups -->
+      <div class="kpi-card">
+        <div class="kpi-icon-wrap green"><span class="material-icons">check_circle</span></div>
+        <div class="kpi-body">
+          <span class="kpi-value">{{ stats()!.pickups.completed | number }}</span>
+          <span class="kpi-label">Completed Pickups</span>
+          <span class="kpi-sub">{{ stats()!.pickups.completedGrowth >= 0 ? '+' : '' }}{{ stats()!.pickups.completedGrowth }}% this month</span>
+        </div>
+      </div>
+
+      <!-- 3. Waste Collected -->
+      <div class="kpi-card">
+        <div class="kpi-icon-wrap teal"><span class="material-icons">recycling</span></div>
+        <div class="kpi-body">
+          <span class="kpi-value">{{ stats()!.waste.totalWeightKg | number:'1.0-1' }} kg</span>
+          <span class="kpi-label">Waste Collected</span>
+          <span class="kpi-sub">{{ stats()!.waste.totalCO2Kg | number:'1.0-1' }} kg CO₂ saved</span>
+        </div>
+      </div>
+
+      <!-- 4. Total Users -->
+      <div class="kpi-card">
+        <div class="kpi-icon-wrap indigo"><span class="material-icons">people</span></div>
+        <div class="kpi-body">
+          <span class="kpi-value">{{ stats()!.users.total | number }}</span>
+          <span class="kpi-label">Total Users</span>
+          <span class="kpi-sub">{{ stats()!.users.volunteers }} volunteers · {{ stats()!.users.ngos }} NGOs</span>
+        </div>
+      </div>
+
+      <!-- 5. Active Opportunities -->
+      <div class="kpi-card">
+        <div class="kpi-icon-wrap orange"><span class="material-icons">volunteer_activism</span></div>
+        <div class="kpi-body">
+          <span class="kpi-value">{{ stats()!.opportunities.active | number }}</span>
+          <span class="kpi-label">Active Opportunities</span>
+          <span class="kpi-sub">{{ stats()!.opportunities.total }} total created</span>
+        </div>
+      </div>
+
+      <!-- 6. Applications -->
+      <div class="kpi-card">
+        <div class="kpi-icon-wrap purple"><span class="material-icons">assignment</span></div>
+        <div class="kpi-body">
+          <span class="kpi-value">{{ stats()!.applications.total | number }}</span>
+          <span class="kpi-label">Applications</span>
+          <span class="kpi-sub">{{ stats()!.applications.pending }} pending · {{ stats()!.applications.accepted }} accepted</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  }
+
+  <!-- ── Report Generation ─────────────────────────────────── -->
+  <div class="section-card">
+    <div class="section-header">
+      <span class="material-icons section-icon">download</span>
+      <h2>Generate Reports</h2>
+    </div>
+    <p class="section-hint">Download platform data as CSV, Excel, or PDF. Rate-limited to 5 downloads/hour.</p>
+
+    <div class="report-controls">
+      <!-- Report type -->
+      <div class="control-group">
+        <label class="control-label" for="report-type">Report Type</label>
+        <select id="report-type" class="control-select"
+          [value]="reportType()" (change)="reportType.set($any($event.target).value)">
+          @for(rt of reportTypes; track rt.value){
+          <option [value]="rt.value">{{ rt.label }}</option>
+          }
+        </select>
+      </div>
+
+      <!-- Format pills -->
+      <div class="control-group">
+        <span class="control-label">Format</span>
+        <div class="format-pills">
+          <button type="button" class="format-pill" [class.active]="reportFormat()==='csv'"
+            (click)="reportFormat.set('csv')">
+            <span class="material-icons">table_chart</span> CSV
+          </button>
+          <button type="button" class="format-pill" [class.active]="reportFormat()==='xlsx'"
+            (click)="reportFormat.set('xlsx')">
+            <span class="material-icons">grid_on</span> Excel
+          </button>
+          <button type="button" class="format-pill" [class.active]="reportFormat()==='pdf'"
+            (click)="reportFormat.set('pdf')">
+            <span class="material-icons">picture_as_pdf</span> PDF
+          </button>
+        </div>
+      </div>
+
+      <!-- Date range -->
+      <div class="control-group date-range-group">
+        <label class="control-label">Date Range <span class="label-opt">(optional)</span></label>
+        <div class="date-inputs">
+          <input type="date" class="control-input"
+            [value]="reportStartDate()"
+            (change)="reportStartDate.set($any($event.target).value)">
+          <span class="date-sep">to</span>
+          <input type="date" class="control-input"
+            [value]="reportEndDate()"
+            (change)="reportEndDate.set($any($event.target).value)">
+        </div>
+      </div>
+
+      <!-- Download -->
+      <button type="button" class="btn-download"
+        [disabled]="downloadingReport()"
+        (click)="downloadReport()">
+        <span class="material-icons" [class.spinning]="downloadingReport()">
+          {{ downloadingReport() ? 'hourglass_empty' : 'download' }}
+        </span>
+        {{ downloadingReport() ? 'Generating…' : 'Download Report' }}
+      </button>
+    </div>
+  </div>
+
+  <!-- ── Tabs ──────────────────────────────────────────────── -->
+  <div class="section-card" style="padding-bottom:0">
+    <div class="tab-bar">
+      <button type="button" class="tab-btn" [class.active]="activeTab()==='users'"
+        (click)="setTab('users')">
+        <span class="material-icons">manage_accounts</span>
+        Users
+        @if(userTotal() > 0){
+        <span class="tab-count">{{ userTotal() }}</span>
+        }
+      </button>
+      <button type="button" class="tab-btn" [class.active]="activeTab()==='opportunities'"
+        (click)="setTab('opportunities')">
+        <span class="material-icons">volunteer_activism</span>
+        Opportunities
+        @if(oppTotal() > 0){
+        <span class="tab-count">{{ oppTotal() }}</span>
+        }
+      </button>
+      <button type="button" class="tab-btn" [class.active]="activeTab()==='pickups'"
+        (click)="setTab('pickups')">
+        <span class="material-icons">local_shipping</span>
+        Pickups
+        @if(pickupsTotal() > 0){
+        <span class="tab-count">{{ pickupsTotal() }}</span>
+        }
+      </button>
+      <button type="button" class="tab-btn" [class.active]="activeTab()==='logs'"
+        (click)="setTab('logs')">
+        <span class="material-icons">history</span>
+        Audit Logs
+        @if(logsTotal() > 0){
+        <span class="tab-count">{{ logsTotal() }}</span>
+        }
+      </button>
+      <button type="button" class="tab-btn" [class.active]="activeTab()==='leaderboard'"
+        (click)="setTab('leaderboard')">
+        <span class="material-icons">leaderboard</span>
+        Leaderboard
+        @if(volunteerRankedTotal() + ngoRankedTotal() > 0){
+        <span class="tab-count">{{ volunteerRankedTotal() + ngoRankedTotal() }}</span>
+        }
+      </button>
+    </div>
+
+    <!-- ── USERS TAB ─────────────────────────────────────── -->
+    @if(activeTab() === 'users'){
+    <div style="padding:1.25rem 0">
+
+      <!-- Filters -->
+      <div class="filter-row">
+        <div class="search-wrap">
+          <span class="material-icons search-icon">search</span>
+          <input class="search-input" type="text" placeholder="Search by name, email or username…"
+            [ngModel]="userSearch()"
+            (ngModelChange)="userSearch.set($event)"
+            (keyup.enter)="onSearchChange()">
+        </div>
+        <select class="control-select role-select"
+          [ngModel]="userRoleFilter()"
+          (ngModelChange)="userRoleFilter.set($event); onRoleFilterChange()">
+          <option value="">All Roles</option>
+          <option value="volunteer">Volunteer</option>
+          <option value="ngo">NGO</option>
+          <option value="admin">Admin</option>
+        </select>
+        <button type="button" class="btn-download" style="padding:0.5rem 1rem"
+          (click)="onSearchChange()">
+          <span class="material-icons" style="font-size:1rem">search</span>
+          Search
+        </button>
+      </div>
+
+      <!-- Loading -->
+      @if(loadingUsers()){
+      <div class="kpi-loading"><div class="spinner"></div><span>Loading users…</span></div>
+      }
+
+      <!-- Error -->
+      @if(usersError() && !loadingUsers()){
+      <div class="state-card error-state">
+        <span class="material-icons state-icon">error_outline</span>
+        <p>{{ usersError() }}</p>
+        <button class="btn-retry" (click)="loadUsers()">Retry</button>
+      </div>
+      }
+
+      <!-- Table -->
+      @if(!loadingUsers() && !usersError()){
+        @if(users().length === 0){
+        <div class="state-card empty-state">
+          <span class="material-icons state-icon">person_search</span>
+          <p>No users found.</p>
+        </div>
+        } @else {
+         <div class="table-scroll">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>User</th>
+                <th>Email</th>
+                <th>Role</th>
+                <th>Status</th>
+                <th>Joined</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for(user of users(); track user._id){
+              <tr [class.suspended-row]="user.isSuspended">
+                <td>
+                  <div class="user-name-cell">
+                    <div class="user-avatar-sm">{{ getInitials(user.name) }}</div>
+                    <div>
+                      <span class="user-name">{{ user.name }}</span>
+                      <span class="user-username">&#64;{{ user.username }}</span>
+                    </div>
+                  </div>
+                </td>
+                <td>{{ user.email }}</td>
+                <td>
+                  <span class="role-badge"
+                    [class.role-volunteer]="user.role === 'volunteer'"
+                    [class.role-ngo]="user.role === 'ngo'"
+                    [class.role-admin]="user.role === 'admin'">
+                    {{ user.role | titlecase }}
+                  </span>
+                </td>
+                <td>
+                  <span class="status-badge" [class.active]="!user.isSuspended"
+                    [class.suspended]="user.isSuspended">
+                    {{ user.isSuspended ? 'Suspended' : 'Active' }}
+                  </span>
+                  @if(user.isSuspended && user.suspensionReason){
+                  <div style="font-size:0.72rem;color:var(--color-text-muted);margin-top:0.2rem;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"
+                    [title]="user.suspensionReason">
+                    {{ user.suspensionReason }}
+                  </div>
+                  }
+                </td>
+                <td>{{ formatDate(user.createdAt) }}</td>
+                <td class="td-actions">
+                  @if(user.role !== 'admin'){
+                  <button type="button" class="btn-action btn-chat"
+                    (click)="chatWithUser(user)"
+                    [attr.aria-label]="'Chat with ' + user.name"
+                    title="Chat with user">
+                    <span class="material-icons">chat</span>
+                    Chat
+                  </button>
+                  }
+                  <button type="button" class="btn-action btn-secondary"
+                    [disabled]="changingRoleId() === user._id"
+                    (click)="openRoleModal(user)">
+                    @if(changingRoleId() === user._id){
+                    <span class="material-icons spinning">autorenew</span>
+                    } @else {
+                    <span class="material-icons">manage_accounts</span>
+                    } Role
+                  </button>
+                  @if(!user.isSuspended){
+                  <button type="button" class="btn-action btn-danger"
+                    [disabled]="suspendingId() === user._id"
+                    (click)="openSuspendModal(user)">
+                    <span class="material-icons">block</span>
+                    Suspend
+                  </button>
+                  } @else {
+                  <button type="button" class="btn-action btn-success"
+                    [disabled]="suspendingId() === user._id"
+                    (click)="unsuspendUser(user)">
+                    <span class="material-icons">check_circle_outline</span>
+                    Unsuspend
+                  </button>
+                  }
+                </td>
+              </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Pagination -->
+        <div class="pagination-row">
+          <span class="pagination-info">
+            Showing {{ users().length }} of {{ userTotal() }} users — Page {{ userPage() }} of {{ userPages() }}
+          </span>
+          <div class="pagination-btns">
+            <button type="button" class="btn-page" [disabled]="!hasPrevUsers()" (click)="prevUserPage()">
+              <span class="material-icons">chevron_left</span>
+            </button>
+            <button type="button" class="btn-page" [disabled]="!hasNextUsers()" (click)="nextUserPage()">
+              <span class="material-icons">chevron_right</span>
+            </button>
+          </div>
+        </div>
+        }
+      }
+    </div>
+    }
+
+    <!-- ── OPPORTUNITIES TAB ──────────────────────────────── -->
+    @if(activeTab() === 'opportunities'){
+    <div style="padding:1.25rem 0">
+
+      <div class="filter-row">
+        <div class="search-wrap">
+          <span class="material-icons search-icon">search</span>
+          <input class="search-input" type="text" placeholder="Search opportunities…"
+            [ngModel]="oppSearch()" (ngModelChange)="oppSearch.set($event); onOppFilterChange()">
+        </div>
+        <select class="filter-select"
+          [ngModel]="oppStatusFilter()" (ngModelChange)="oppStatusFilter.set($event); onOppFilterChange()">
+          <option value="">All Statuses</option>
+          <option value="open">Open</option>
+          <option value="closed">Closed</option>
+          <option value="draft">Draft</option>
+        </select>
+        <button type="button" class="btn-secondary" (click)="loadOpportunities(1)">
+          <span class="material-icons">refresh</span> Refresh
+        </button>
+      </div>
+
+      @if(loadingOpportunities()){
+      <div class="kpi-loading"><div class="spinner"></div><span>Loading opportunities…</span></div>
+      }
+      @if(oppError() && !loadingOpportunities()){
+      <div class="state-card error-state">
+        <span class="material-icons state-icon">error_outline</span>
+        <p>{{ oppError() }}</p>
+        <button class="btn-retry" (click)="loadOpportunities(1)">Retry</button>
+      </div>
+      }
+      @if(!loadingOpportunities() && !oppError()){
+        @if(opportunities().length === 0){
+        <div class="state-card empty-state">
+          <span class="material-icons state-icon">search_off</span>
+          <p>No opportunities found.</p>
+        </div>
+        } @else {
+        <div class="table-scroll">
+          <table class="data-table">
+            <thead><tr>
+              <th>Title</th>
+              <th>Location</th>
+              <th>Status</th>
+              <th>Created</th>
+              <th>Actions</th>
+            </tr></thead>
+            <tbody>
+              @for(opp of opportunities(); track opp._id){
+              <tr [class.row-removed]="opp.isRemoved">
+                <td class="td-name">{{ opp.title }}</td>
+                <td class="td-secondary">{{ opp.location }}</td>
+                <td>
+                  <span class="role-badge" [ngClass]="'opp-' + opp.status">
+                    {{ opp.status }}
+                  </span>
+                  @if(opp.isRemoved){
+                  <span class="role-badge opp-removed" style="margin-left:4px">removed</span>
+                  }
+                </td>
+                <td class="td-secondary">{{ formatDate(opp.createdAt) }}</td>
+                <td class="td-actions">
+                  @if(!opp.isRemoved){
+                  <button type="button" class="btn-action btn-danger"
+                    [disabled]="deletingOppId() === opp._id"
+                    (click)="openDeleteOppModal(opp)">
+                    @if(deletingOppId() === opp._id){
+                    <span class="material-icons spinning">autorenew</span>
+                    } @else {
+                    <span class="material-icons">delete</span>
+                    } Remove
+                  </button>
+                  } @else {
+                  <button type="button" class="btn-action btn-success"
+                    [disabled]="restoringOppId() === opp._id"
+                    (click)="restoreOpp(opp)">
+                    @if(restoringOppId() === opp._id){
+                    <span class="material-icons spinning">autorenew</span>
+                    } @else {
+                    <span class="material-icons">restore</span>
+                    } Restore
+                  </button>
+                  }
+                </td>
+              </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        <div class="pagination-row">
+          <span class="pagination-info">{{ opportunities().length }} of {{ oppTotal() }} — Page {{ oppPage() }} of {{ oppPages() }}</span>
+          <div class="pagination-btns">
+            <button type="button" class="btn-page" [disabled]="!hasPrevOpps()" (click)="prevOppPage()">
+              <span class="material-icons">chevron_left</span>
+            </button>
+            <button type="button" class="btn-page" [disabled]="!hasNextOpps()" (click)="nextOppPage()">
+              <span class="material-icons">chevron_right</span>
+            </button>
+          </div>
+        </div>
+        }
+      }
+    </div>
+    }
+
+    <!-- ── PICKUPS TAB ──────────────────────────────────────── -->
+    @if(activeTab() === 'pickups'){
+    <div style="padding:1.25rem 0">
+
+      <div class="filter-row">
+        <select class="filter-select"
+          [ngModel]="pickupsStatusFilter()" (ngModelChange)="pickupsStatusFilter.set($event); onPickupFilterChange()">
+          <option value="all">All Statuses</option>
+          <option value="Pending">Pending</option>
+          <option value="Assigned">Assigned</option>
+          <option value="Completed">Completed</option>
+          <option value="Cancelled">Cancelled</option>
+          <option value="Missed">Missed</option>
+        </select>
+        <button type="button" class="btn-secondary" (click)="loadAdminPickups(1)">
+          <span class="material-icons">refresh</span> Refresh
+        </button>
+      </div>
+
+      @if(loadingPickups()){
+      <div class="kpi-loading"><div class="spinner"></div><span>Loading pickups…</span></div>
+      }
+      @if(pickupsError() && !loadingPickups()){
+      <div class="state-card error-state">
+        <span class="material-icons state-icon">error_outline</span>
+        <p>{{ pickupsError() }}</p>
+        <button class="btn-retry" (click)="loadAdminPickups(1)">Retry</button>
+      </div>
+      }
+      @if(!loadingPickups() && !pickupsError()){
+        @if(adminPickups().length === 0){
+        <div class="state-card empty-state">
+          <span class="material-icons state-icon">local_shipping</span>
+          <p>No pickups found.</p>
+        </div>
+        } @else {
+        <div class="table-scroll">
+          <table class="data-table">
+            <thead><tr>
+              <th>Address</th>
+              <th>City</th>
+              <th>Waste Types</th>
+              <th>Status</th>
+              <th>Scheduled</th>
+              <th>Actions</th>
+            </tr></thead>
+            <tbody>
+              @for(p of adminPickups(); track p._id){
+              <tr>
+                <td class="td-name">{{ $any(p.address)?.area ? ($any(p.address).area + ', ' + $any(p.address).city) : (p.address?.city ?? '—') }}</td>
+                <td class="td-secondary">{{ p.address?.city ?? '—' }}</td>
+                <td class="td-secondary">{{ p.wasteTypes.join(', ') }}</td>
+                <td>
+                  <span class="status-pill" [ngClass]="'pickup-' + p.status.toLowerCase()">
+                    {{ p.status }}
+                  </span>
+                </td>
+                <td class="td-secondary">{{ formatDate(p.scheduledDate) }}</td>
+                <td class="td-actions">
+                  @if(p.status === 'Pending' || p.status === 'Assigned'){
+                  <button type="button" class="btn-action btn-secondary"
+                    [disabled]="forcingStatusId() === p._id"
+                    (click)="openForceStatusModal(p)">
+                    @if(forcingStatusId() === p._id){
+                    <span class="material-icons spinning">autorenew</span>
+                    } @else {
+                    <span class="material-icons">published_with_changes</span>
+                    } Status
+                  </button>
+                  }
+                  @if(p.status === 'Completed'){
+                  <button type="button" class="btn-action btn-secondary"
+                    (click)="openForceStatusModal(p)">
+                    <span class="material-icons">visibility</span> Details
+                  </button>
+                  }
+                  <button type="button" class="btn-action btn-danger"
+                    [disabled]="deletingPickupId() === p._id"
+                    (click)="openDeletePickupModal(p)">
+                    @if(deletingPickupId() === p._id){
+                    <span class="material-icons spinning">autorenew</span>
+                    } @else {
+                    <span class="material-icons">delete</span>
+                    } Delete
+                  </button>
+                </td>
+              </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        <div class="pagination-row">
+          <span class="pagination-info">{{ adminPickups().length }} of {{ pickupsTotal() }} — Page {{ pickupsPage() }} of {{ pickupsPages() }}</span>
+          <div class="pagination-btns">
+            <button type="button" class="btn-page" [disabled]="!hasPrevPickups()" (click)="prevPickupsPage()">
+              <span class="material-icons">chevron_left</span>
+            </button>
+            <button type="button" class="btn-page" [disabled]="!hasNextPickups()" (click)="nextPickupsPage()">
+              <span class="material-icons">chevron_right</span>
+            </button>
+          </div>
+        </div>
+        }
+      }
+    </div>
+    }
+    @if(activeTab() === 'logs'){
+    <div style="padding:1.25rem 0">
+
+      @if(loadingLogs()){
+      <div class="kpi-loading"><div class="spinner"></div><span>Loading audit logs…</span></div>
+      }
+
+      @if(logsError() && !loadingLogs()){
+      <div class="state-card error-state">
+        <span class="material-icons state-icon">error_outline</span>
+        <p>{{ logsError() }}</p>
+        <button class="btn-retry" (click)="loadLogs()">Retry</button>
+      </div>
+      }
+
+      @if(!loadingLogs() && !logsError()){
+        @if(logs().length === 0){
+        <div class="state-card empty-state">
+          <span class="material-icons state-icon">history</span>
+          <p>No audit logs yet.</p>
+        </div>
+        } @else {
+        <div class="table-wrap log-list">
+          @for(log of logs(); track log._id){
+          <div class="log-entry">
+            <div class="log-icon-wrap">
+              <span class="material-icons log-icon">manage_accounts</span>
+            </div>
+            <div class="log-body">
+              <span class="log-action">{{ log.action }}</span>
+              <span class="log-admin"> by {{ getLogAdminName(log) }}</span>
+              @if(log.target_type){
+              <span class="log-target-type"> · {{ log.target_type }}</span>
+              }
+              @if(log.details){
+              <div style="font-size:0.78rem;color:var(--color-text-muted);margin-top:0.15rem;width:100%">
+                {{ log.details }}
+              </div>
+              }
+            </div>
+            <span class="log-time">{{ formatTimestamp(log.timestamp) }}</span>
+          </div>
+          }
+        </div>
+
+        <!-- Pagination -->
+        <div class="pagination-row">
+          <span class="pagination-info">
+            Showing {{ logs().length }} of {{ logsTotal() }} entries — Page {{ logsPage() }} of {{ logsPages() }}
+          </span>
+          <div class="pagination-btns">
+            <button type="button" class="btn-page" [disabled]="!hasPrevLogs()" (click)="prevLogsPage()">
+              <span class="material-icons">chevron_left</span>
+            </button>
+            <button type="button" class="btn-page" [disabled]="!hasNextLogs()" (click)="nextLogsPage()">
+              <span class="material-icons">chevron_right</span>
+            </button>
+          </div>
+        </div>
+        }
+      }
+    </div>
+    }
+
+    <!-- ── LEADERBOARD TAB ────────────────────────── -->
+    @if(activeTab() === 'leaderboard'){
+    <div style="padding:1.25rem 0">
+
+      <!-- Leaderboard Header Controls -->
+      <div class="lb-controls-row">
+        <div class="role-filter-group">
+          <button type="button" class="filter-pill-btn" [class.active]="leaderboardRoleFilter() === 'all'" (click)="leaderboardRoleFilter.set('all')">
+            <span class="material-icons">groups</span> All Rankings
+          </button>
+          <button type="button" class="filter-pill-btn" [class.active]="leaderboardRoleFilter() === 'volunteer'" (click)="leaderboardRoleFilter.set('volunteer')">
+            <span class="material-icons">volunteer_activism</span> Volunteers ({{ volunteerRankedTotal() }})
+          </button>
+          <button type="button" class="filter-pill-btn" [class.active]="leaderboardRoleFilter() === 'ngo'" (click)="leaderboardRoleFilter.set('ngo')">
+            <span class="material-icons">corporate_fare</span> NGOs ({{ ngoRankedTotal() }})
+          </button>
+        </div>
+
+        <button type="button" class="btn-refresh-tab" title="Refresh Leaderboard" (click)="loadLeaderboard()">
+          <span class="material-icons" [class.spinning]="loadingLeaderboard()">refresh</span>
+          Refresh
+        </button>
+      </div>
+
+      <!-- Loading state -->
+      @if(loadingLeaderboard()){
+      <div class="state-card loading-state">
+        <div class="spinner"></div>
+        <p>Loading leaderboard rankings from platform data…</p>
+      </div>
+      }
+
+      <!-- Error state -->
+      @if(leaderboardError() && !loadingLeaderboard()){
+      <div class="state-card error-state">
+        <span class="material-icons state-icon">error_outline</span>
+        <p>{{ leaderboardError() }}</p>
+        <button class="btn-retry" (click)="loadLeaderboard()">Retry</button>
+      </div>
+      }
+
+      <!-- Data display -->
+      @if(!loadingLeaderboard() && !leaderboardError()){
+      <div class="admin-lb-grid" [class.grid-single]="leaderboardRoleFilter() !== 'all'">
+
+        <!-- Volunteers Leaderboard Section -->
+        @if(leaderboardRoleFilter() === 'all' || leaderboardRoleFilter() === 'volunteer'){
+        <div class="admin-lb-panel">
+          <div class="panel-section-head">
+            <div class="head-title-wrap">
+              <span class="material-icons icon-vol">volunteer_activism</span>
+              <div>
+                <h3>Top Volunteers</h3>
+                <span class="head-sub">Ranked by CO₂ saved &amp; total waste collected</span>
+              </div>
+            </div>
+            <span class="head-badge badge-vol">{{ volunteerLeaderboard().length }} ranked</span>
+          </div>
+
+          @if(volunteerLeaderboard().length === 0){
+          <div class="state-card empty-state">
+            <span class="material-icons state-icon">sports_score</span>
+            <p>No volunteer activity recorded yet.</p>
+          </div>
+          } @else {
+          <div class="table-responsive">
+            <table class="admin-table lb-admin-table">
+              <thead>
+                <tr>
+                  <th style="width: 75px;">Rank</th>
+                  <th>Volunteer</th>
+                  <th>CO₂ Saved</th>
+                  <th>Weight</th>
+                  <th>Pickups</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for(v of volunteerLeaderboard(); track v.user?._id || $index; let i = $index){
+                <tr class="lb-table-row">
+                  <td>
+                    <span class="rank-badge"
+                      [class.rank-gold]="i === 0"
+                      [class.rank-silver]="i === 1"
+                      [class.rank-bronze]="i === 2">
+                      {{ i === 0 ? '🥇 1' : i === 1 ? '🥈 2' : i === 2 ? '🥉 3' : '#' + v.rank }}
+                    </span>
+                  </td>
+                  <td>
+                    <div class="user-cell">
+                      <div class="user-avatar-small vol-avatar">
+                        {{ (v.user?.name || 'V').charAt(0).toUpperCase() }}
+                      </div>
+                      <div class="user-cell-meta">
+                        <span class="user-cell-name">{{ v.user?.name || 'Volunteer' }}</span>
+                        <span class="user-cell-email">{{ v.user?.email || 'N/A' }}</span>
+                      </div>
+                    </div>
+                  </td>
+                  <td>
+                    <span class="metric-highlight co2-metric">
+                      <span class="material-icons metric-icon">eco</span>
+                      {{ v.totalCO2Kg | number:'1.1-2' }} <small>kg</small>
+                    </span>
+                  </td>
+                  <td>
+                    <span class="metric-val">{{ v.totalWeightKg | number:'1.1-1' }} <small>kg</small></span>
+                  </td>
+                  <td>
+                    <span class="badge-count">{{ v.pickupCount }}</span>
+                  </td>
+                </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+          }
+        </div>
+        }
+
+        <!-- NGOs Leaderboard Section -->
+        @if(leaderboardRoleFilter() === 'all' || leaderboardRoleFilter() === 'ngo'){
+        <div class="admin-lb-panel">
+          <div class="panel-section-head">
+            <div class="head-title-wrap">
+              <span class="material-icons icon-ngo">corporate_fare</span>
+              <div>
+                <h3>Top NGOs &amp; Organizations</h3>
+                <span class="head-sub">Ranked by CO₂ saved &amp; completed collections</span>
+              </div>
+            </div>
+            <span class="head-badge badge-ngo">{{ ngoLeaderboard().length }} ranked</span>
+          </div>
+
+          @if(ngoLeaderboard().length === 0){
+          <div class="state-card empty-state">
+            <span class="material-icons state-icon">sports_score</span>
+            <p>No NGO activity recorded yet.</p>
+          </div>
+          } @else {
+          <div class="table-responsive">
+            <table class="admin-table lb-admin-table">
+              <thead>
+                <tr>
+                  <th style="width: 75px;">Rank</th>
+                  <th>Organization</th>
+                  <th>CO₂ Saved</th>
+                  <th>Weight</th>
+                  <th>Completed</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for(n of ngoLeaderboard(); track n.user?._id || $index; let i = $index){
+                <tr class="lb-table-row">
+                  <td>
+                    <span class="rank-badge"
+                      [class.rank-gold]="i === 0"
+                      [class.rank-silver]="i === 1"
+                      [class.rank-bronze]="i === 2">
+                      {{ i === 0 ? '🥇 1' : i === 1 ? '🥈 2' : i === 2 ? '🥉 3' : '#' + n.rank }}
+                    </span>
+                  </td>
+                  <td>
+                    <div class="user-cell">
+                      <div class="user-avatar-small ngo-avatar">
+                        {{ (n.user?.name || 'N').charAt(0).toUpperCase() }}
+                      </div>
+                      <div class="user-cell-meta">
+                        <span class="user-cell-name">{{ n.user?.name || 'NGO Organization' }}</span>
+                        <span class="user-cell-email">{{ n.user?.email || 'N/A' }}</span>
+                      </div>
+                    </div>
+                  </td>
+                  <td>
+                    <span class="metric-highlight co2-metric">
+                      <span class="material-icons metric-icon">eco</span>
+                      {{ n.totalCO2Kg | number:'1.1-2' }} <small>kg</small>
+                    </span>
+                  </td>
+                  <td>
+                    <span class="metric-val">{{ n.totalWeightKg | number:'1.1-1' }} <small>kg</small></span>
+                  </td>
+                  <td>
+                    <span class="badge-count badge-count-ngo">{{ n.pickupCount }}</span>
+                  </td>
+                </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+          }
+        </div>
+        }
+
+      </div>
+      }
+
+    </div>
+    }
+
+  </div><!-- /section-card tabs -->
+</div><!-- /page-container -->
+
+<!-- ════════════════════════════════════════════════════════════
+     SUSPEND REASON MODAL
+     Shown when admin clicks "Suspend" on a user row.
+     Reason is REQUIRED by the backend.
+     ════════════════════════════════════════════════════════════ -->
+@if(suspendTarget()){
+<div class="modal-backdrop" (click)="closeSuspendModal()" role="dialog" aria-modal="true"
+  aria-labelledby="suspend-modal-title">
+
+  <div class="modal-card" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <span class="material-icons modal-header-icon danger">block</span>
+      <h2 id="suspend-modal-title">Suspend Account</h2>
+    </div>
+
+    <p class="modal-body-text">
+      You are about to suspend
+      <strong>{{ suspendTarget()!.name }}</strong>
+      (<span style="font-size:0.85rem;color:var(--color-text-muted)">{{ suspendTarget()!.email }}</span>).
+      <br>
+      The user will be immediately logged out of all sessions.
+    </p>
+
+    <div class="modal-field">
+      <label class="modal-label" for="suspend-reason">
+        Suspension Reason <span class="required-star">*</span>
+      </label>
+      <textarea
+        id="suspend-reason"
+        class="modal-textarea"
+        rows="3"
+        maxlength="500"
+        placeholder="Enter a clear reason for suspension (required)…"
+        [ngModel]="suspendReason()"
+        (ngModelChange)="suspendReason.set($event)"></textarea>
+      <span class="modal-char-count">{{ suspendReason().trim().length }}/500</span>
+    </div>
+
+    <div class="modal-actions">
+      <button type="button" class="modal-btn-cancel" (click)="closeSuspendModal()">Cancel</button>
+      <button type="button" class="modal-btn-confirm"
+        [disabled]="!suspendReason().trim()"
+        (click)="confirmSuspend()">
+        <span class="material-icons">block</span>
+        Confirm Suspension
+      </button>
+    </div>
+  </div>
+
+</div>
+}
+
+<!-- ── DELETE OPPORTUNITY MODAL ─────────────────────────────────── -->
+@if(deleteOppTarget()){
+<div class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="del-opp-title"
+  (click)="closeDeleteOppModal()">
+  <div class="modal-box" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <span class="material-icons modal-icon warn-icon">delete_forever</span>
+      <h2 id="del-opp-title">Remove Opportunity</h2>
+    </div>
+    <p class="modal-desc">
+      Remove <strong>{{ deleteOppTarget()!.title }}</strong>? This is a soft-delete —
+      the opportunity can be restored. A reason is required.
+    </p>
+    <div class="modal-field">
+      <label class="modal-label" for="del-opp-reason">Reason <span class="required">*</span></label>
+      <textarea id="del-opp-reason" class="modal-textarea" rows="3"
+        maxlength="255"
+        placeholder="Explain why this opportunity is being removed…"
+        [ngModel]="deleteOppReason()"
+        (ngModelChange)="deleteOppReason.set($event)"></textarea>
+      <span class="modal-char-count">{{ deleteOppReason().trim().length }}/255</span>
+    </div>
+    <div class="modal-actions">
+      <button type="button" class="modal-btn-cancel" (click)="closeDeleteOppModal()">Cancel</button>
+      <button type="button" class="modal-btn-confirm modal-btn-danger"
+        [disabled]="!deleteOppReason().trim()"
+        (click)="confirmDeleteOpp()">
+        <span class="material-icons">delete</span>
+        Confirm Removal
+      </button>
+    </div>
+  </div>
+</div>
+}
+
+<!-- ── DELETE PICKUP MODAL ─────────────────────────────────────── -->
+@if(deletePickupTarget()){
+<div class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="del-pickup-title"
+  (click)="closeDeletePickupModal()">
+  <div class="modal-box" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <span class="material-icons modal-icon warn-icon">delete_forever</span>
+      <h2 id="del-pickup-title">Delete Pickup Request</h2>
+    </div>
+    <p class="modal-desc">
+      Are you sure you want to permanently delete the pickup request at
+      <strong>{{ deletePickupTarget()!.address?.area ? (deletePickupTarget()!.address?.area + ', ') : '' }}{{ deletePickupTarget()!.address?.city ?? '—' }}</strong>?
+    </p>
+    <div class="modal-info-box danger-notice">
+      <span class="material-icons info-box-icon">warning</span>
+      <div>
+        <strong>Permanent Action:</strong> This will permanently delete the pickup record, schedule, and related history from the database. This action cannot be undone.
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button type="button" class="modal-btn-cancel" (click)="closeDeletePickupModal()">Cancel</button>
+      <button type="button" class="modal-btn-confirm modal-btn-danger"
+        [disabled]="deletingPickupId() === deletePickupTarget()!._id"
+        (click)="confirmDeletePickup()">
+        @if(deletingPickupId() === deletePickupTarget()!._id){
+        <span class="material-icons spinning">autorenew</span> Deleting…
+        } @else {
+        <span class="material-icons">delete</span> Permanently Delete
+        }
+      </button>
+    </div>
+  </div>
+</div>
+}
+
+<!-- ── FORCE PICKUP STATUS / COMPLETION MODAL ─────────────────────── -->
+@if(forceStatusTarget()){
+<div class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="force-status-title"
+  (click)="closeForceStatusModal()">
+  <div class="modal-box modal-box-large" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <span class="material-icons modal-icon">published_with_changes</span>
+      <h2 id="force-status-title">Manage Pickup Status</h2>
+    </div>
+    <p class="modal-desc">
+      Pickup location: <strong>{{ forceStatusTarget()!.address?.area ? (forceStatusTarget()!.address?.area + ', ') : '' }}{{ forceStatusTarget()!.address?.city ?? '' }}</strong>
+      &bull; Current status: <span class="status-pill" [ngClass]="'pickup-' + forceStatusTarget()!.status.toLowerCase()">{{ forceStatusTarget()!.status }}</span>
+    </p>
+
+    <!-- Target Status Selector -->
+    <div class="modal-field">
+      <label class="modal-label" for="force-status-select">Set Status To</label>
+      <select id="force-status-select" class="filter-select" style="width:100%;margin-top:0.25rem"
+        [ngModel]="forceStatusValue()"
+        (ngModelChange)="forceStatusValue.set($event)">
+        <option value="Completed">Completed (Record Waste &amp; Attribute to NGO)</option>
+        <option value="Cancelled">Cancelled (Cancel this request)</option>
+      </select>
+    </div>
+
+    <!-- ── When Completed: NGO Selection + Waste Collection Form ── -->
+    @if(forceStatusValue() === 'Completed'){
+    <div class="completion-section">
+
+      <!-- NGO Attribution -->
+      <div class="modal-field">
+        <label class="modal-label">
+          <span class="material-icons label-icon">business</span>
+          Which NGO completed this pickup?
+          <span class="modal-hint">(Optional — attributes waste to NGO for stats &amp; leaderboard)</span>
+        </label>
+
+        @if(selectedNgo()){
+        <div class="selected-ngo-card">
+          <div class="ngo-info">
+            <span class="material-icons ngo-avatar">corporate_fare</span>
+            <div>
+              <div class="ngo-name">{{ selectedNgo()!.name }}</div>
+              <div class="ngo-email">{{ selectedNgo()!.email }}</div>
+            </div>
+          </div>
+          <button type="button" class="btn-clear-ngo" (click)="clearSelectedNgo()" title="Change NGO">
+            <span class="material-icons">close</span>
+          </button>
+        </div>
+        } @else {
+        <div class="ngo-search-wrap">
+          <div class="ngo-search-input-box">
+            <span class="material-icons">search</span>
+            <input type="text"
+              placeholder="Search NGO by name or email…"
+              [ngModel]="ngoSearchQuery()"
+              (ngModelChange)="onNgoSearchInput($event)"
+              class="filter-input"
+              style="width: 100%;">
+          </div>
+
+          @if(loadingNgos()){
+          <div class="ngo-loading-hint"><div class="spinner-small"></div> Loading NGOs…</div>
+          } @else if(availableNgos().length > 0){
+          <div class="ngo-dropdown-list">
+            @for(ngo of availableNgos(); track ngo._id){
+            <div class="ngo-option-item" (click)="selectNgo(ngo)">
+              <div class="ngo-opt-name">{{ ngo.name }}</div>
+              <div class="ngo-opt-email">{{ ngo.email }}</div>
+            </div>
+            }
+          </div>
+          } @else if(ngoSearchQuery()){
+          <div class="ngo-no-results">No NGOs found matching "{{ ngoSearchQuery() }}"</div>
+          }
+        </div>
+        }
+      </div>
+
+      <!-- Waste Collected FormArray -->
+      <div class="modal-field" [formGroup]="completeForm">
+        <div class="waste-form-head">
+          <label class="modal-label">
+            <span class="material-icons label-icon">delete_outline</span>
+            Waste Collected Details <span class="required">*</span>
+          </label>
+          <button type="button" class="btn-add-waste" (click)="addWasteEntry()">
+            <span class="material-icons">add</span> Add Type
+          </button>
+        </div>
+        <p class="waste-form-desc">Enter the actual categories and weights (kg) collected on-site.</p>
+
+        <div formArrayName="entries" class="waste-entries-list">
+          @for(entry of wasteEntries.controls; track $index; let i = $index){
+          <div [formGroupName]="i" class="waste-entry-row">
+            <div class="entry-field category-field">
+              <label class="sr-only">Category</label>
+              <select formControlName="category" class="filter-select entry-select"
+                [class.invalid-control]="entryError(i, 'category')">
+                <option value="" disabled selected>Select category…</option>
+                @for(type of wasteTypes; track type){
+                <option [value]="type">{{ type }}</option>
+                }
+              </select>
+              @if(entryError(i, 'category')){
+              <span class="entry-err-msg">{{ entryError(i, 'category') }}</span>
+              }
+            </div>
+
+            <div class="entry-field weight-field">
+              <label class="sr-only">Weight (kg)</label>
+              <div class="weight-input-wrap">
+                <input type="number" formControlName="weight" placeholder="Weight" min="0.01" step="0.1"
+                  class="filter-input entry-weight-input"
+                  [class.invalid-control]="entryError(i, 'weight')">
+                <span class="weight-unit">kg</span>
+              </div>
+              @if(entryError(i, 'weight')){
+              <span class="entry-err-msg">{{ entryError(i, 'weight') }}</span>
+              }
+            </div>
+
+            @if(wasteEntries.length > 1){
+            <button type="button" class="btn-remove-entry" (click)="removeWasteEntry(i)" title="Remove entry">
+              <span class="material-icons">delete_outline</span>
+            </button>
+            }
+          </div>
+          }
+        </div>
+      </div>
+
+    </div>
+    }
+
+    <!-- Modal Actions -->
+    <div class="modal-actions">
+      <button type="button" class="modal-btn-cancel" (click)="closeForceStatusModal()">Cancel</button>
+      <button type="button" class="modal-btn-confirm"
+        [class.modal-btn-danger]="forceStatusValue() === 'Cancelled'"
+        [disabled]="forcingStatusId() === forceStatusTarget()!._id"
+        (click)="confirmForceStatus()">
+        @if(forcingStatusId() === forceStatusTarget()!._id){
+        <span class="material-icons spinning">autorenew</span> Updating…
+        } @else {
+        <span class="material-icons">{{ forceStatusValue() === 'Completed' ? 'check_circle' : 'cancel' }}</span>
+        {{ forceStatusValue() === 'Completed' ? 'Complete Pickup & Record Waste' : 'Cancel Pickup' }}
+        }
+      </button>
+    </div>
+  </div>
+</div>
+}
+
+<!-- ── CHANGE USER ROLE MODAL ─────────────────────────────────────── -->
+@if(roleChangeTarget()){
+<div class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="role-modal-title"
+  (click)="closeRoleModal()">
+  <div class="modal-box" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <span class="material-icons modal-icon">manage_accounts</span>
+      <h2 id="role-modal-title">Change Role</h2>
+    </div>
+    <p class="modal-desc">
+      Changing role for <strong>{{ roleChangeTarget()!.name }}</strong>
+      (<span style="font-size:0.85rem;color:var(--color-text-muted)">{{ roleChangeTarget()!.email }}</span>).
+      Current role: <strong>{{ roleChangeTarget()!.role | titlecase }}</strong>.
+    </p>
+    <div class="modal-field">
+      <label class="modal-label" for="role-select">New Role</label>
+      <select id="role-select" class="filter-select" style="width:100%;margin-top:0.25rem"
+        [ngModel]="roleChangeValue()"
+        (ngModelChange)="roleChangeValue.set($event)">
+        @for(r of userRoles; track r){
+        <option [value]="r">{{ r | titlecase }}</option>
+        }
+      </select>
+    </div>
+    <div class="modal-actions">
+      <button type="button" class="modal-btn-cancel" (click)="closeRoleModal()">Cancel</button>
+      <button type="button" class="modal-btn-confirm"
+        [disabled]="roleChangeValue() === roleChangeTarget()!.role"
+        (click)="confirmRoleChange()">
+        <span class="material-icons">save</span>
+        Apply Role Change
+      </button>
+    </div>
+  </div>
+</div>
+}

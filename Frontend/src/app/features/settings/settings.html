@@ -1,0 +1,378 @@
+<div class="settings-page">
+
+  <!-- Header -->
+  <div class="settings-header">
+    <div>
+      <h1 class="settings-title">Settings &amp; Preferences</h1>
+      <p class="settings-subtitle">Manage your account notifications, appearance, and privacy preferences.</p>
+    </div>
+  </div>
+
+  <!-- Feedback Alerts -->
+  @if(successMessage()){
+  <div class="alert-box success">
+    <span class="material-icons">check_circle</span>
+    <span>{{ successMessage() }}</span>
+  </div>
+  }
+  @if(errorMessage()){
+  <div class="alert-box danger">
+    <span class="material-icons">error_outline</span>
+    <span>{{ errorMessage() }}</span>
+  </div>
+  }
+
+  <!-- Layout: Sidebar Tabs + Panel Content -->
+  <div class="settings-container">
+
+    <!-- Nav Tabs -->
+    <nav class="settings-tabs-nav" role="tablist" aria-label="Settings Categories">
+      <button
+        type="button"
+        class="tab-link"
+        [class.active]="activeTab() === 'notifications'"
+        (click)="activeTab.set('notifications')"
+        role="tab"
+        [attr.aria-selected]="activeTab() === 'notifications'">
+        <span class="material-icons tab-icon">notifications_none</span>
+        <div class="tab-copy">
+          <span class="tab-label">Notifications</span>
+          <span class="tab-sub">Alerts &amp; communications</span>
+        </div>
+      </button>
+
+      <button
+        type="button"
+        class="tab-link"
+        [class.active]="activeTab() === 'appearance'"
+        (click)="activeTab.set('appearance')"
+        role="tab"
+        [attr.aria-selected]="activeTab() === 'appearance'">
+        <span class="material-icons tab-icon">palette</span>
+        <div class="tab-copy">
+          <span class="tab-label">Appearance</span>
+          <span class="tab-sub">Theme &amp; display</span>
+        </div>
+      </button>
+
+      <button
+        type="button"
+        class="tab-link"
+        [class.active]="activeTab() === 'account'"
+        (click)="activeTab.set('account')"
+        role="tab"
+        [attr.aria-selected]="activeTab() === 'account'">
+        <span class="material-icons tab-icon">person_outline</span>
+        <div class="tab-copy">
+          <span class="tab-label">Account Overview</span>
+          <span class="tab-sub">Profile &amp; credentials</span>
+        </div>
+      </button>
+
+      <button
+        type="button"
+        class="tab-link"
+        [class.active]="activeTab() === 'security'"
+        (click)="activeTab.set('security')"
+        role="tab"
+        [attr.aria-selected]="activeTab() === 'security'">
+        <span class="material-icons tab-icon">security</span>
+        <div class="tab-copy">
+          <span class="tab-label">Privacy &amp; Data</span>
+          <span class="tab-sub">Encryption &amp; database cleanup</span>
+        </div>
+      </button>
+    </nav>
+
+    <!-- Main Panel -->
+    <div class="settings-panel">
+
+      <!-- ── 1. Notifications Tab ────────────────────────── -->
+      @if(activeTab() === 'notifications'){
+      <div class="settings-section">
+        <div class="section-head">
+          <div class="section-icon-wrap">
+            <span class="material-icons">notifications_active</span>
+          </div>
+          <div>
+            <h2>Notification Preferences</h2>
+            <p>Choose which activity updates and communication streams you want to receive.</p>
+          </div>
+        </div>
+
+        <div class="settings-list">
+
+          <div class="setting-item" (click)="toggleSetting('messageAlerts')">
+            <div class="setting-info">
+              <h4>Direct Messages &amp; Chat Alerts</h4>
+              <p>Receive real-time notifications when a user sends you a direct message in chat.</p>
+            </div>
+            <label class="toggle-switch" [class.checked]="settings().messageAlerts" (click)="$event.stopPropagation()">
+              <input
+                type="checkbox"
+                [checked]="settings().messageAlerts"
+                (change)="toggleSetting('messageAlerts')"
+                aria-label="Direct Messages and Chat Alerts">
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+
+          <div class="setting-item" (click)="toggleSetting('pickupAlerts')">
+            <div class="setting-info">
+              <h4>Pickup Status Alerts</h4>
+              <p>Receive alerts when pickups are assigned, completed, missed by automated sweeps, or rescheduled.</p>
+            </div>
+            <label class="toggle-switch" [class.checked]="settings().pickupAlerts" (click)="$event.stopPropagation()">
+              <input
+                type="checkbox"
+                [checked]="settings().pickupAlerts"
+                (change)="toggleSetting('pickupAlerts')"
+                aria-label="Pickup Status Alerts">
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+
+          <div class="setting-item" (click)="toggleSetting('opportunityAlerts')">
+            <div class="setting-info">
+              <h4>Opportunity &amp; Application Matches</h4>
+              <p>Receive notifications when volunteer drives match your area or when applications are reviewed.</p>
+            </div>
+            <label class="toggle-switch" [class.checked]="settings().opportunityAlerts" (click)="$event.stopPropagation()">
+              <input
+                type="checkbox"
+                [checked]="settings().opportunityAlerts"
+                (change)="toggleSetting('opportunityAlerts')"
+                aria-label="Opportunity and Application Matches">
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+
+          <div class="setting-item" (click)="toggleSetting('pushNotifications')">
+            <div class="setting-info">
+              <h4>Push Notifications &amp; Desktop Alerts</h4>
+              <p>Receive immediate in-app pings and desktop toast alerts for important updates.</p>
+            </div>
+            <label class="toggle-switch" [class.checked]="settings().pushNotifications" (click)="$event.stopPropagation()">
+              <input
+                type="checkbox"
+                [checked]="settings().pushNotifications"
+                (change)="toggleSetting('pushNotifications')"
+                aria-label="Push Notifications and Desktop Alerts">
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+
+          <div class="setting-item" (click)="toggleSetting('emailNotifications')">
+            <div class="setting-info">
+              <h4>Email Communications</h4>
+              <p>Receive important security updates, OTP notifications, and account verification digests.</p>
+            </div>
+            <label class="toggle-switch" [class.checked]="settings().emailNotifications" (click)="$event.stopPropagation()">
+              <input
+                type="checkbox"
+                [checked]="settings().emailNotifications"
+                (change)="toggleSetting('emailNotifications')"
+                aria-label="Email Communications">
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+
+        </div>
+
+        <div class="section-actions">
+          <button type="button" class="btn-save-settings" (click)="saveSettings()" [disabled]="saving()">
+            @if(saving()){
+            <div class="spinner-sm"></div>
+            <span>Saving…</span>
+            } @else {
+            <span class="material-icons">save</span>
+            <span>Save Notification Preferences</span>
+            }
+          </button>
+        </div>
+      </div>
+      }
+
+      <!-- ── 2. Appearance Tab ──────────────────────────── -->
+      @if(activeTab() === 'appearance'){
+      <div class="settings-section">
+        <div class="section-head">
+          <div class="section-icon-wrap">
+            <span class="material-icons">palette</span>
+          </div>
+          <div>
+            <h2>Appearance &amp; Theme</h2>
+            <p>Customize the look and feel of your WasteZero platform interface.</p>
+          </div>
+        </div>
+
+        <div class="theme-options-grid">
+
+          <div
+            class="theme-card"
+            [class.selected]="!themeService.isDark()"
+            (click)="setTheme('light')">
+            <div class="theme-preview light-preview">
+              <div class="preview-bar"></div>
+              <div class="preview-box"></div>
+            </div>
+            <div class="theme-meta">
+              <div class="theme-radio" [class.checked]="!themeService.isDark()"></div>
+              <div>
+                <h4>Light Mode</h4>
+                <p>Clean emerald theme with crisp contrast for bright environments.</p>
+              </div>
+            </div>
+          </div>
+
+          <div
+            class="theme-card"
+            [class.selected]="themeService.isDark()"
+            (click)="setTheme('dark')">
+            <div class="theme-preview dark-preview">
+              <div class="preview-bar"></div>
+              <div class="preview-box"></div>
+            </div>
+            <div class="theme-meta">
+              <div class="theme-radio" [class.checked]="themeService.isDark()"></div>
+              <div>
+                <h4>Dark Mode</h4>
+                <p>Sleek midnight slate theme optimized for low-light conditions.</p>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+      }
+
+      <!-- ── 3. Account Overview Tab ────────────────────── -->
+      @if(activeTab() === 'account'){
+      <div class="settings-section">
+        <div class="section-head">
+          <div class="section-icon-wrap">
+            <span class="material-icons">account_circle</span>
+          </div>
+          <div>
+            <h2>Account Overview</h2>
+            <p>Your verified credentials and quick access to profile settings.</p>
+          </div>
+        </div>
+
+        <div class="account-summary-card">
+          <div class="account-avatar-wrap">
+            <div class="account-avatar">
+              {{ authService.getCurrentUser()?.name?.charAt(0) }}
+            </div>
+            <div>
+              <h3>{{ authService.getCurrentUser()?.name }}</h3>
+              <p class="account-handle">&#64;{{ authService.getCurrentUser()?.username }}</p>
+            </div>
+          </div>
+
+          <div class="account-details-grid">
+            <div class="detail-item">
+              <span class="detail-label">Email Address</span>
+              <span class="detail-val">{{ authService.getCurrentUser()?.email }}</span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">Account Role</span>
+              <span class="role-chip">{{ authService.getCurrentUser()?.role | uppercase }}</span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">Email Verification</span>
+              <span class="verified-chip">
+                <span class="material-icons">verified</span>
+                Verified
+              </span>
+            </div>
+          </div>
+
+          <div class="account-quick-links">
+            <a routerLink="/profile" class="btn-quick-action">
+              <span class="material-icons">edit</span>
+              <span>Edit Profile &amp; Coverage</span>
+            </a>
+            <a routerLink="/change-password" class="btn-quick-action">
+              <span class="material-icons">lock_reset</span>
+              <span>Change Password (OTP)</span>
+            </a>
+          </div>
+        </div>
+      </div>
+      }
+
+      <!-- ── 4. Privacy & Data Tab ──────────────────────── -->
+      @if(activeTab() === 'security'){
+      <div class="settings-section">
+        <div class="section-head">
+          <div class="section-icon-wrap">
+            <span class="material-icons">enhanced_encryption</span>
+          </div>
+          <div>
+            <h2>Privacy &amp; Data Security</h2>
+            <p>Manage data persistence and security configurations on your account.</p>
+          </div>
+        </div>
+
+        <div class="security-card">
+          <div class="security-card-header">
+            <span class="material-icons security-shield-icon">security</span>
+            <div>
+              <h4>Authenticated Data Encryption</h4>
+              <p>All sensitive notification records and chat communications are encrypted at rest with AES-256-GCM.</p>
+            </div>
+          </div>
+        </div>
+
+        @if(authService.getCurrentUser()?.role === 'admin'){
+        <div class="danger-zone-card">
+          <div class="danger-zone-header">
+            <span class="material-icons">delete_sweep</span>
+            <div>
+              <h4>Clear Notification Backlog</h4>
+              <p>Permanently removes all read and unread notifications from your database record. This action cannot be undone.</p>
+            </div>
+          </div>
+          <button type="button" class="btn-danger-action" (click)="openClearModal()">
+            <span class="material-icons">delete_forever</span>
+            <span>Clear All Notifications from Database</span>
+          </button>
+        </div>
+        }
+      </div>
+      }
+
+    </div>
+  </div>
+
+  <!-- Clear Confirmation Dialog -->
+  @if(showClearModal()){
+  <div class="modal-backdrop" (click)="cancelClearModal()">
+    <div class="confirm-modal-box" (click)="$event.stopPropagation()" role="dialog" aria-labelledby="settings-clear-title" aria-modal="true">
+      <div class="confirm-modal-icon danger">
+        <span class="material-icons">delete_sweep</span>
+      </div>
+      <div class="confirm-modal-content">
+        <h3 id="settings-clear-title">Clear All Notifications?</h3>
+        <p>This will permanently delete all your notifications from your account and database. This action cannot be undone.</p>
+      </div>
+      <div class="confirm-modal-actions">
+        <button type="button" class="btn-modal-cancel" (click)="cancelClearModal()" [disabled]="clearingHistory()">
+          Cancel
+        </button>
+        <button type="button" class="btn-modal-confirm-danger" (click)="confirmClearNotifications()" [disabled]="clearingHistory()">
+          @if(clearingHistory()){
+          <div class="spinner-sm"></div>
+          <span>Clearing…</span>
+          } @else {
+          <span class="material-icons">delete_forever</span>
+          <span>Yes, Clear All</span>
+          }
+        </button>
+      </div>
+    </div>
+  </div>
+  }
+
+</div>
