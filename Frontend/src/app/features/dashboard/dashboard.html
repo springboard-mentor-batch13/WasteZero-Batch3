@@ -764,7 +764,6 @@
           <button type="button" class="lb-pill" [class.active]="adminMessageRoleFilter() === 'all'" (click)="adminMessageRoleFilter.set('all')">All</button>
           <button type="button" class="lb-pill" [class.active]="adminMessageRoleFilter() === 'volunteer'" (click)="adminMessageRoleFilter.set('volunteer')">Volunteers</button>
           <button type="button" class="lb-pill" [class.active]="adminMessageRoleFilter() === 'ngo'" (click)="adminMessageRoleFilter.set('ngo')">NGOs</button>
-          <button type="button" class="lb-pill" [class.active]="adminMessageRoleFilter() === 'admin'" (click)="adminMessageRoleFilter.set('admin')">Admins</button>
         </div>
 
         <a routerLink="/messages" class="link-view-all">
@@ -779,7 +778,7 @@
     } @else if(filteredAdminConversations().length === 0){
     <div class="state-empty" style="padding: 2rem 1rem;">
       <span class="material-icons" style="font-size: 2.25rem;">chat_bubble_outline</span>
-      <p>No active conversations found for {{ adminMessageRoleFilter() === 'all' ? 'any role' : adminMessageRoleFilter() === 'volunteer' ? 'volunteers' : adminMessageRoleFilter() === 'ngo' ? 'NGOs' : 'administrators' }}.</p>
+      <p>No active conversations found for {{ adminMessageRoleFilter() === 'all' ? 'any role' : adminMessageRoleFilter() === 'volunteer' ? 'volunteers' : 'NGOs' }}.</p>
     </div>
     } @else {
     <div class="dash-msg-list">

@@ -191,8 +191,8 @@
                 <span class="search-user-handle">&#64;{{ u.username }}</span>
                 }
               </div>
-              <span class="search-user-role-badge" [class.badge-ngo]="u.role === 'ngo'" [class.badge-vol]="u.role === 'volunteer'">
-                {{ u.role === 'ngo' ? 'NGO' : 'Volunteer' }}
+              <span class="search-user-role-badge" [class.badge-ngo]="u.role === 'ngo'" [class.badge-vol]="u.role === 'volunteer'" [class.badge-admin]="u.role === 'admin'">
+                {{ u.role === 'ngo' ? 'NGO' : u.role === 'admin' ? 'Admin' : 'Volunteer' }}
               </span>
             </div>
             <button

@@ -312,8 +312,12 @@ const changePasswordWithOtp = async (req, res) => {
    Search Users by Username
    GET /api/users/search?username=&targetRole=
    Volunteer callers may only search NGOs.
-   NGO callers may only search Volunteers.
-   Admin callers may search Volunteers and NGOs.
+/* ============================================
+   User Search — Global User Discovery
+   GET /api/users/search?username=<query>&targetRole=<role>
+   Accessible to all authenticated users (Volunteer, NGO, Admin)
+   Searches for users across all roles by username or name.
+   Excludes the caller and suspended users.
 ============================================ */
 
 const searchUsers = async (req, res) => {
@@ -327,51 +331,40 @@ const searchUsers = async (req, res) => {
       });
     }
 
-    const callerRole = req.user.role;
+    const VALID_ROLES = ['volunteer', 'ngo', 'admin'];
     let roleFilter;
 
-    if (callerRole === 'admin') {
-      if (targetRole) {
-        if (!['volunteer', 'ngo'].includes(targetRole)) {
-          return res.status(403).json({
-            success: false,
-            message: 'Admin search target must be either volunteer or ngo.',
-          });
-        }
-        roleFilter = targetRole;
-      } else {
-        roleFilter = { $in: ['volunteer', 'ngo'] };
-      }
-    } else {
-      // Enforce the allowed target-role pairing for non-admin callers.
-      // Volunteer → may only search NGOs.
-      // NGO       → may only search Volunteers.
-      const allowedTargetRole = callerRole === 'volunteer' ? 'ngo' : 'volunteer';
-
-      if (targetRole && targetRole !== allowedTargetRole) {
-        return res.status(403).json({
+    if (targetRole) {
+      const normalizedTarget = targetRole.trim().toLowerCase();
+      if (!VALID_ROLES.includes(normalizedTarget)) {
+        return res.status(400).json({
           success: false,
-          message: `As a ${callerRole} you may only search ${allowedTargetRole} users.`,
+          message: `targetRole must be one of: ${VALID_ROLES.join(', ')}.`,
         });
       }
-
-      roleFilter = targetRole || allowedTargetRole;
+      roleFilter = normalizedTarget;
+    } else {
+      roleFilter = { $in: VALID_ROLES };
     }
 
-    // Case-insensitive prefix match on username or name. Escaping special regex chars
-    // prevents ReDoS from crafted input (same convention as other services).
+    // Case-insensitive partial match on username or name. Escaping special regex chars
+    // prevents ReDoS from crafted input.
     const escapedQuery = username.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const searchRegex = new RegExp(`^${escapedQuery}`, 'i');
+    const searchRegex = new RegExp(escapedQuery, 'i');
+
+    const currentUserId = req.user?._id || req.user?.id;
 
     const users = await User.find({
+      _id: { $ne: currentUserId },
       role: roleFilter,
+      isSuspended: { $ne: true },
       $or: [
         { username: searchRegex },
         { name: searchRegex },
       ],
     })
-      .select('_id name username role')
-      .limit(10)
+      .select('_id name username role email')
+      .limit(20)
       .lean();
 
     return res.status(200).json({
@@ -387,6 +380,7 @@ const searchUsers = async (req, res) => {
     });
   }
 };
+
 
 const defaultSettings = {
   emailNotifications: true,

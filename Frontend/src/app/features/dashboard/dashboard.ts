@@ -123,7 +123,7 @@ export class Dashboard implements OnInit, OnDestroy {
   // ── Admin Communications / Messages Widget ───────────────────────────
   adminConversations         = signal<Conversation[]>([]);
   loadingAdminMessages       = signal<boolean>(false);
-  adminMessageRoleFilter     = signal<'all' | 'volunteer' | 'ngo' | 'admin'>('all');
+  adminMessageRoleFilter     = signal<'all' | 'volunteer' | 'ngo'>('all');
 
   filteredAdminConversations = computed(() => {
     const list = this.adminConversations();

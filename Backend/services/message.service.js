@@ -10,22 +10,25 @@ const { buildConversationId } = require('../sockets/rooms');
 
 
 const createMessage = async ({ sender_id, sender_role, receiver_id, content }) => {
-  // 1. Fetch receiver to check existence and role
-  const receiver = await User.findById(receiver_id).select('role').lean();
+  // 1. Prevent self-messaging
+  if (String(sender_id) === String(receiver_id)) {
+    throw new Error('Cannot send messages to yourself');
+  }
+
+  // 2. Fetch receiver to check existence, suspension status, and role
+  const receiver = await User.findById(receiver_id).select('role isSuspended').lean();
 
   if (!receiver) {
     throw new Error('Recipient user does not exist');
   }
 
-  // 2. Strict Role Check: Volunteer <-> NGO, Admin <-> Volunteer, Admin <-> NGO
-  const isVolunteerToNgo = sender_role === 'volunteer' && receiver.role === 'ngo';
-  const isNgoToVolunteer = sender_role === 'ngo' && receiver.role === 'volunteer';
-  const isAdminToVolunteer = sender_role === 'admin' && receiver.role === 'volunteer';
-  const isVolunteerToAdmin = sender_role === 'volunteer' && receiver.role === 'admin';
-  const isAdminToNgo = sender_role === 'admin' && receiver.role === 'ngo';
-  const isNgoToAdmin = sender_role === 'ngo' && receiver.role === 'admin';
+  if (receiver.isSuspended) {
+    throw new Error('Cannot message a suspended user');
+  }
 
-  if (!isVolunteerToNgo && !isNgoToVolunteer && !isAdminToVolunteer && !isVolunteerToAdmin && !isAdminToNgo && !isNgoToAdmin) {
+  // 3. Role Validation: Volunteers, NGOs, and Administrators can all message each other
+  const VALID_ROLES = ['volunteer', 'ngo', 'admin'];
+  if (!VALID_ROLES.includes(sender_role) || !VALID_ROLES.includes(receiver.role)) {
     throw new Error('Messaging is only allowed between Volunteers, NGOs, and Administrators');
   }
 

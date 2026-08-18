@@ -74,34 +74,12 @@ export class MessagesPage implements OnInit, OnDestroy {
 
   readonly currentUser = computed(() => this.authService.currentUser());
 
-  readonly availableRoleFilters = computed<{ label: string; value: 'all' | 'volunteer' | 'ngo' | 'admin' }[]>(() => {
-    const role = (this.currentUser()?.role || '').toLowerCase();
-    if (role === 'admin') {
-      return [
-        { label: 'All', value: 'all' },
-        { label: 'Volunteer', value: 'volunteer' },
-        { label: 'NGO', value: 'ngo' },
-      ];
-    } else if (role === 'volunteer') {
-      return [
-        { label: 'All', value: 'all' },
-        { label: 'NGO', value: 'ngo' },
-        { label: 'Admin', value: 'admin' },
-      ];
-    } else if (role === 'ngo') {
-      return [
-        { label: 'All', value: 'all' },
-        { label: 'Volunteer', value: 'volunteer' },
-        { label: 'Admin', value: 'admin' },
-      ];
-    }
-    return [
-      { label: 'All', value: 'all' },
-      { label: 'Volunteer', value: 'volunteer' },
-      { label: 'NGO', value: 'ngo' },
-      { label: 'Admin', value: 'admin' },
-    ];
-  });
+  readonly availableRoleFilters = computed<{ label: string; value: 'all' | 'volunteer' | 'ngo' | 'admin' }[]>(() => [
+    { label: 'All', value: 'all' },
+    { label: 'Volunteers', value: 'volunteer' },
+    { label: 'NGOs', value: 'ngo' },
+    { label: 'Admins', value: 'admin' },
+  ]);
 
   readonly filteredConversations = computed(() => {
     const q = this.conversationSearch().toLowerCase().trim();
@@ -157,6 +135,15 @@ export class MessagesPage implements OnInit, OnDestroy {
     if (this.typingTimeout) clearTimeout(this.typingTimeout);
   }
 
+  // ── Mobile Navigation ───────────────────────────────────────────────
+
+  backToConversations(): void {
+    this.activeConversation.set(null);
+    this.messages.set([]);
+    this.errorMessages.set('');
+    this.sendError.set('');
+  }
+
   // ── Load conversations ──────────────────────────────────────────────
 
   loadConversations(
@@ -178,8 +165,12 @@ export class MessagesPage implements OnInit, OnDestroy {
             // Open the contact target — conversations list is now populated
             this.openConversationWithUser(pendingContactId, pendingContactName, pendingContactRole);
           } else if (!this.activeConversation() && res.data.length > 0) {
-            // Auto-select first conversation when no contact is pending
-            this.selectConversation(res.data[0]);
+            // On desktop screens, auto-select first conversation.
+            // On mobile screens (<= 768px), allow user to view conversation list first.
+            const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
+            if (!isMobile) {
+              this.selectConversation(res.data[0]);
+            }
           }
         },
         error: (err) => {

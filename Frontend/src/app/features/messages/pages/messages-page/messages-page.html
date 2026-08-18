@@ -9,7 +9,7 @@
   </div>
 
   <!-- ── Chat Shell ── -->
-  <div class="chat-shell">
+  <div class="chat-shell" [class.has-active-chat]="activeConversation() !== null">
 
     <!-- ════════════════════════════════════
          LEFT PANEL — Conversation List
@@ -184,6 +184,13 @@
 
       <!-- Chat header -->
       <div class="chat-header">
+        <button
+          type="button"
+          class="btn-back-conversations"
+          (click)="backToConversations()"
+          aria-label="Back to conversation list">
+          <span class="material-icons">arrow_back</span>
+        </button>
         <div class="chat-header-avatar">
           {{ getAvatarInitial(activeConversation()!.otherUser.name) }}
         </div>

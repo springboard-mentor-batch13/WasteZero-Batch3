@@ -1599,6 +1599,7 @@ html.dark .hamburger-btn:hover { background: rgba(34,197,94,0.1); color: var(--c
 }
 .badge-ngo { background: #dbeafe; color: #1e40af; }
 .badge-vol { background: #dcfce7; color: #166534; }
+.badge-admin { background: #fef3c7; color: #92400e; }
 
 /* Direct chat button */
 .btn-search-chat {

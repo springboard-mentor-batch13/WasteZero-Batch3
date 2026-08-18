@@ -15,6 +15,7 @@ export interface SearchUserResult {
   name: string;
   username: string;
   role: 'volunteer' | 'ngo' | 'admin' | string;
+  email?: string;
 }
 
 export interface UserSearchResponse {
@@ -37,10 +38,9 @@ export class UserSearchService {
   }
 
   /**
-   * Search users by username prefix.
-   * targetRole defaults to undefined — backend infers allowed target from caller's role.
-   * Volunteer callers → searches NGOs.
-   * NGO callers       → searches Volunteers.
+   * Search users by username or name.
+   * targetRole defaults to undefined — searches across all roles (Volunteer, NGO, Admin).
+   * Optionally pass targetRole ('volunteer', 'ngo', or 'admin') to filter by a specific role.
    */
   searchUsers(username: string, targetRole?: string): Observable<UserSearchResponse> {
     let params = new HttpParams().set('username', username);

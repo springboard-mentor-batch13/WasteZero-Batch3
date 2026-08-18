@@ -31,10 +31,10 @@ const {
 } = require("../validations/user.validation");
 
 /* ============================================
-   User Search — Volunteer ↔ NGO & Admin Search
+   User Search — Global User Discovery
 ============================================ */
 
-// Volunteer → search NGOs. NGO → search Volunteers. Admin → search Volunteers & NGOs.
+// All authenticated users can search for other users across all roles (Volunteer, NGO, Admin)
 router.get(
   "/search",
   protect,
