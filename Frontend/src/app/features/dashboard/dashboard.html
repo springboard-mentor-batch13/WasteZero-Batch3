@@ -75,6 +75,124 @@
     </div>
   </div>
 
+  <!-- Volunteer Activity Trends -->
+  <div class="panel">
+    <div class="panel-head">
+      <span class="material-icons panel-head-icon">bar_chart</span>
+      <div>
+        <h2>Activity &amp; Impact Trends</h2>
+        <p class="panel-sub">Completed pickups, applications &amp; CO₂ saved — last 12 months</p>
+      </div>
+    </div>
+    @if(loadingTrends()){
+    <div class="state-loading"><div class="spinner"></div><span>Loading activity trends…</span></div>
+    } @else if(trendsError()){
+    <div class="banner banner--error">
+      <span class="material-icons">error_outline</span>
+      <span>{{ trendsError() }}</span>
+      <button (click)="loadVolunteerChartsAndAnalytics()">Retry</button>
+    </div>
+    } @else if(!hasTrendsData()){
+    <div class="state-empty">
+      <span class="material-icons">bar_chart</span>
+      <p>No activity trends recorded yet.</p>
+      <small>Complete pickups and apply to drives to track your progress over time.</small>
+    </div>
+    } @else {
+    <div class="chart-wrap"><canvas #volTrendsCanvas class="chart-canvas"></canvas></div>
+    <div class="chart-legend">
+      <span class="legend-item"><span class="legend-swatch" style="background:#22c55e"></span>Completed Pickups</span>
+      <span class="legend-item"><span class="legend-swatch" style="background:#6366f1"></span>Applications</span>
+      <span class="legend-item"><span class="legend-swatch legend-swatch--line" style="border-color:#f59e0b"></span>CO₂ Saved (kg)</span>
+    </div>
+    }
+  </div>
+
+  <!-- Volunteer Status Donut Charts -->
+  <div class="two-col-equal">
+
+    <!-- Applications Submitted by Status -->
+    <div class="panel">
+      <div class="panel-head">
+        <span class="material-icons panel-head-icon">donut_large</span>
+        <div>
+          <h2>Applications by Status</h2>
+          <p class="panel-sub">Your opportunity application outcomes</p>
+        </div>
+      </div>
+      @if(loadingSummary()){
+      <div class="state-loading"><div class="spinner"></div><span>Loading applications…</span></div>
+      } @else if(summaryError()){
+      <div class="banner banner--error">
+        <span class="material-icons">error_outline</span>
+        <span>{{ summaryError() }}</span>
+        <button (click)="loadVolunteerChartsAndAnalytics()">Retry</button>
+      </div>
+      } @else if(!hasChartData(applicationStatusChart())){
+      <div class="state-empty">
+        <span class="material-icons">donut_large</span>
+        <p>No applications submitted yet.</p>
+        <small>Apply for volunteer drives to view status breakdowns.</small>
+      </div>
+      } @else {
+      <div class="donut-wrap"><canvas #volAppDonutCanvas class="donut-canvas"></canvas></div>
+      <ul class="donut-legend">
+        @for(label of applicationStatusChart()!.labels; track label; let i = $index){
+        @if(applicationStatusChart()!.data[i] > 0){
+        <li class="donut-legend-item">
+          <span class="donut-dot" [style.background]="applicationStatusColor(i)"></span>
+          <span class="donut-lbl">{{ label }}</span>
+          <span class="donut-cnt">{{ applicationStatusChart()!.data[i] | number }}</span>
+          <span class="donut-pct">{{ (applicationStatusChart()!.data[i] / sumArray(applicationStatusChart()!.data) * 100) | number:'1.0-0' }}%</span>
+        </li>
+        }
+        }
+      </ul>
+      }
+    </div>
+
+    <!-- Pickups by Status -->
+    <div class="panel">
+      <div class="panel-head">
+        <span class="material-icons panel-head-icon">donut_large</span>
+        <div>
+          <h2>Pickups by Status</h2>
+          <p class="panel-sub">Your scheduled collection breakdown</p>
+        </div>
+      </div>
+      @if(loadingSummary()){
+      <div class="state-loading"><div class="spinner"></div><span>Loading pickups…</span></div>
+      } @else if(summaryError()){
+      <div class="banner banner--error">
+        <span class="material-icons">error_outline</span>
+        <span>{{ summaryError() }}</span>
+        <button (click)="loadVolunteerChartsAndAnalytics()">Retry</button>
+      </div>
+      } @else if(!hasChartData(pickupStatusChart())){
+      <div class="state-empty">
+        <span class="material-icons">donut_large</span>
+        <p>No pickups scheduled yet.</p>
+        <small>Schedule your first waste pickup to view status breakdowns.</small>
+      </div>
+      } @else {
+      <div class="donut-wrap"><canvas #volPickupDonutCanvas class="donut-canvas"></canvas></div>
+      <ul class="donut-legend">
+        @for(label of pickupStatusChart()!.labels; track label; let i = $index){
+        @if(pickupStatusChart()!.data[i] > 0){
+        <li class="donut-legend-item">
+          <span class="donut-dot" [style.background]="pickupStatusColor(i)"></span>
+          <span class="donut-lbl">{{ label }}</span>
+          <span class="donut-cnt">{{ pickupStatusChart()!.data[i] | number }}</span>
+          <span class="donut-pct">{{ (pickupStatusChart()!.data[i] / sumArray(pickupStatusChart()!.data) * 100) | number:'1.0-0' }}%</span>
+        </li>
+        }
+        }
+      </ul>
+      }
+    </div>
+
+  </div>
+
   <div class="portal-card portal-card--volunteer">
     <div class="portal-icon"><span class="material-icons">volunteer_activism</span></div>
     <div><h2>Volunteer Portal</h2><p>Schedule waste pickups, track your recycling activities and contribute towards a cleaner environment.</p></div>
@@ -260,6 +378,125 @@
     </div>
   </div>
 
+  <!-- NGO Activity Trends -->
+  <div class="panel">
+    <div class="panel-head">
+      <span class="material-icons panel-head-icon">bar_chart</span>
+      <div>
+        <h2>Organization Activity Trends</h2>
+        <p class="panel-sub">Applications received, opportunities created &amp; pickups completed — last 12 months</p>
+      </div>
+    </div>
+    @if(loadingTrends()){
+    <div class="state-loading"><div class="spinner"></div><span>Loading activity trends…</span></div>
+    } @else if(trendsError()){
+    <div class="banner banner--error">
+      <span class="material-icons">error_outline</span>
+      <span>{{ trendsError() }}</span>
+      <button (click)="loadNgoChartsAndAnalytics()">Retry</button>
+    </div>
+    } @else if(!hasTrendsData()){
+    <div class="state-empty">
+      <span class="material-icons">bar_chart</span>
+      <p>No organization activity recorded yet.</p>
+      <small>Post opportunities, review applications, and complete pickups to view monthly trends.</small>
+    </div>
+    } @else {
+    <div class="chart-wrap"><canvas #ngoTrendsCanvas class="chart-canvas"></canvas></div>
+    <div class="chart-legend">
+      <span class="legend-item"><span class="legend-swatch" style="background:#10b981"></span>Applications Received</span>
+      <span class="legend-item"><span class="legend-swatch" style="background:#6366f1"></span>Opportunities Created</span>
+      <span class="legend-item"><span class="legend-swatch" style="background:#f59e0b"></span>Pickups Completed</span>
+      <span class="legend-item"><span class="legend-swatch legend-swatch--line" style="border-color:#06b6d4"></span>CO₂ Saved (kg)</span>
+    </div>
+    }
+  </div>
+
+  <!-- NGO Status Donut Charts -->
+  <div class="two-col-equal">
+
+    <!-- Applications Received by Status -->
+    <div class="panel">
+      <div class="panel-head">
+        <span class="material-icons panel-head-icon">donut_large</span>
+        <div>
+          <h2>Applications by Status</h2>
+          <p class="panel-sub">Volunteer applications for your campaigns</p>
+        </div>
+      </div>
+      @if(loadingSummary()){
+      <div class="state-loading"><div class="spinner"></div><span>Loading applications…</span></div>
+      } @else if(summaryError()){
+      <div class="banner banner--error">
+        <span class="material-icons">error_outline</span>
+        <span>{{ summaryError() }}</span>
+        <button (click)="loadNgoChartsAndAnalytics()">Retry</button>
+      </div>
+      } @else if(!hasChartData(applicationStatusChart())){
+      <div class="state-empty">
+        <span class="material-icons">donut_large</span>
+        <p>No applications received yet.</p>
+        <small>Applications submitted by volunteers will appear here.</small>
+      </div>
+      } @else {
+      <div class="donut-wrap"><canvas #ngoAppDonutCanvas class="donut-canvas"></canvas></div>
+      <ul class="donut-legend">
+        @for(label of applicationStatusChart()!.labels; track label; let i = $index){
+        @if(applicationStatusChart()!.data[i] > 0){
+        <li class="donut-legend-item">
+          <span class="donut-dot" [style.background]="applicationStatusColor(i)"></span>
+          <span class="donut-lbl">{{ label }}</span>
+          <span class="donut-cnt">{{ applicationStatusChart()!.data[i] | number }}</span>
+          <span class="donut-pct">{{ (applicationStatusChart()!.data[i] / sumArray(applicationStatusChart()!.data) * 100) | number:'1.0-0' }}%</span>
+        </li>
+        }
+        }
+      </ul>
+      }
+    </div>
+
+    <!-- Opportunities by Status -->
+    <div class="panel">
+      <div class="panel-head">
+        <span class="material-icons panel-head-icon">donut_large</span>
+        <div>
+          <h2>Opportunities by Status</h2>
+          <p class="panel-sub">Your organization's posted drives</p>
+        </div>
+      </div>
+      @if(loadingSummary()){
+      <div class="state-loading"><div class="spinner"></div><span>Loading opportunities…</span></div>
+      } @else if(summaryError()){
+      <div class="banner banner--error">
+        <span class="material-icons">error_outline</span>
+        <span>{{ summaryError() }}</span>
+        <button (click)="loadNgoChartsAndAnalytics()">Retry</button>
+      </div>
+      } @else if(!hasChartData(opportunityStatusChart())){
+      <div class="state-empty">
+        <span class="material-icons">donut_large</span>
+        <p>No opportunities posted yet.</p>
+        <small>Create your first opportunity to view status breakdowns.</small>
+      </div>
+      } @else {
+      <div class="donut-wrap"><canvas #ngoOppDonutCanvas class="donut-canvas"></canvas></div>
+      <ul class="donut-legend">
+        @for(label of opportunityStatusChart()!.labels; track label; let i = $index){
+        @if(opportunityStatusChart()!.data[i] > 0){
+        <li class="donut-legend-item">
+          <span class="donut-dot" [style.background]="opportunityStatusColor(i)"></span>
+          <span class="donut-lbl">{{ label }}</span>
+          <span class="donut-cnt">{{ opportunityStatusChart()!.data[i] | number }}</span>
+          <span class="donut-pct">{{ (opportunityStatusChart()!.data[i] / sumArray(opportunityStatusChart()!.data) * 100) | number:'1.0-0' }}%</span>
+        </li>
+        }
+        }
+      </ul>
+      }
+    </div>
+
+  </div>
+
   <!-- NGO upcoming schedule -->
   @if(upcomingPickups().length > 0 || loadingUpcoming()){
   <div class="panel">
@@ -275,7 +512,7 @@
       <li class="upcoming-item">
         <div class="upcoming-info">
           <span class="upcoming-name">{{ p.eventName }}</span>
-          <span class="upcoming-date"><span class="material-icons">calendar_today</span>{{ formatDate(p.date) }}</span>
+          <span class="upcoming-date"><span class="material-icons">calendar_today</span>{{ formatDate(p.date) }}@if(formatTime(p)){<span class="upcoming-time"> · {{ formatTime(p) }}</span>}</span>
         </div>
         <span class="status-badge" [ngClass]="statusClass(p.status)">{{ p.status }}</span>
       </li>
@@ -432,22 +669,28 @@
   </div>
   } <!-- /adminStats -->
 
-  <!-- ── 2: Pickup Analytics Chart ───────────────────────────────── -->
+  <!-- ── 2: Activity & Impact Trends (Admin) ─────────────────────── -->
   <div class="panel">
     <div class="panel-head">
       <span class="material-icons panel-head-icon">bar_chart</span>
-      <div><h2>Pickup Analytics</h2><p class="panel-sub">Completed &amp; Pending per month · CO₂ saved — last 12 months</p></div>
+      <div><h2>Activity &amp; Impact Trends</h2><p class="panel-sub">Completed &amp; pending pickups · platform CO₂ saved — last 12 months</p></div>
     </div>
     @if(loadingTrends()){
-    <div class="state-loading"><div class="spinner"></div><span>Loading chart…</span></div>
-    } @else if(trendsLabels().length === 0){
-    <div class="state-empty"><span class="material-icons">bar_chart</span><p>No pickup data recorded yet.</p></div>
+    <div class="state-loading"><div class="spinner"></div><span>Loading activity trends…</span></div>
+    } @else if(trendsError()){
+    <div class="banner banner--error">
+      <span class="material-icons">error_outline</span>
+      <span>{{ trendsError() }}</span>
+      <button (click)="loadChartsAndWidgets()">Retry</button>
+    </div>
+    } @else if(!hasTrendsData()){
+    <div class="state-empty"><span class="material-icons">bar_chart</span><p>No activity trends recorded yet.</p><small>Platform activity will appear once pickups and drives are recorded.</small></div>
     } @else {
     <div class="chart-wrap"><canvas #trendsCanvas class="chart-canvas"></canvas></div>
     <div class="chart-legend">
       <span class="legend-item"><span class="legend-swatch" style="background:#22c55e"></span>Completed</span>
       <span class="legend-item"><span class="legend-swatch" style="background:#6366f1"></span>Pending</span>
-      <span class="legend-item"><span class="legend-swatch legend-swatch--line" style="border-color:#f59e0b"></span>CO₂ (kg)</span>
+      <span class="legend-item"><span class="legend-swatch legend-swatch--line" style="border-color:#f59e0b"></span>CO₂ Saved (kg)</span>
     </div>
     }
   </div>

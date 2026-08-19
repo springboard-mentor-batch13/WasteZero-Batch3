@@ -1297,11 +1297,23 @@ const getMonthlyTrends = async (months = 12, userId = null, role = 'admin', endD
   const now = endDate instanceof Date && !isNaN(endDate) ? endDate : new Date();
   const startDate = new Date(now.getFullYear(), now.getMonth() - (months - 1), 1);
 
+  const dateCond = { $gte: startDate };
+  if (endDate instanceof Date && !isNaN(endDate)) {
+    dateCond.$lte = endDate;
+  }
+
   // Base time filters
-  const pickupMatch = { createdAt:  { $gte: startDate } };
-  const wasteMatch  = { date:       { $gte: startDate } };
-  const oppMatch    = { createdAt:  { $gte: startDate } };
-  const appMatch    = { createdAt:  { $gte: startDate } };
+  // For pickups: Completed pickups match on completion/update date, non-completed on creation date
+  const pickupMatch = {
+    $or: [
+      { status: 'Completed', completedAt: dateCond },
+      { status: 'Completed', completedAt: null, createdAt: dateCond },
+      { status: { $ne: 'Completed' }, createdAt: dateCond },
+    ],
+  };
+  const wasteMatch  = { date:       dateCond };
+  const oppMatch    = { createdAt:  dateCond };
+  const appMatch    = { createdAt:  dateCond };
 
   // Scoping — only applied when userId is present (scoped=true from controller)
   // Admin: no scoping → full platform view
@@ -1339,14 +1351,26 @@ const getMonthlyTrends = async (months = 12, userId = null, role = 'admin', endD
   const { ALLOWED_WASTE_TYPES } = require('../constants/wasteTypes');
 
   const [pickupTrends, wasteTrends, oppTrends, appTrends, userGrowth] = await Promise.all([
-    // Pickups by status × month
+    // Pickups by status × month (completed grouped by completion date)
     Pickup.aggregate([
       { $match: pickupMatch },
       {
+        $project: {
+          status: 1,
+          eventDate: {
+            $cond: {
+              if: { $eq: ['$status', 'Completed'] },
+              then: { $ifNull: ['$completedAt', '$createdAt'] },
+              else: '$createdAt',
+            },
+          },
+        },
+      },
+      {
         $group: {
           _id: {
-            year:   { $year:  '$createdAt' },
-            month:  { $month: '$createdAt' },
+            year:   { $year:  '$eventDate' },
+            month:  { $month: '$eventDate' },
             status: '$status',
           },
           count: { $sum: 1 },
@@ -1408,7 +1432,7 @@ const getMonthlyTrends = async (months = 12, userId = null, role = 'admin', endD
     // / getWeeklyTrends / getDailyTrends (a per-user "growth" figure isn't
     // meaningful for a scoped NGO/volunteer view).
     User.aggregate([
-      { $match: { createdAt: { $gte: startDate } } },
+      { $match: { createdAt: dateCond } },
       {
         $group: {
           _id: {
@@ -1454,7 +1478,7 @@ const getMonthlyTrends = async (months = 12, userId = null, role = 'admin', endD
       const found = wasteTrends.find(
         (w) => w._id.year === year && w._id.month === month && w._id.category === cat
       );
-      return Math.round((found?.totalWeight || 0) * 100) / 100;
+      return Math.round((Number(found?.totalWeight) || 0) * 100) / 100;
     }),
   }));
 
@@ -1464,7 +1488,7 @@ const getMonthlyTrends = async (months = 12, userId = null, role = 'admin', endD
       const monthRecords = wasteTrends.filter(
         (w) => w._id.year === year && w._id.month === month
       );
-      const total = monthRecords.reduce((sum, w) => sum + w.totalCO2, 0);
+      const total = monthRecords.reduce((sum, w) => sum + (Number(w.totalCO2) || 0), 0);
       return Math.round(total * 100) / 100;
     }),
   };
@@ -1536,10 +1560,21 @@ const getWeeklyTrends = async (weeks = 12, userId = null, role = 'admin', endDat
   const startDate = new Date(now);
   startDate.setDate(startDate.getDate() - weeks * 7);
 
-  const pickupMatch = { createdAt: { $gte: startDate } };
-  const wasteMatch  = { date:      { $gte: startDate } };
-  const oppMatch    = { createdAt: { $gte: startDate } };
-  const appMatch    = { createdAt: { $gte: startDate } };
+  const dateCond = { $gte: startDate };
+  if (endDate instanceof Date && !isNaN(endDate)) {
+    dateCond.$lte = endDate;
+  }
+
+  const pickupMatch = {
+    $or: [
+      { status: 'Completed', completedAt: dateCond },
+      { status: 'Completed', completedAt: null, createdAt: dateCond },
+      { status: { $ne: 'Completed' }, createdAt: dateCond },
+    ],
+  };
+  const wasteMatch  = { date:      dateCond };
+  const oppMatch    = { createdAt: dateCond };
+  const appMatch    = { createdAt: dateCond };
 
   if (userId && role !== 'admin') {
     const uid = new mongoose.Types.ObjectId(userId);
@@ -1568,10 +1603,22 @@ const getWeeklyTrends = async (weeks = 12, userId = null, role = 'admin', endDat
     Pickup.aggregate([
       { $match: pickupMatch },
       {
+        $project: {
+          status: 1,
+          eventDate: {
+            $cond: {
+              if: { $eq: ['$status', 'Completed'] },
+              then: { $ifNull: ['$completedAt', '$createdAt'] },
+              else: '$createdAt',
+            },
+          },
+        },
+      },
+      {
         $group: {
           _id: {
-            week:   { $isoWeek: '$createdAt' },
-            year:   { $isoWeekYear: '$createdAt' },
+            week:   { $isoWeek: '$eventDate' },
+            year:   { $isoWeekYear: '$eventDate' },
             status: '$status',
           },
           count: { $sum: 1 },
@@ -1627,7 +1674,7 @@ const getWeeklyTrends = async (weeks = 12, userId = null, role = 'admin', endDat
     ]),
 
     User.aggregate([
-      { $match: { createdAt: { $gte: startDate } } },
+      { $match: { createdAt: dateCond } },
       {
         $group: {
           _id: {
@@ -1671,7 +1718,7 @@ const getWeeklyTrends = async (weeks = 12, userId = null, role = 'admin', endDat
       const found = wasteTrends.find(
         (w) => w._id.week === week && w._id.year === year && w._id.category === cat
       );
-      return Math.round((found?.totalWeight || 0) * 100) / 100;
+      return Math.round((Number(found?.totalWeight) || 0) * 100) / 100;
     }),
   }));
 
@@ -1679,7 +1726,7 @@ const getWeeklyTrends = async (weeks = 12, userId = null, role = 'admin', endDat
     label: 'CO₂ Saved (kg)',
     data: labels.map(({ week, year }) => {
       const weekRecords = wasteTrends.filter((w) => w._id.week === week && w._id.year === year);
-      const total = weekRecords.reduce((sum, w) => sum + w.totalCO2, 0);
+      const total = weekRecords.reduce((sum, w) => sum + (Number(w.totalCO2) || 0), 0);
       return Math.round(total * 100) / 100;
     }),
   };
@@ -1784,10 +1831,21 @@ const getDailyTrends = async (days = 30, userId = null, role = 'admin', endDate 
   startDate.setDate(startDate.getDate() - days + 1);
   startDate.setHours(0, 0, 0, 0);
 
-  const pickupMatch = { createdAt: { $gte: startDate } };
-  const wasteMatch  = { date:      { $gte: startDate } };
-  const oppMatch    = { createdAt: { $gte: startDate } };
-  const appMatch    = { createdAt: { $gte: startDate } };
+  const dateCond = { $gte: startDate };
+  if (endDate instanceof Date && !isNaN(endDate)) {
+    dateCond.$lte = endDate;
+  }
+
+  const pickupMatch = {
+    $or: [
+      { status: 'Completed', completedAt: dateCond },
+      { status: 'Completed', completedAt: null, createdAt: dateCond },
+      { status: { $ne: 'Completed' }, createdAt: dateCond },
+    ],
+  };
+  const wasteMatch  = { date:      dateCond };
+  const oppMatch    = { createdAt: dateCond };
+  const appMatch    = { createdAt: dateCond };
 
   if (userId && role !== 'admin') {
     const uid = new mongoose.Types.ObjectId(userId);
@@ -1816,11 +1874,23 @@ const getDailyTrends = async (days = 30, userId = null, role = 'admin', endDate 
     Pickup.aggregate([
       { $match: pickupMatch },
       {
+        $project: {
+          status: 1,
+          eventDate: {
+            $cond: {
+              if: { $eq: ['$status', 'Completed'] },
+              then: { $ifNull: ['$completedAt', '$createdAt'] },
+              else: '$createdAt',
+            },
+          },
+        },
+      },
+      {
         $group: {
           _id: {
-            year:   { $year:  '$createdAt' },
-            month:  { $month: '$createdAt' },
-            day:    { $dayOfMonth: '$createdAt' },
+            year:   { $year:  '$eventDate' },
+            month:  { $month: '$eventDate' },
+            day:    { $dayOfMonth: '$eventDate' },
             status: '$status',
           },
           count: { $sum: 1 },
@@ -1879,7 +1949,7 @@ const getDailyTrends = async (days = 30, userId = null, role = 'admin', endDate 
     ]),
 
     User.aggregate([
-      { $match: { createdAt: { $gte: startDate } } },
+      { $match: { createdAt: dateCond } },
       {
         $group: {
           _id: {
@@ -1931,7 +2001,7 @@ const getDailyTrends = async (days = 30, userId = null, role = 'admin', endDate 
       const found = wasteTrends.find(
         (w) => w._id.year === year && w._id.month === month && w._id.day === day && w._id.category === cat
       );
-      return Math.round((found?.totalWeight || 0) * 100) / 100;
+      return Math.round((Number(found?.totalWeight) || 0) * 100) / 100;
     }),
   }));
 
@@ -1941,7 +2011,7 @@ const getDailyTrends = async (days = 30, userId = null, role = 'admin', endDate 
       const dayRecords = wasteTrends.filter(
         (w) => w._id.year === year && w._id.month === month && w._id.day === day
       );
-      const total = dayRecords.reduce((sum, w) => sum + w.totalCO2, 0);
+      const total = dayRecords.reduce((sum, w) => sum + (Number(w.totalCO2) || 0), 0);
       return Math.round(total * 100) / 100;
     }),
   };
@@ -2000,7 +2070,8 @@ const getDailyTrends = async (days = 30, userId = null, role = 'admin', endDate 
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * Yearly aggregation for the last N years.
+ * Multi-year high-level trajectory (default 5 years, max 10).
+ * Platform-wide view only.
  *
  * @param {number} [years=5]
  * @returns {Promise<object>}
@@ -2012,10 +2083,30 @@ const getYearlyTrends = async (years = 5) => {
 
   const [pickupTrends, wasteTrends, userGrowth, oppTrends, appTrends] = await Promise.all([
     Pickup.aggregate([
-      { $match: { createdAt: { $gte: startDate } } },
+      {
+        $match: {
+          $or: [
+            { status: 'Completed', completedAt: { $gte: startDate } },
+            { status: 'Completed', completedAt: null, createdAt: { $gte: startDate } },
+            { status: { $ne: 'Completed' }, createdAt: { $gte: startDate } },
+          ],
+        },
+      },
+      {
+        $project: {
+          status: 1,
+          eventDate: {
+            $cond: {
+              if: { $eq: ['$status', 'Completed'] },
+              then: { $ifNull: ['$completedAt', '$createdAt'] },
+              else: '$createdAt',
+            },
+          },
+        },
+      },
       {
         $group: {
-          _id:    { year: { $year: '$createdAt' }, status: '$status' },
+          _id:    { year: { $year: '$eventDate' }, status: '$status' },
           count:  { $sum: 1 },
         },
       },
@@ -2343,14 +2434,13 @@ const getSummaryReportsForNgo = async (ngoId) => {
       },
     ]),
 
-    // Pickups assigned to this NGO — spec calls out Completed / Cancelled
-    // as the two statuses that matter for this pie chart (Pending/Assigned
-    // pickups are still in-flight work, not a "response" outcome yet).
+    // Pickups assigned to this NGO — Assigned / Completed / Cancelled
     Pickup.aggregate([
       { $match: { agent_id: uid } },
       {
         $facet: {
           total:     [{ $count: 'count' }],
+          assigned:  [{ $match: { status: 'Assigned' } }, { $count: 'count' }],
           completed: [{ $match: { status: 'Completed' } }, { $count: 'count' }],
           cancelled: [{ $match: { status: 'Cancelled' } }, { $count: 'count' }],
         },
@@ -2376,6 +2466,7 @@ const getSummaryReportsForNgo = async (ngoId) => {
 
   const pickupReport = {
     totalPickups: extract(pickupFacet.total),
+    assigned:     extract(pickupFacet.assigned),
     completed:    extract(pickupFacet.completed),
     cancelled:    extract(pickupFacet.cancelled),
   };
@@ -2403,8 +2494,8 @@ const getSummaryReportsForNgo = async (ngoId) => {
       pickups: {
         type:   'pie',
         title:  'Assigned Pickups by Status',
-        labels: ['Completed', 'Cancelled'],
-        data:   [pickupReport.completed, pickupReport.cancelled],
+        labels: ['Assigned', 'Completed', 'Cancelled'],
+        data:   [pickupReport.assigned, pickupReport.completed, pickupReport.cancelled],
       },
     },
   };

@@ -677,6 +677,52 @@ describe('Dashboard & Analytics Module — Unit and Integration Tests', () => {
       expect(trends.waste.datasets).toBeDefined();
       expect(trends.users.datasets).toBeDefined();
     });
+
+    test('getMonthlyTrends correctly sums CO2 savings from wasteStats and scopes by role', async () => {
+      const now = new Date();
+      const currentYear = now.getFullYear();
+      const currentMonth = now.getMonth() + 1;
+
+      jest.spyOn(Pickup, 'aggregate').mockResolvedValue([
+        { _id: { year: currentYear, month: currentMonth, status: 'Completed' }, count: 3 },
+      ]);
+      jest.spyOn(WasteStats, 'aggregate').mockResolvedValue([
+        { _id: { year: currentYear, month: currentMonth, category: 'Plastic' }, totalWeight: 10, totalCO2: 18.4 },
+        { _id: { year: currentYear, month: currentMonth, category: 'E-Waste' }, totalWeight: 5, totalCO2: 22.5 },
+      ]);
+      jest.spyOn(Opportunity, 'aggregate').mockResolvedValue([]);
+      jest.spyOn(Application, 'aggregate').mockResolvedValue([]);
+      jest.spyOn(User, 'aggregate').mockResolvedValue([]);
+      jest.spyOn(Application, 'find').mockReturnValue({
+        distinct: jest.fn().mockResolvedValue([]),
+      });
+
+      const volunteerId = new mongoose.Types.ObjectId();
+      const trends = await analyticsService.getMonthlyTrends(6, volunteerId.toString(), 'volunteer');
+
+      expect(trends.labels).toHaveLength(6);
+      expect(trends.co2.label).toBe('CO₂ Saved (kg)');
+      // The last month in the 6-month array is the current month
+      const currentMonthCO2 = trends.co2.data[trends.co2.data.length - 1];
+      expect(currentMonthCO2).toBe(40.9); // 18.4 + 22.5
+
+      const completedDataset = trends.pickup.datasets.find(d => d.label === 'Completed');
+      expect(completedDataset.data[completedDataset.data.length - 1]).toBe(3);
+    });
+
+    test('getMonthlyTrends handles custom endDate boundary correctly', async () => {
+      jest.spyOn(Pickup, 'aggregate').mockResolvedValue([]);
+      jest.spyOn(WasteStats, 'aggregate').mockResolvedValue([]);
+      jest.spyOn(Opportunity, 'aggregate').mockResolvedValue([]);
+      jest.spyOn(Application, 'aggregate').mockResolvedValue([]);
+      jest.spyOn(User, 'aggregate').mockResolvedValue([]);
+
+      const customEnd = new Date('2026-06-30T23:59:59.999Z');
+      const trends = await analyticsService.getMonthlyTrends(12, null, 'admin', customEnd);
+
+      expect(trends.labels).toHaveLength(12);
+      expect(trends.labels[trends.labels.length - 1]).toContain('26');
+    });
   });
 
   // ───────────────────────────────────────────────────────────────────────────

@@ -352,13 +352,15 @@
 /* ── Chart canvas ────────────────────────────────────────────────────── */
 .chart-wrap {
   width: 100%;
-  height: 240px;
+  height: 250px;
   position: relative;
 }
 .chart-canvas {
   display: block;
   width: 100% !important;
-  height: 240px !important;
+  height: 250px !important;
+  cursor: crosshair;
+  touch-action: pan-y;
 }
 .chart-legend {
   display: flex;
@@ -392,6 +394,12 @@
   grid-template-columns: minmax(0, 300px) minmax(0, 1fr);
   gap: 1.25rem;
   align-items: start;
+}
+.two-col-equal {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 1.25rem;
+  align-items: stretch;
 }
 
 /* ── Pickup status donut ─────────────────────────────────────────────── */
@@ -479,10 +487,15 @@
   letter-spacing: 0.02em;
 }
 .badge-pending   { background: #fef3c7; color: #92400e; }
-.badge-assigned  { background: var(--color-primary-light); color: var(--color-primary-dark); } /* green replaces purple */
+.badge-assigned  { background: var(--color-primary-light); color: var(--color-primary-dark); }
 .badge-completed { background: #dcfce7; color: #166534; }
 .badge-missed    { background: #fee2e2; color: #991b1b; }
 .badge-cancelled { background: #f3f4f6; color: #4b5563; }
+.badge-open      { background: #dcfce7; color: #166534; }
+.badge-closed    { background: #f1f5f9; color: #475569; }
+.badge-progress  { background: #e0e7ff; color: #4338ca; }
+.badge-accepted  { background: #dcfce7; color: #166534; }
+.badge-rejected  { background: #fee2e2; color: #991b1b; }
 .badge-default   { background: var(--color-border-neutral); color: var(--color-text-secondary); }
 
 /* ── Recycling breakdown ─────────────────────────────────────────────── */
@@ -1477,7 +1490,9 @@
 
 /* ── Responsive Breakpoints ─────────────────────────────────────────── */
 @media (max-width: 900px) {
-  .admin-dash-lb-grid {
+  .admin-dash-lb-grid,
+  .two-col,
+  .two-col-equal {
     grid-template-columns: 1fr;
   }
 }

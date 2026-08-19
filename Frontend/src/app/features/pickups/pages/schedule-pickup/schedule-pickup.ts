@@ -16,6 +16,7 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 
 import { PickupService } from '../../../../core/services/pickup.service';
 import { Pickup, CreatePickupPayload, ReschedulePickupPayload, WASTE_TYPES } from '../../../../core/models/pickup.model';
+import { formatTimeSlot } from '../../../../core/utils/date-time.util';
 
 // ── Cross-field validator: end time must be after start time ──────────────
 // Applied at the FormGroup level so it re-evaluates whenever either field
@@ -260,6 +261,10 @@ export class SchedulePickup implements OnInit, OnDestroy {
     return new Date(dateStr).toLocaleDateString('en-US', {
       year: 'numeric', month: 'short', day: 'numeric'
     });
+  }
+
+  formatTimeSlot(slot?: { start?: string; end?: string; startDisplay?: string; endDisplay?: string } | null): string {
+    return formatTimeSlot(slot);
   }
 
   canReschedule(pickup: Pickup): boolean {

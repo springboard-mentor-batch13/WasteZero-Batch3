@@ -492,7 +492,7 @@ export class MessagesPage implements OnInit, OnDestroy {
   formatTime(dateStr: string): string {
     if (!dateStr) return '';
     try {
-      return new Date(dateStr).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      return new Date(dateStr).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true });
     } catch {
       return '';
     }

@@ -16,6 +16,7 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 
 import { PickupService } from '../../../../core/services/pickup.service';
 import { Pickup, PickupStatus, WasteCollectedItem, WASTE_TYPES } from '../../../../core/models/pickup.model';
+import { formatTimeSlot } from '../../../../core/utils/date-time.util';
 
 @Component({
   selector: 'app-ngo-pickup-management',
@@ -285,6 +286,10 @@ export class NgoPickupManagement implements OnInit, OnDestroy {
     return new Date(dateStr).toLocaleDateString('en-US', {
       year: 'numeric', month: 'short', day: 'numeric'
     });
+  }
+
+  formatTimeSlot(slot?: { start?: string; end?: string; startDisplay?: string; endDisplay?: string } | null): string {
+    return formatTimeSlot(slot);
   }
 
   /** Returns an error string for a waste entry field, or '' if clean */
