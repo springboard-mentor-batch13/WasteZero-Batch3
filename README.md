@@ -642,12 +642,9 @@ Contributions make the open-source community an amazing place to learn, inspire,
 
 ---
 
-## 📄 License
-
-Distributed under the **ISC License**. See `LICENSE` for more information.
-
-<div align="center">
-
-Made with 💚 for a Cleaner, Greener Earth 🌍
-
+#Contributers
+Vaishnavi Shrivastava
+Dhruv Pathak
+Apporva J
+Aruneshwar
 </div>
